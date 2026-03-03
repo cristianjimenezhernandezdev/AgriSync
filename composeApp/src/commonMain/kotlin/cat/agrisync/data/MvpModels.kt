@@ -80,3 +80,31 @@ data class EntregaDejeccioDto(
     val dan: DanRefDto? = null
 )
 
+@Serializable
+data class TerraUpdateRequest(
+    val superficie: Double? = null
+)
+
+@Serializable
+data class AplicacioUpdateRequest(
+    val data: String? = null,
+    val kg_n: Double? = null,
+    val uf: Double? = null
+)
+
+@Serializable
+data class GranjaUpdateRequest(
+    val nom: String? = null,
+    val marca_oficial: String? = null
+)
+
+@Serializable
+data class GranjaBestiarUpdateRequest(
+    val cens: Double? = null
+)
+
+@Serializable
+data class EntregaUpdateRequest(
+    val data: String? = null,
+    val quantitat: Double? = null
+)
