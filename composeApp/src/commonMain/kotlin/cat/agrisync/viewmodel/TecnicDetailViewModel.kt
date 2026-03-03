@@ -26,7 +26,10 @@ data class TecnicDetailUiState(
     val editOficinaId: String = "",
     // Add assignacio
     val newTitularId: String = "",
-    val newScope: String = "comu"
+    val newScope: String = "comu",
+    // Change password
+    val newPassword: String = "",
+    val showPasswordField: Boolean = false
 )
 
 internal class TecnicDetailViewModel(
@@ -70,6 +73,29 @@ internal class TecnicDetailViewModel(
     fun onEditOficina(v: String) { _uiState.update { it.copy(editOficinaId = v) } }
     fun onNewTitular(v: String) { _uiState.update { it.copy(newTitularId = v) } }
     fun onNewScope(v: String) { _uiState.update { it.copy(newScope = v) } }
+    fun onNewPassword(v: String) { _uiState.update { it.copy(newPassword = v) } }
+    fun togglePasswordField() { _uiState.update { it.copy(showPasswordField = !it.showPasswordField, newPassword = "") } }
+
+    fun changePassword() {
+        val st = _uiState.value
+        val userId = st.tecnic?.user_id
+        if (userId == null) {
+            _uiState.update { it.copy(message = "Aquest tecnic no te login (sense user_id)") }
+            return
+        }
+        if (st.newPassword.length < 6) {
+            _uiState.update { it.copy(message = "El password ha de tenir minim 6 caracters") }
+            return
+        }
+        scope.launch {
+            try {
+                repository.updateAuthUserPassword(userId, st.newPassword)
+                _uiState.update { it.copy(newPassword = "", showPasswordField = false, message = "Password canviat correctament") }
+            } catch (ex: Exception) {
+                _uiState.update { it.copy(message = "Error: ${ex.message}") }
+            }
+        }
+    }
 
     fun saveTecnic() {
         val st = _uiState.value

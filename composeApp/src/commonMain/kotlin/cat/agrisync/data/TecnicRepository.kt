@@ -3,6 +3,7 @@ package cat.agrisync.data
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.client.statement.bodyAsText
@@ -84,6 +85,22 @@ internal class TecnicRepository(
     internal suspend fun deleteAssignacio(assignacioId: String) {
         restClient.delete("tecnic_titular", "?id=eq.$assignacioId")
     }
+
+    /** Canvia el password d'un usuari Auth via Admin API (requereix service_role key) */
+    internal suspend fun updateAuthUserPassword(userId: String, newPassword: String) {
+        val response = httpClient.put {
+            url("${config.url}/auth/v1/admin/users/$userId")
+            contentType(ContentType.Application.Json)
+            headers.append("apikey", config.serviceRoleKey)
+            headers.append(HttpHeaders.Authorization, "Bearer ${config.serviceRoleKey}")
+            setBody(UpdatePasswordRequest(password = newPassword))
+        }
+
+        if (!response.status.isSuccess()) {
+            val msg = response.bodyAsText()
+            throw ApiException(response.status.value, "Error canviant password: $msg")
+        }
+    }
 }
 
 @Serializable
@@ -126,5 +143,10 @@ data class TecnicTitularWithTitular(
     val scope: String = "comu",
     val actiu: Boolean = true,
     val titular: TitularDto? = null
+)
+
+@Serializable
+private data class UpdatePasswordRequest(
+    val password: String
 )
 

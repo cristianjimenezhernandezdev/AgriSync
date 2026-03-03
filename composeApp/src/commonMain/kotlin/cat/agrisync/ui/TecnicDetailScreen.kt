@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import cat.agrisync.data.OficinaDto
 import cat.agrisync.data.TitularDto
@@ -84,6 +85,27 @@ internal fun TecnicDetailScreen(
                                     Text("ID: ${t.id}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text("User ID: ${t.user_id ?: "Sense login"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text("Actiu: ${if (t.actiu) "Si" else "No"}", style = MaterialTheme.typography.bodySmall)
+
+                                    // Canvi de password
+                                    if (t.user_id != null) {
+                                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                                        if (ui.showPasswordField) {
+                                            OutlinedTextField(
+                                                value = ui.newPassword,
+                                                onValueChange = viewModel::onNewPassword,
+                                                label = { Text("Nou password (minim 6 caracters)") },
+                                                singleLine = true,
+                                                visualTransformation = PasswordVisualTransformation(),
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                Button(onClick = viewModel::changePassword) { Text("Canviar password") }
+                                                OutlinedButton(onClick = viewModel::togglePasswordField) { Text("Cancel·lar") }
+                                            }
+                                        } else {
+                                            OutlinedButton(onClick = viewModel::togglePasswordField) { Text("Canviar password") }
+                                        }
+                                    }
                                 }
                             }
                         }
