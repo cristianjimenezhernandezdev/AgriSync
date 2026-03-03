@@ -10,7 +10,7 @@ plugins {
 
 kotlin {
     jvm()
-    
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -34,10 +34,10 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
             implementation(libs.ktor.client.cio)
+            implementation("org.slf4j:slf4j-simple:2.0.16")
         }
     }
 }
-
 
 compose.desktop {
     application {

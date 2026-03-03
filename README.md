@@ -92,6 +92,55 @@ AgriSync/
 
 ---
 
+## Estat actual (MVP Desktop)
+
+Aplicacio KMP + Compose Desktop connectada a Supabase amb:
+
+- Login / logout amb `email + password` (Supabase Auth)
+- Sessio persistent local (Desktop) + refresh automàtic de token
+- Home de titulars assignats via vista `public.v_titular_access`
+- Navegacio simple: `Login` -> `Titulars` -> `Modul Agricola` / `Modul Ramader`
+- Pantalla `El meu perfil` (nom, rol, oficina, email)
+- Errors visibles per casos de permisos RLS (`401/403`)
+
+## SQL de base de dades
+
+Aplica `SQLAgriSync.sql` al SQL Editor de Supabase.
+
+Inclou:
+
+- Taules i triggers d'auditoria
+- Funcions helpers de permisos (`can_read_titular`, `can_write_*`)
+- RLS policies
+- Vista `v_titular_access` per la Home del client Desktop
+
+## Entorn (ENV)
+
+Defineix aquestes variables abans d'arrencar l'app:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+
+## Execucio (Desktop)
+
+Exemple amb PowerShell:
+
+```powershell
+$env:SUPABASE_URL="https://<PROJECT>.supabase.co"
+$env:SUPABASE_ANON_KEY="<ANON_KEY>"
+./gradlew :composeApp:run
+```
+
+## Estructura rellevant
+
+- `composeApp/src/commonMain/kotlin/cat/agrisync/data`: auth, client REST i repositoris
+- `composeApp/src/commonMain/kotlin/cat/agrisync/viewmodel`: presenters + `UiState`
+- `composeApp/src/commonMain/kotlin/cat/agrisync/ui`: pantalles Compose Desktop
+- `composeApp/src/jvmMain/kotlin/cat/agrisync/data/JvmEnvConfig.kt`: lectura d'ENV
+- `composeApp/src/jvmMain/kotlin/cat/agrisync/data/SessionPersistence.kt`: persistencia de sessio local
+
+---
+
 ## Desenvolupador
 
 - **Nom:** Cristian Jimenez Hernandez

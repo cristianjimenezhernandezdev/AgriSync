@@ -289,6 +289,22 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 -- =========================================================
+-- RPC: Retorna el perfil del tecnic de l'usuari autenticat
+-- (SECURITY DEFINER per saltar les RLS)
+-- =========================================================
+create or replace function public.get_my_tecnic()
+returns setof public.tecnic
+language sql
+stable
+security definer
+as $$
+  select *
+  from public.tecnic t
+  where t.user_id = auth.uid()
+  limit 1;
+$$;
+
+-- =========================================================
 -- RLS HELPERS
 -- =========================================================
 
@@ -296,6 +312,7 @@ create or replace function public.current_oficina_id()
 returns uuid
 language sql
 stable
+security definer
 as $$
   select t.oficina_id
   from public.tecnic t
@@ -307,6 +324,7 @@ create or replace function public.current_tecnic_id()
 returns uuid
 language sql
 stable
+security definer
 as $$
   select t.id
   from public.tecnic t
@@ -318,6 +336,7 @@ create or replace function public.is_admin()
 returns boolean
 language sql
 stable
+security definer
 as $$
   select exists(
     select 1
@@ -332,6 +351,7 @@ create or replace function public.is_oficina_manager()
 returns boolean
 language sql
 stable
+security definer
 as $$
   select exists(
     select 1
@@ -346,6 +366,7 @@ create or replace function public.same_oficina(p_tecnic_id uuid)
 returns boolean
 language sql
 stable
+security definer
 as $$
   select exists(
     select 1
@@ -359,6 +380,7 @@ create or replace function public.can_read_titular(p_titular_id uuid)
 returns boolean
 language sql
 stable
+security definer
 as $$
   select
     public.is_admin()
@@ -378,6 +400,7 @@ create or replace function public.can_write_scope(p_titular_id uuid, p_scope sco
 returns boolean
 language sql
 stable
+security definer
 as $$
   select
     public.is_admin()
@@ -397,6 +420,7 @@ create or replace function public.can_write_agricola(p_titular_id uuid)
 returns boolean
 language sql
 stable
+security definer
 as $$
   select public.can_write_scope(p_titular_id, 'agricola'::scope_titular)
 $$;
@@ -405,9 +429,47 @@ create or replace function public.can_write_ramader(p_titular_id uuid)
 returns boolean
 language sql
 stable
+security definer
 as $$
   select public.can_write_scope(p_titular_id, 'ramader'::scope_titular)
 $$;
+
+-- =========================================================
+-- VIEW: access de titulars per Home (scope agricola/ramader)
+-- =========================================================
+drop view if exists public.v_titular_access;
+create view public.v_titular_access as
+select
+  t.id as titular_id,
+  t.nom_rao as nom,
+  t.nif,
+  true as can_agricola,
+  true as can_ramader,
+  t.updated_at as last_update_at,
+  coalesce(te_upd.nom, t.updated_by::text) as last_update_by
+from public.titular t
+left join public.tecnic te_upd on te_upd.user_id = t.updated_by
+where public.is_admin() or public.is_oficina_manager()
+
+union all
+
+select
+  t.id as titular_id,
+  t.nom_rao as nom,
+  t.nif,
+  bool_or(tt.scope in ('comu', 'agricola')) as can_agricola,
+  bool_or(tt.scope in ('comu', 'ramader')) as can_ramader,
+  t.updated_at as last_update_at,
+  coalesce(te_upd.nom, t.updated_by::text) as last_update_by
+from public.titular t
+join public.tecnic_titular tt on tt.titular_id = t.id and tt.actiu = true
+join public.tecnic me on me.id = tt.tecnic_id and me.actiu = true
+left join public.tecnic te_upd on te_upd.user_id = t.updated_by
+where me.user_id = auth.uid()
+  and not (public.is_admin() or public.is_oficina_manager())
+group by t.id, t.nom_rao, t.nif, t.updated_at, t.updated_by, te_upd.nom;
+
+grant select on public.v_titular_access to authenticated;
 
 -- =========================================================
 -- ENABLE RLS
