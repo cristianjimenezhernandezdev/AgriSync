@@ -32,12 +32,16 @@ import cat.agrisync.data.EnvConfig
 import cat.agrisync.data.OficinaDto
 import cat.agrisync.ui.LoginScreen
 import cat.agrisync.ui.ProfileScreen
+import cat.agrisync.ui.TecnicDetailScreen
+import cat.agrisync.ui.TecnicManagementScreen
 import cat.agrisync.ui.TitularAgricolaScreen
 import cat.agrisync.ui.TitularRamaderScreen
 import cat.agrisync.ui.TitularsScreen
 import cat.agrisync.ui.navigation.Screen
 import cat.agrisync.viewmodel.HomeViewModel
 import cat.agrisync.viewmodel.LoginViewModel
+import cat.agrisync.viewmodel.TecnicDetailViewModel
+import cat.agrisync.viewmodel.TecnicManagementViewModel
 import cat.agrisync.viewmodel.TitularAgricolaViewModel
 import cat.agrisync.viewmodel.TitularRamaderViewModel
 
@@ -105,6 +109,9 @@ fun App(envConfig: EnvConfig) {
 private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenticated) {
     var currentScreen by remember { mutableStateOf<Screen>(Screen.TitularsHome) }
     var oficina by remember { mutableStateOf<OficinaDto?>(null) }
+    val isAdmin = data.tecnic.rol == "admin"
+    val isManager = data.tecnic.rol == "oficina_manager"
+    val canManageTecnics = isAdmin || isManager
 
     LaunchedEffect(data.tecnic.oficina_id) {
         oficina = runCatching { services.oficinaRepository.getById(data.tecnic.oficina_id) }.getOrNull()
@@ -120,10 +127,13 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("AgriSync", style = MaterialTheme.typography.titleLarge)
                     TextButton(onClick = { currentScreen = Screen.TitularsHome }) { Text("Titulars") }
+                    if (canManageTecnics) {
+                        TextButton(onClick = { currentScreen = Screen.TecnicManagement }) { Text("Tecnics") }
+                    }
                     TextButton(onClick = { currentScreen = Screen.Profile }) { Text("Perfil") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(data.tecnic.nom)
+                    Text("${data.tecnic.nom} (${data.tecnic.rol ?: "tecnic"})")
                     Button(onClick = services.authService::signOut) { Text("Logout") }
                 }
             }
@@ -167,6 +177,27 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                     TitularRamaderScreen(
                         viewModel = vm,
                         onBack = { currentScreen = Screen.TitularsHome }
+                    )
+                }
+
+                Screen.TecnicManagement -> {
+                    val vm = remember { TecnicManagementViewModel(services.tecnicRepository) }
+                    DisposableEffect(Unit) { onDispose { vm.clear() } }
+                    LaunchedEffect(Unit) { vm.load() }
+                    TecnicManagementScreen(
+                        viewModel = vm,
+                        onBack = { currentScreen = Screen.TitularsHome },
+                        onOpenDetail = { currentScreen = Screen.TecnicDetail(it) }
+                    )
+                }
+
+                is Screen.TecnicDetail -> {
+                    val vm = remember(screen.tecnicId) { TecnicDetailViewModel(services.tecnicRepository) }
+                    DisposableEffect(screen.tecnicId) { onDispose { vm.clear() } }
+                    LaunchedEffect(screen.tecnicId) { vm.load(screen.tecnicId) }
+                    TecnicDetailScreen(
+                        viewModel = vm,
+                        onBack = { currentScreen = Screen.TecnicManagement }
                     )
                 }
 

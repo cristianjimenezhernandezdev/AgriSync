@@ -1,0 +1,153 @@
+package cat.agrisync.viewmodel
+
+import cat.agrisync.data.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+data class TecnicManagementUiState(
+    val tecnics: List<TecnicDto> = emptyList(),
+    val oficines: List<OficinaDto> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val message: String? = null,
+    // Formulari nou tècnic
+    val showCreateDialog: Boolean = false,
+    val newNom: String = "",
+    val newEmail: String = "",
+    val newPassword: String = "",
+    val newOficinaId: String = "",
+    val newRol: String = "tecnic",
+    val isCreating: Boolean = false
+)
+
+internal class TecnicManagementViewModel(
+    private val repository: TecnicRepository
+) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val _uiState = MutableStateFlow(TecnicManagementUiState())
+    val uiState: StateFlow<TecnicManagementUiState> = _uiState.asStateFlow()
+
+    fun load() {
+        scope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            try {
+                val tecnics = repository.listAll()
+                val oficines = repository.listOficines()
+                _uiState.update {
+                    it.copy(isLoading = false, tecnics = tecnics, oficines = oficines,
+                        newOficinaId = oficines.firstOrNull()?.id ?: "")
+                }
+            } catch (ex: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = ex.message ?: "Error") }
+            }
+        }
+    }
+
+    fun showCreateDialog() {
+        _uiState.update { it.copy(showCreateDialog = true, newNom = "", newEmail = "", newPassword = "", newRol = "tecnic") }
+    }
+
+    fun hideCreateDialog() {
+        _uiState.update { it.copy(showCreateDialog = false) }
+    }
+
+    fun onNewNom(v: String) { _uiState.update { it.copy(newNom = v) } }
+    fun onNewEmail(v: String) { _uiState.update { it.copy(newEmail = v) } }
+    fun onNewPassword(v: String) { _uiState.update { it.copy(newPassword = v) } }
+    fun onNewOficina(v: String) { _uiState.update { it.copy(newOficinaId = v) } }
+    fun onNewRol(v: String) { _uiState.update { it.copy(newRol = v) } }
+
+    fun createTecnic() {
+        val st = _uiState.value
+        if (st.newNom.isBlank() || st.newEmail.isBlank() || st.newPassword.isBlank() || st.newOficinaId.isBlank()) {
+            _uiState.update { it.copy(message = "Tots els camps son obligatoris") }
+            return
+        }
+        if (st.newPassword.length < 6) {
+            _uiState.update { it.copy(message = "El password ha de tenir minim 6 caracters") }
+            return
+        }
+
+        scope.launch {
+            _uiState.update { it.copy(isCreating = true) }
+            try {
+                // 1) Crear usuari Auth
+                val userId = repository.createAuthUser(st.newEmail.trim(), st.newPassword)
+                println("[TECNIC] Auth user creat: $userId")
+
+                // 2) Crear tècnic a public.tecnic vinculat a l'usuari Auth
+                repository.createTecnic(TecnicCreateRequest(
+                    oficina_id = st.newOficinaId,
+                    user_id = userId,
+                    nom = st.newNom.trim(),
+                    email = st.newEmail.trim(),
+                    rol = st.newRol,
+                    actiu = true
+                ))
+                println("[TECNIC] Tecnic creat: ${st.newNom}")
+
+                // 3) Recarregar llista
+                val tecnics = repository.listAll()
+                _uiState.update {
+                    it.copy(
+                        isCreating = false, showCreateDialog = false,
+                        tecnics = tecnics, message = "Tecnic '${st.newNom}' creat correctament"
+                    )
+                }
+            } catch (ex: Exception) {
+                println("[TECNIC] Error: ${ex.message}")
+                _uiState.update { it.copy(isCreating = false, message = "Error: ${ex.message}") }
+            }
+        }
+    }
+
+    fun toggleActiu(tecnic: TecnicDto) {
+        scope.launch {
+            try {
+                val updated = repository.updateTecnic(tecnic.id, TecnicUpdateRequest(actiu = !tecnic.actiu))
+                _uiState.update { st ->
+                    st.copy(
+                        tecnics = st.tecnics.map { if (it.id == tecnic.id) updated else it },
+                        message = "${updated.nom} ${if (updated.actiu) "activat" else "desactivat"}"
+                    )
+                }
+            } catch (ex: Exception) {
+                _uiState.update { it.copy(message = "Error: ${ex.message}") }
+            }
+        }
+    }
+
+    fun updateTecnic(tecnicId: String, nom: String, email: String, rol: String, oficinaId: String) {
+        scope.launch {
+            try {
+                val updated = repository.updateTecnic(tecnicId, TecnicUpdateRequest(
+                    nom = nom, email = email, rol = rol, oficina_id = oficinaId
+                ))
+                _uiState.update { st ->
+                    st.copy(
+                        tecnics = st.tecnics.map { if (it.id == tecnicId) updated else it },
+                        message = "Tecnic '${updated.nom}' actualitzat"
+                    )
+                }
+            } catch (ex: Exception) {
+                _uiState.update { it.copy(message = "Error: ${ex.message}") }
+            }
+        }
+    }
+
+    fun clearMessage() {
+        _uiState.update { it.copy(message = null) }
+    }
+
+    fun clear() {
+        scope.cancel()
+    }
+}
+
