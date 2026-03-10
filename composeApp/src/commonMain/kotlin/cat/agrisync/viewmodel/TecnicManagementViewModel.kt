@@ -24,7 +24,13 @@ data class TecnicManagementUiState(
     val newPassword: String = "",
     val newOficinaId: String = "",
     val newRol: String = "tecnic",
-    val isCreating: Boolean = false
+    val isCreating: Boolean = false,
+    // Reset password
+    val showPasswordDialog: Boolean = false,
+    val passwordTecnic: TecnicDto? = null,
+    val resetPassword: String = "",
+    val resetPasswordConfirm: String = "",
+    val isResettingPassword: Boolean = false
 )
 
 internal class TecnicManagementViewModel(
@@ -111,7 +117,9 @@ internal class TecnicManagementViewModel(
     fun toggleActiu(tecnic: TecnicDto) {
         scope.launch {
             try {
+                println("[TECNIC] toggleActiu: ${tecnic.id} actiu=${tecnic.actiu} -> ${!tecnic.actiu}")
                 val updated = repository.updateTecnic(tecnic.id, TecnicUpdateRequest(actiu = !tecnic.actiu))
+                println("[TECNIC] toggleActiu OK: ${updated.nom} actiu=${updated.actiu}")
                 _uiState.update { st ->
                     st.copy(
                         tecnics = st.tecnics.map { if (it.id == tecnic.id) updated else it },
@@ -119,6 +127,8 @@ internal class TecnicManagementViewModel(
                     )
                 }
             } catch (ex: Exception) {
+                println("[TECNIC] toggleActiu ERROR: ${ex.message}")
+                ex.printStackTrace()
                 _uiState.update { it.copy(message = "Error: ${ex.message}") }
             }
         }
@@ -144,6 +154,52 @@ internal class TecnicManagementViewModel(
 
     fun clearMessage() {
         _uiState.update { it.copy(message = null) }
+    }
+
+    // ── Reset password ──
+    fun showPasswordDialog(tecnic: TecnicDto) {
+        _uiState.update { it.copy(showPasswordDialog = true, passwordTecnic = tecnic, resetPassword = "", resetPasswordConfirm = "") }
+    }
+
+    fun hidePasswordDialog() {
+        _uiState.update { it.copy(showPasswordDialog = false, passwordTecnic = null) }
+    }
+
+    fun onResetPassword(v: String) { _uiState.update { it.copy(resetPassword = v) } }
+    fun onResetPasswordConfirm(v: String) { _uiState.update { it.copy(resetPasswordConfirm = v) } }
+
+    fun confirmResetPassword() {
+        val st = _uiState.value
+        val tecnic = st.passwordTecnic ?: return
+        val userId = tecnic.user_id
+        if (userId == null) {
+            _uiState.update { it.copy(message = "'${tecnic.nom}' no te compte Auth (sense user_id)") }
+            return
+        }
+        if (st.resetPassword.length < 6) {
+            _uiState.update { it.copy(message = "El password ha de tenir minim 6 caracters") }
+            return
+        }
+        if (st.resetPassword != st.resetPasswordConfirm) {
+            _uiState.update { it.copy(message = "Els passwords no coincideixen") }
+            return
+        }
+        scope.launch {
+            _uiState.update { it.copy(isResettingPassword = true) }
+            try {
+                repository.updateAuthUserPassword(userId, st.resetPassword)
+                _uiState.update {
+                    it.copy(
+                        isResettingPassword = false,
+                        showPasswordDialog = false,
+                        passwordTecnic = null,
+                        message = "Password de '${tecnic.nom}' canviat correctament. Ara pot entrar amb: ${tecnic.email} / (nou password)"
+                    )
+                }
+            } catch (ex: Exception) {
+                _uiState.update { it.copy(isResettingPassword = false, message = "Error: ${ex.message}") }
+            }
+        }
     }
 
     fun clear() {

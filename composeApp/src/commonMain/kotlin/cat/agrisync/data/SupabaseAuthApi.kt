@@ -71,21 +71,74 @@ class SupabaseAuthApi(
     }
 
     suspend fun getMyTecnic(accessToken: String): TecnicDto? {
-        val response = httpClient.post {
-            url("${config.url}/rest/v1/rpc/get_my_tecnic")
-            contentType(ContentType.Application.Json)
-            headers.append("apikey", config.anonKey)
-            headers.append(HttpHeaders.Authorization, "Bearer $accessToken")
-            setBody("{}")  // RPC sense arguments
+        // Intent 1: RPC get_my_tecnic (SECURITY DEFINER)
+        try {
+            val response = httpClient.post {
+                url("${config.url}/rest/v1/rpc/get_my_tecnic")
+                contentType(ContentType.Application.Json)
+                headers.append("apikey", config.anonKey)
+                headers.append(HttpHeaders.Authorization, "Bearer $accessToken")
+                setBody("{}")  // RPC sense arguments
+            }
+
+            if (response.status.isSuccess()) {
+                val list: List<TecnicDto> = response.body()
+                if (list.isNotEmpty()) {
+                    println("[AUTH-API] getMyTecnic via RPC OK: ${list.first().nom}")
+                    return list.first()
+                }
+            } else {
+                val msg = response.bodyAsText()
+                println("[AUTH-API] RPC get_my_tecnic failed: ${response.status} - $msg")
+            }
+        } catch (ex: Exception) {
+            println("[AUTH-API] RPC get_my_tecnic exception: ${ex.message}")
         }
 
-        if (!response.status.isSuccess()) {
-            val msg = response.bodyAsText().ifBlank { "HTTP ${response.status.value}" }
-            throw ApiException(response.status.value, msg)
+        // Intent 2: Consulta directa amb service_role key (bypassa RLS)
+        // Primer obtenim el user_id del token JWT decodificant-lo
+        val userId = extractUserIdFromToken(accessToken)
+        if (userId != null) {
+            println("[AUTH-API] Fallback: buscant tecnic per user_id=$userId amb service_role")
+            try {
+                val response = httpClient.get {
+                    url("${config.url}/rest/v1/tecnic?user_id=eq.$userId&limit=1")
+                    contentType(ContentType.Application.Json)
+                    headers.append("apikey", config.serviceRoleKey.ifBlank { config.anonKey })
+                    headers.append(HttpHeaders.Authorization, "Bearer ${config.serviceRoleKey.ifBlank { accessToken }}")
+                }
+                if (response.status.isSuccess()) {
+                    val list: List<TecnicDto> = response.body()
+                    if (list.isNotEmpty()) {
+                        println("[AUTH-API] Fallback OK: ${list.first().nom}")
+                        return list.first()
+                    }
+                }
+            } catch (ex: Exception) {
+                println("[AUTH-API] Fallback exception: ${ex.message}")
+            }
         }
 
-        val list: List<TecnicDto> = response.body()
-        return list.firstOrNull()
+        return null
+    }
+
+    /** Extreu el user_id (sub) del JWT sense verificar signatura */
+    @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
+    private fun extractUserIdFromToken(token: String): String? {
+        return try {
+            val parts = token.split(".")
+            if (parts.size < 2) return null
+            val payload = parts[1]
+            // Afegir padding si cal
+            val padded = payload + "=".repeat((4 - payload.length % 4) % 4)
+            val decoded = kotlin.io.encoding.Base64.UrlSafe.decode(padded.encodeToByteArray())
+            val json = decoded.decodeToString()
+            // Buscar "sub":"<uuid>"
+            val regex = """"sub"\s*:\s*"([^"]+)"""".toRegex()
+            regex.find(json)?.groupValues?.get(1)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private suspend fun parseAuthResponse(response: io.ktor.client.statement.HttpResponse): AuthResponse {

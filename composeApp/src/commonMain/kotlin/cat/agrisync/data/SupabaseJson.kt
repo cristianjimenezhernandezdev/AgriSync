@@ -6,6 +6,7 @@ object SupabaseJson {
     val instance: Json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
+        explicitNulls = false
     }
 }
 

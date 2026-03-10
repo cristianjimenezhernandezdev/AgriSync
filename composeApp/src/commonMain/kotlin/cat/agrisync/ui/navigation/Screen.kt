@@ -11,4 +11,5 @@ sealed interface Screen {
     data class TecnicDetail(val tecnicId: String) : Screen
     data object TitularManagement : Screen
     data object TerraManagement : Screen
+    data object OficinaManagement : Screen
 }

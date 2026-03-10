@@ -472,6 +472,24 @@ group by t.id, t.nom_rao, t.nif, t.updated_at, t.updated_by, te_upd.nom;
 grant select on public.v_titular_access to authenticated;
 
 -- =========================================================
+-- GRANTS (permisos de taula — RLS controla l'accés real)
+-- =========================================================
+grant select, insert, update, delete on public.oficina to authenticated;
+grant select, insert, update, delete on public.tecnic to authenticated;
+grant select, insert, update, delete on public.titular to authenticated;
+grant select, insert, update, delete on public.tecnic_titular to authenticated;
+grant select, insert, update, delete on public.dan_declaracio to authenticated;
+grant select, insert, update, delete on public.terra to authenticated;
+grant select, insert, update, delete on public.cessio_terra to authenticated;
+grant select, insert, update, delete on public.aplicacions_fertilitzants to authenticated;
+grant select, insert, update, delete on public.granja to authenticated;
+grant select, insert, update, delete on public.bestiar to authenticated;
+grant select, insert, update, delete on public.fase_productiva to authenticated;
+grant select, insert, update, delete on public.granja_bestiar to authenticated;
+grant select, insert, update, delete on public.emmagatzematge to authenticated;
+grant select, insert, update, delete on public.entrega_dejeccions to authenticated;
+
+-- =========================================================
 -- ENABLE RLS
 -- =========================================================
 alter table public.oficina enable row level security;

@@ -32,6 +32,7 @@ internal class RestClient(
     private suspend inline fun <reified T> handle(response: io.ktor.client.statement.HttpResponse): T {
         if (!response.status.isSuccess()) {
             val msg = response.bodyAsText().ifBlank { "HTTP ${response.status.value}" }
+            println("[REST] Error ${response.status.value}: $msg")
             throw ApiException(response.status.value, msg)
         }
         return response.body()

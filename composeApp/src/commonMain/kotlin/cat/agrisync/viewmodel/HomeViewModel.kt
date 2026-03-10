@@ -1,6 +1,7 @@
 package cat.agrisync.viewmodel
 
 import cat.agrisync.data.AccessRepository
+import cat.agrisync.data.TecnicDto
 import cat.agrisync.data.TitularAccessRow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +41,8 @@ data class HomeUiState(
 }
 
 internal class HomeViewModel(
-    private val repository: AccessRepository
+    private val repository: AccessRepository,
+    private val tecnic: TecnicDto
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -50,7 +52,8 @@ internal class HomeViewModel(
         scope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val rows = repository.listTitularAccess().filter { it.can_agricola || it.can_ramader }
+                val rows = repository.listTitularAccessForTecnic(tecnic)
+                    .filter { it.can_agricola || it.can_ramader }
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -59,6 +62,8 @@ internal class HomeViewModel(
                     )
                 }
             } catch (ex: Exception) {
+                println("[HOME] Error carregant titulars: ${ex.message}")
+                ex.printStackTrace()
                 _uiState.update { it.copy(isLoading = false, error = ex.message ?: "Error carregant titulars") }
             }
         }

@@ -98,6 +98,14 @@ class AuthService(private val api: SupabaseAuthApi) {
         _state.value = AuthState.Unauthenticated
     }
 
+    /** Recarrega les dades del tècnic des de la BDD sense tancar sessió */
+    suspend fun reloadTecnic() {
+        val session = sessionOrNull() ?: return
+        val tecnic = api.getMyTecnic(session.accessToken)
+            ?: throw IllegalStateException("No s'ha trobat perfil tecnic")
+        _state.value = AuthState.Authenticated(session, tecnic)
+    }
+
     fun sessionOrNull(): Session? {
         return (state.value as? AuthState.Authenticated)?.session
     }

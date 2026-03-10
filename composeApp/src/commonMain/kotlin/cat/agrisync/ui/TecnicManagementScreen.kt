@@ -54,7 +54,8 @@ internal fun TecnicManagementScreen(
                                 tecnic = tecnic,
                                 oficines = ui.oficines,
                                 onToggleActiu = { viewModel.toggleActiu(tecnic) },
-                                onOpenDetail = { onOpenDetail(tecnic.id) }
+                                onOpenDetail = { onOpenDetail(tecnic.id) },
+                                onResetPassword = { viewModel.showPasswordDialog(tecnic) }
                             )
                         }
                     }
@@ -81,6 +82,22 @@ internal fun TecnicManagementScreen(
                 onDismiss = viewModel::hideCreateDialog
             )
         }
+
+        // Dialog reset password
+        val pwTecnic = ui.passwordTecnic
+        if (ui.showPasswordDialog && pwTecnic != null) {
+            ResetPasswordDialog(
+                tecnicNom = pwTecnic.nom,
+                tecnicEmail = pwTecnic.email ?: "-",
+                password = ui.resetPassword,
+                confirmPassword = ui.resetPasswordConfirm,
+                isResetting = ui.isResettingPassword,
+                onPasswordChange = viewModel::onResetPassword,
+                onConfirmChange = viewModel::onResetPasswordConfirm,
+                onConfirm = viewModel::confirmResetPassword,
+                onDismiss = viewModel::hidePasswordDialog
+            )
+        }
     }
 }
 
@@ -89,7 +106,8 @@ private fun TecnicCard(
     tecnic: TecnicDto,
     oficines: List<OficinaDto>,
     onToggleActiu: () -> Unit,
-    onOpenDetail: () -> Unit
+    onOpenDetail: () -> Unit,
+    onResetPassword: () -> Unit
 ) {
     val oficinaNom = oficines.find { it.id == tecnic.oficina_id }?.nom ?: tecnic.oficina_id
 
@@ -107,6 +125,8 @@ private fun TecnicCard(
                     AssistChip(onClick = {}, label = { Text(oficinaNom) })
                     if (tecnic.user_id != null) {
                         AssistChip(onClick = {}, label = { Text("Amb login") })
+                    } else {
+                        AssistChip(onClick = {}, label = { Text("Sense login") })
                     }
                 }
             }
@@ -114,6 +134,9 @@ private fun TecnicCard(
                 Switch(checked = tecnic.actiu, onCheckedChange = { onToggleActiu() })
                 Text(if (tecnic.actiu) "Actiu" else "Inactiu", style = MaterialTheme.typography.labelSmall)
                 TextButton(onClick = onOpenDetail) { Text("Detalls") }
+                if (tecnic.user_id != null) {
+                    TextButton(onClick = onResetPassword) { Text("Password") }
+                }
             }
         }
     }
@@ -169,3 +192,59 @@ private fun CreateTecnicDialog(
     )
 }
 
+@Composable
+private fun ResetPasswordDialog(
+    tecnicNom: String,
+    tecnicEmail: String,
+    password: String,
+    confirmPassword: String,
+    isResetting: Boolean,
+    onPasswordChange: (String) -> Unit,
+    onConfirmChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Canviar password") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Tecnic: $tecnicNom", style = MaterialTheme.typography.bodyMedium)
+                Text("Email: $tecnicEmail", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = onPasswordChange,
+                    label = { Text("Nou password (minim 6 caracters)") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = onConfirmChange,
+                    label = { Text("Confirmar password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (password.isNotEmpty() && confirmPassword.isNotEmpty() && password != confirmPassword) {
+                    Text(
+                        "Els passwords no coincideixen",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                if (isResetting) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onConfirm, enabled = !isResetting) { Text("Canviar") }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss, enabled = !isResetting) { Text("Cancel·lar") }
+        }
+    )
+}

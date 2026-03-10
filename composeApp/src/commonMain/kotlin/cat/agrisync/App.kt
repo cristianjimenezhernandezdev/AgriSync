@@ -31,6 +31,7 @@ import cat.agrisync.data.AuthState
 import cat.agrisync.data.EnvConfig
 import cat.agrisync.data.OficinaDto
 import cat.agrisync.ui.LoginScreen
+import cat.agrisync.ui.OficinaManagementScreen
 import cat.agrisync.ui.ProfileScreen
 import cat.agrisync.ui.TecnicDetailScreen
 import cat.agrisync.ui.TecnicManagementScreen
@@ -42,6 +43,8 @@ import cat.agrisync.ui.TitularsScreen
 import cat.agrisync.ui.navigation.Screen
 import cat.agrisync.viewmodel.HomeViewModel
 import cat.agrisync.viewmodel.LoginViewModel
+import cat.agrisync.viewmodel.OficinaManagementViewModel
+import cat.agrisync.viewmodel.ProfileViewModel
 import cat.agrisync.viewmodel.TecnicDetailViewModel
 import cat.agrisync.viewmodel.TecnicManagementViewModel
 import cat.agrisync.viewmodel.TerraManagementViewModel
@@ -135,6 +138,7 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                         TextButton(onClick = { currentScreen = Screen.TitularManagement }) { Text("Gestio Titulars") }
                         TextButton(onClick = { currentScreen = Screen.TerraManagement }) { Text("Terres") }
                         TextButton(onClick = { currentScreen = Screen.TecnicManagement }) { Text("Tecnics") }
+                        TextButton(onClick = { currentScreen = Screen.OficinaManagement }) { Text("Oficines") }
                     }
                     TextButton(onClick = { currentScreen = Screen.Profile }) { Text("Perfil") }
                 }
@@ -148,9 +152,9 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
         Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             when (val screen = currentScreen) {
                 Screen.TitularsHome -> {
-                    val vm = remember { HomeViewModel(services.accessRepository) }
-                    DisposableEffect(Unit) { onDispose { vm.clear() } }
-                    LaunchedEffect(Unit) { vm.load() }
+                    val vm = remember(data.tecnic.id) { HomeViewModel(services.accessRepository, data.tecnic) }
+                    DisposableEffect(data.tecnic.id) { onDispose { vm.clear() } }
+                    LaunchedEffect(data.tecnic.id) { vm.load() }
                     TitularsScreen(
                         viewModel = vm,
                         onOpenAgricola = { currentScreen = Screen.TitularAgricola(it) },
@@ -159,7 +163,12 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                 }
 
                 Screen.Profile -> {
+                    val vm = remember(data.tecnic.id) {
+                        ProfileViewModel(data.tecnic, services.tecnicRepository, services.authService)
+                    }
+                    DisposableEffect(data.tecnic.id) { onDispose { vm.clear() } }
                     ProfileScreen(
+                        viewModel = vm,
                         tecnic = data.tecnic,
                         oficina = oficina,
                         onBack = { currentScreen = Screen.TitularsHome }
@@ -222,6 +231,16 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                     DisposableEffect(Unit) { onDispose { vm.clear() } }
                     LaunchedEffect(Unit) { vm.load() }
                     TerraManagementScreen(
+                        viewModel = vm,
+                        onBack = { currentScreen = Screen.TitularsHome }
+                    )
+                }
+
+                Screen.OficinaManagement -> {
+                    val vm = remember { OficinaManagementViewModel(services.oficinaRepository) }
+                    DisposableEffect(Unit) { onDispose { vm.clear() } }
+                    LaunchedEffect(Unit) { vm.load() }
+                    OficinaManagementScreen(
                         viewModel = vm,
                         onBack = { currentScreen = Screen.TitularsHome }
                     )
