@@ -1,0 +1,95 @@
+package cat.agrisync.data
+
+import kotlinx.serialization.Serializable
+
+internal class TitularManagementRepository(private val restClient: RestClient) {
+
+    // ── Titulars ──
+
+    internal suspend fun listAll(): List<TitularDto> {
+        return restClient.get("titular", "?select=id,nif,nom_rao,created_at,created_by,updated_at,updated_by&order=nom_rao")
+    }
+
+    internal suspend fun create(body: TitularCreateRequest): TitularDto {
+        val result: List<TitularDto> = restClient.post("titular", body)
+        return result.first()
+    }
+
+    internal suspend fun update(titularId: String, body: TitularUpdateRequest): TitularDto {
+        val q = "?id=eq.$titularId"
+        val result: List<TitularDto> = restClient.patch("titular", body, q)
+        return result.first()
+    }
+
+    internal suspend fun delete(titularId: String) {
+        restClient.delete("titular", "?id=eq.$titularId")
+    }
+
+    // ── Terres ──
+
+    internal suspend fun listTerres(titularId: String? = null): List<TerraFullDto> {
+        val filter = if (titularId != null) "&titular_id=eq.$titularId" else ""
+        val q = "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,superficie,created_at,updated_at,titular:titular_id(id,nom_rao,nif)&order=codi_sigpac_complet$filter"
+        return restClient.get("terra", q)
+    }
+
+    internal suspend fun createTerra(body: TerraCreateRequest): TerraFullDto {
+        val result: List<TerraFullDto> = restClient.post(
+            "terra",
+            body,
+            "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,superficie,created_at,updated_at,titular:titular_id(id,nom_rao,nif)"
+        )
+        return result.first()
+    }
+
+    internal suspend fun updateTerra(terraId: String, body: TerraUpdateFullRequest): TerraFullDto {
+        val q = "?id=eq.$terraId&select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,superficie,created_at,updated_at,titular:titular_id(id,nom_rao,nif)"
+        val result: List<TerraFullDto> = restClient.patch("terra", body, q)
+        return result.first()
+    }
+
+    internal suspend fun deleteTerra(terraId: String) {
+        restClient.delete("terra", "?id=eq.$terraId")
+    }
+}
+
+// ── Models específics per terres ──
+
+@Serializable
+data class TerraFullDto(
+    val id: String,
+    val titular_id: String? = null,
+    val mun_codi: String? = null,
+    val poligon: Int? = null,
+    val parcela: Int? = null,
+    val recinte: Int? = null,
+    val codi_sigpac_complet: String? = null,
+    val superficie: Double? = null,
+    val created_at: String? = null,
+    val updated_at: String? = null,
+    val titular: TitularRefDto? = null
+)
+
+@Serializable
+data class TitularRefDto(
+    val id: String,
+    val nom_rao: String? = null,
+    val nif: String? = null
+)
+
+@Serializable
+data class TerraCreateRequest(
+    val titular_id: String? = null,
+    val mun_codi: String,
+    val poligon: Int,
+    val parcela: Int,
+    val recinte: Int,
+    val superficie: Double
+)
+
+@Serializable
+data class TerraUpdateFullRequest(
+    val titular_id: String? = null,
+    val superficie: Double? = null
+)
+
