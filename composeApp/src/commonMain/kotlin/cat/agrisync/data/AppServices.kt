@@ -6,7 +6,8 @@ internal class AppServices private constructor(
     val agricolaRepository: AgricolaRepository,
     val ramaderRepository: RamaderRepository,
     val oficinaRepository: OficinaRepository,
-    val tecnicRepository: TecnicRepository
+    val tecnicRepository: TecnicRepository,
+    val titularManagementRepository: TitularManagementRepository
 ) {
     companion object {
         internal fun create(config: SupabaseConfig): AppServices {
@@ -20,7 +21,8 @@ internal class AppServices private constructor(
                 agricolaRepository = AgricolaRepository(restClient),
                 ramaderRepository = RamaderRepository(restClient),
                 oficinaRepository = OficinaRepository(restClient),
-                tecnicRepository = TecnicRepository(restClient, httpClient, config)
+                tecnicRepository = TecnicRepository(restClient, httpClient, config),
+                titularManagementRepository = TitularManagementRepository(restClient)
             )
         }
     }

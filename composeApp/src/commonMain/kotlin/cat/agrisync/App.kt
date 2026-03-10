@@ -34,7 +34,9 @@ import cat.agrisync.ui.LoginScreen
 import cat.agrisync.ui.ProfileScreen
 import cat.agrisync.ui.TecnicDetailScreen
 import cat.agrisync.ui.TecnicManagementScreen
+import cat.agrisync.ui.TerraManagementScreen
 import cat.agrisync.ui.TitularAgricolaScreen
+import cat.agrisync.ui.TitularManagementScreen
 import cat.agrisync.ui.TitularRamaderScreen
 import cat.agrisync.ui.TitularsScreen
 import cat.agrisync.ui.navigation.Screen
@@ -42,7 +44,9 @@ import cat.agrisync.viewmodel.HomeViewModel
 import cat.agrisync.viewmodel.LoginViewModel
 import cat.agrisync.viewmodel.TecnicDetailViewModel
 import cat.agrisync.viewmodel.TecnicManagementViewModel
+import cat.agrisync.viewmodel.TerraManagementViewModel
 import cat.agrisync.viewmodel.TitularAgricolaViewModel
+import cat.agrisync.viewmodel.TitularManagementViewModel
 import cat.agrisync.viewmodel.TitularRamaderViewModel
 
 @Composable
@@ -128,6 +132,8 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                     Text("AgriSync", style = MaterialTheme.typography.titleLarge)
                     TextButton(onClick = { currentScreen = Screen.TitularsHome }) { Text("Titulars") }
                     if (canManageTecnics) {
+                        TextButton(onClick = { currentScreen = Screen.TitularManagement }) { Text("Gestio Titulars") }
+                        TextButton(onClick = { currentScreen = Screen.TerraManagement }) { Text("Terres") }
                         TextButton(onClick = { currentScreen = Screen.TecnicManagement }) { Text("Tecnics") }
                     }
                     TextButton(onClick = { currentScreen = Screen.Profile }) { Text("Perfil") }
@@ -198,6 +204,26 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                     TecnicDetailScreen(
                         viewModel = vm,
                         onBack = { currentScreen = Screen.TecnicManagement }
+                    )
+                }
+
+                Screen.TitularManagement -> {
+                    val vm = remember { TitularManagementViewModel(services.titularManagementRepository) }
+                    DisposableEffect(Unit) { onDispose { vm.clear() } }
+                    LaunchedEffect(Unit) { vm.load() }
+                    TitularManagementScreen(
+                        viewModel = vm,
+                        onBack = { currentScreen = Screen.TitularsHome }
+                    )
+                }
+
+                Screen.TerraManagement -> {
+                    val vm = remember { TerraManagementViewModel(services.titularManagementRepository) }
+                    DisposableEffect(Unit) { onDispose { vm.clear() } }
+                    LaunchedEffect(Unit) { vm.load() }
+                    TerraManagementScreen(
+                        viewModel = vm,
+                        onBack = { currentScreen = Screen.TitularsHome }
                     )
                 }
 
