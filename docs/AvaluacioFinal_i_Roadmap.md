@@ -10,13 +10,13 @@ La conclusio actual és aquesta:
 
 - sí, el projecte compleix bé els objectius principals del MVP
 - sí, es pot defensar com a projecte funcional i coherent
-- sí, després de les iteracions 1, 2, 3 i 4 ha quedat més sòlid, més complet i més presentable
-- el que queda ara és sobretot valor afegit funcional, no mancances greus del nucli ni de l'experiència bàsica d'ús
+- sí, després de les iteracions 1, 2, 3, 4 i 5 ha quedat més sòlid, més complet i més presentable
+- el que queda ara és sobretot tancament fi i valor afegit opcional, no mancances greus del nucli ni de l'experiència bàsica d'ús
 
 En altres paraules:
 
 - com a MVP acadèmic, el projecte ja està clarament tancat i defensable
-- si es vol pujar el nivell, la següent passa passa per càlculs, resums i sortides amb més valor funcional
+- si es vol pujar el nivell, les següents passes ja van cap a producte més rodó, automatització o reducció de dependència de `service_role`
 
 ## 3. Què compleix bé ara mateix
 
@@ -39,6 +39,8 @@ Actualment el projecte ja resol bé aquests punts:
 - alta i baixa directa de dades dins dels mòduls agrícola i ramader
 - login més clar i més guiada la primera experiència d'ús
 - estats buits, errors i textos d'ajuda més coherents a les pantalles principals
+- pantalla de resum per titular orientada a la preparació de la DAN real
+- càlculs derivats visibles per ajudar en la revisió abans de presentar
 
 Per tant, el nucli del projecte, la part administrativa, la part operativa principal i la UX essencial ja estan assolits.
 
@@ -59,14 +61,16 @@ Per què:
 - ja no depèn de claus sensibles hardcodejades
 - l'administració bàsica i l'operació principal es poden fer des de l'app
 - la UX ja és prou clara per una defensa i una demostració sense sensació de prototip cru
+- l'usuari ja pot veure en una sola finestra el resum útil per preparar la declaració externa
 
 ### 4.2. Si el criteri és producte més rodó o entrega excel·lent
 
 Encara hi ha millores clares:
 
-- afegir càlculs derivats, resums o exportacions amb més valor funcional
-- connectar millor el model de dades amb indicadors finals del procés real
-- fer una passada de poliment visual encara més fina si es vol una percepció més "producte"
+- exportació o impressió del resum DAN
+- modelatge de més camps finals de les DAN reals
+- eliminació de dependència de `service_role` al client
+- utilitats de còpia ràpida o importació des de fulls de càlcul
 
 ## 5. Estat dels findings principals
 
@@ -98,13 +102,16 @@ Estat: resolt a la iteració 3.
 
 Estat: resolt a la iteració 4 en els punts de més impacte.
 
-Ara s'ha millorat especialment:
+### 5.8. Falta d'una visió de conjunt per preparar la DAN
 
-- la pantalla de login
-- la cerca i la presentació de la home de titulars
-- els estats buits i d'error de les pantalles principals
-- les capçaleres de secció i els textos d'ajuda als mòduls agrícola i ramader
-- la coherència visual dels formularis nous dins dels mòduls
+Estat: resolt a la iteració 5.
+
+Ara l'app ja incorpora:
+
+- accés directe a `Preparar DAN` des de la home de titulars
+- resum per titular amb mètriques derivades
+- vista unificada de dades agrícoles i ramaderes
+- bloc explícit de camps que encara s'han de revisar manualment
 
 ## 6. Veredicte recomanat
 
@@ -114,9 +121,9 @@ Ja el pots defensar com a MVP acadèmic ben tancat.
 
 ### Si vols continuar evolucionant-lo
 
-La següent iteració amb més valor ara és la 5:
+La següent iteració amb més valor ara és la 6:
 
-- càlculs derivats, resums, informes o importació
+- exportació, automatització parcial o reducció de dependències d'administració
 
 ## 7. Estat del roadmap
 
@@ -163,31 +170,60 @@ Nota sobre BDD:
 
 - no ha calgut tocar la base de dades tampoc en aquesta iteració
 
-### Iteracio 5: Valor afegit funcional
+### Iteracio 5: Valor afegit funcional orientat a la DAN real
 
-Estat: següent iteració recomanada.
+Estat: completada.
 
 Objectiu:
 
-- acostar el projecte a una versió més útil professionalment
+- acostar el projecte a una versió més útil professionalment sense intentar encara generar el document oficial
 
-Tasques:
+S'ha fet:
 
-- càlculs derivats com `kg N/ha` o `kg N/UF`
-- resums per titular o campanya
-- informes exportables
-- importació des de fulls de càlcul
+- revisar els PDFs reals `docs/DANAgricolaExemple.pdf` i `docs/DANRamaderaExemple.pdf`
+- identificar quines dades del model actual són realment útils per al tècnic quan prepara la declaració
+- afegir una nova pantalla `Preparar DAN` accessible des de cada titular
+- construir una capa de lectura específica amb `DanPreparationRepository`
+- afegir càlculs derivats com `kg N/ha`, `kg N/UF`, totals i campanyes detectades
+- mostrar en una sola vista terres, aplicacions, granges, censos i entregues
+- afegir un bloc final de comprovacions manuals perquè quedi clar què encara no modela el MVP
+
+Resultat:
+
+- l'app ja no obliga a saltar entre mòduls per preparar la presentació
+- el tècnic té una vista resum coherent amb la lògica de les DAN reals
+- el projecte guanya molt valor de defensa perquè connecta clarament la persistència interna amb un procés administratiu real
+
+Nota sobre BDD:
+
+- no ha calgut tocar la base de dades en aquesta iteració
+- el model existent ja oferia la informació mínima necessària per construir el resum
+
+### Iteracio 6: Tancament opcional de nivell alt
+
+Estat: opcional futura.
+
+Objectiu:
+
+- passar d'un bon resum funcional a una experiència encara més propera al flux final de presentació
+
+Tasques possibles:
+
+- afegir botons de còpia ràpida o exportació a text/PDF simple
+- modelar més camps finals que avui surten al bloc de comprovació manual
+- separar les operacions administratives del client per poder prescindir de `service_role` a l'executable
+- estudiar una petita importació des de full de càlcul
 
 ## 8. Quines millores faria jo abans d'una entrega encara més forta
 
 Ara mateix prioritzaria exactament això:
 
-1. afegir algun càlcul derivat visible a la UI
-2. construir un resum per titular o campanya
-3. valorar exportació o informe simple
+1. afegir exportació o còpia ràpida del resum DAN
+2. decidir si cal modelar algun camp final més dels PDFs reals
+3. valorar si vols conservar o no la gestió administrativa completa dins del client
 
 ## 9. Resum final
 
-El projecte, en l'estat actual, compleix bé els objectius del MVP i es pot defensar amb criteri com a projecte final de curs funcional. Les quatre primeres iteracions del roadmap ja han reforçat els punts que feien més mal: seguretat bàsica, validació, administració, operativa real dels mòduls i experiència d'usuari.
+El projecte, en l'estat actual, compleix bé els objectius del MVP i es pot defensar amb criteri com a projecte final de curs funcional. Les iteracions 1, 2, 3, 4 i 5 han reforçat els punts que feien més mal: seguretat bàsica, validació, administració, operativa real dels mòduls, experiència d'usuari i connexió directa amb el procés real de preparació de la DAN.
 
-A partir d'aquí, el que queda ja no és tapar mancances crítiques, sinó afegir més valor funcional al que ja està construït.
+A partir d'aquí, el que queda ja no és tapar mancances crítiques, sinó decidir si vols invertir una última iteració en automatització, exportació o refinament de producte.

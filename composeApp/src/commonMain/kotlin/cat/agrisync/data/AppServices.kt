@@ -5,6 +5,7 @@ internal class AppServices private constructor(
     val accessRepository: AccessRepository,
     val agricolaRepository: AgricolaRepository,
     val ramaderRepository: RamaderRepository,
+    val danPreparationRepository: DanPreparationRepository,
     val oficinaRepository: OficinaRepository,
     val tecnicRepository: TecnicRepository,
     val titularManagementRepository: TitularManagementRepository
@@ -28,6 +29,7 @@ internal class AppServices private constructor(
                 accessRepository = AccessRepository(userRestClient),
                 agricolaRepository = AgricolaRepository(userRestClient),
                 ramaderRepository = RamaderRepository(userRestClient),
+                danPreparationRepository = DanPreparationRepository(userRestClient),
                 oficinaRepository = OficinaRepository(userRestClient),
                 tecnicRepository = TecnicRepository(userRestClient, httpClient, config),
                 titularManagementRepository = TitularManagementRepository(userRestClient)

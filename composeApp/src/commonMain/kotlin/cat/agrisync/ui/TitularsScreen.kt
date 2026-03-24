@@ -31,6 +31,7 @@ import cat.agrisync.viewmodel.HomeViewModel
 @Composable
 internal fun TitularsScreen(
     viewModel: HomeViewModel,
+    onOpenDanPreparation: (String) -> Unit,
     onOpenAgricola: (String) -> Unit,
     onOpenRamader: (String) -> Unit
 ) {
@@ -98,6 +99,7 @@ internal fun TitularsScreen(
                     items(uiState.pageItems, key = { it.titular_id }) { item ->
                         TitularCard(
                             row = item,
+                            onOpenDanPreparation = onOpenDanPreparation,
                             onOpenAgricola = onOpenAgricola,
                             onOpenRamader = onOpenRamader
                         )
@@ -146,6 +148,7 @@ private fun MessageCard(title: String, message: String, isError: Boolean = false
 @Composable
 private fun TitularCard(
     row: TitularAccessRow,
+    onOpenDanPreparation: (String) -> Unit,
     onOpenAgricola: (String) -> Unit,
     onOpenRamader: (String) -> Unit
 ) {
@@ -162,6 +165,7 @@ private fun TitularCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AssistChip(onClick = { onOpenDanPreparation(row.titular_id) }, label = { Text("Preparar DAN") })
                 if (row.can_agricola) {
                     AssistChip(onClick = { onOpenAgricola(row.titular_id) }, label = { Text("Agricola") })
                 }

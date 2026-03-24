@@ -31,6 +31,7 @@ import cat.agrisync.data.AuthState
 import cat.agrisync.data.EnvConfig
 import cat.agrisync.data.OficinaDto
 import cat.agrisync.ui.LoginScreen
+import cat.agrisync.ui.DanPreparationScreen
 import cat.agrisync.ui.OficinaManagementScreen
 import cat.agrisync.ui.ProfileScreen
 import cat.agrisync.ui.TecnicDetailScreen
@@ -42,6 +43,7 @@ import cat.agrisync.ui.TitularRamaderScreen
 import cat.agrisync.ui.TitularsScreen
 import cat.agrisync.ui.navigation.Screen
 import cat.agrisync.viewmodel.HomeViewModel
+import cat.agrisync.viewmodel.DanPreparationViewModel
 import cat.agrisync.viewmodel.LoginViewModel
 import cat.agrisync.viewmodel.OficinaManagementViewModel
 import cat.agrisync.viewmodel.ProfileViewModel
@@ -157,8 +159,19 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                     LaunchedEffect(data.tecnic.id) { vm.load() }
                     TitularsScreen(
                         viewModel = vm,
+                        onOpenDanPreparation = { currentScreen = Screen.DanPreparation(it) },
                         onOpenAgricola = { currentScreen = Screen.TitularAgricola(it) },
                         onOpenRamader = { currentScreen = Screen.TitularRamader(it) }
+                    )
+                }
+
+                is Screen.DanPreparation -> {
+                    val vm = remember(screen.titularId) { DanPreparationViewModel(services.danPreparationRepository) }
+                    DisposableEffect(screen.titularId) { onDispose { vm.clear() } }
+                    LaunchedEffect(screen.titularId) { vm.load(screen.titularId) }
+                    DanPreparationScreen(
+                        viewModel = vm,
+                        onBack = { currentScreen = Screen.TitularsHome }
                     )
                 }
 

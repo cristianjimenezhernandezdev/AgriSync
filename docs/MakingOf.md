@@ -11,15 +11,19 @@ L'objectiu del projecte és construir un MVP funcional que demostri:
 - control d'accés per rols i permisos reals
 - separació entre mòdul agrícola i mòdul ramader
 - arquitectura prou neta per poder créixer en el futur
+- suport pràctic al procés real de preparació de la DAN
 
 ## 2. Idea funcional del programa
 
 El concepte central del sistema és el `titular`. Un titular és la persona o entitat sobre la qual es gestionen dades agrícoles, ramaderes o de tots dos àmbits.
 
-A partir del titular, l'aplicació es divideix en dos grans blocs:
+A partir del titular, l'aplicació es divideix en tres blocs operatius:
 
+- home de titulars i navegació
 - bloc agrícola
 - bloc ramader
+
+A partir de la iteració 5 també hi ha una pantalla específica de preparació DAN, pensada no per editar dades noves, sinó per concentrar i resumir la informació que després s'ha de traslladar a l'aplicatiu extern oficial.
 
 Quan un usuari entra al sistema:
 
@@ -27,6 +31,7 @@ Quan un usuari entra al sistema:
 2. el sistema recupera el seu perfil tècnic
 3. es determina el seu rol i els titulars assignats
 4. es mostren només les dades que pot consultar o editar
+5. des de cada titular pot obrir el resum de preparació DAN i veure les dades ja estructurades per transcripció manual
 
 ## 3. Tecnologies escollides
 
@@ -67,6 +72,7 @@ La part client està dins de `composeApp` i s'encarrega de:
 - mostrar errors, càrregues i resultats
 - confirmar accions destructives abans d'executar-les
 - orientar l'usuari amb textos d'ajuda, placeholders i estats buits més clars
+- resumir la informació de cada titular per facilitar la preparació externa de la DAN
 
 ### 4.2. Capa de dades
 
@@ -78,9 +84,12 @@ Entre la UI i Supabase hi ha una capa pròpia formada per:
 - `AccessRepository`
 - `AgricolaRepository`
 - `RamaderRepository`
+- `DanPreparationRepository`
 - `TecnicRepository`
 - `OficinaRepository`
 - `TitularManagementRepository`
+
+La incorporació de `DanPreparationRepository` a la iteració 5 és rellevant perquè encapsula consultes de lectura orientades a resum i no a CRUD. És a dir, la seva funció principal és agrupar dades de `titular`, `terra`, `aplicacions_fertilitzants`, `granja`, `granja_bestiar` i `entrega_dejeccions` per mostrar-les d'una manera més útil funcionalment.
 
 ### 4.3. Base de dades
 
@@ -92,6 +101,8 @@ La base de dades es defineix a `SQLAgriSync.sql` i inclou:
 - triggers d'auditoria
 - funcions helper de permisos
 - RLS i policies per operació
+
+La iteració 5 no ha requerit refer la BDD. L'esquema actual ja contenia les dades mínimes necessàries per construir el resum DAN.
 
 ## 5. Estructura real del codi
 
@@ -112,6 +123,12 @@ Distribució principal:
 - `ui/`: pantalles Compose
 - `ui/navigation/Screen.kt`: mapa de pantalles
 
+A la iteració 5 s'han afegit específicament:
+
+- `data/DanPreparationRepository.kt`
+- `viewmodel/DanPreparationViewModel.kt`
+- `ui/DanPreparationScreen.kt`
+
 ## 6. Ajust del codi a l'esquema actual
 
 L'aplicació actual està alineada amb l'esquema SQL simplificat del MVP.
@@ -122,6 +139,7 @@ Això significa que:
 - ja no depèn de la vista `v_titular_access`
 - el codi actiu no depèn de `cessio_terra` ni `emmagatzematge`
 - el model funcional actiu es concentra en oficines, tècnics, titulars, terres, DAN, aplicacions, granges, bestiar, fases i entregues
+- la nova pantalla DAN reaprofita exactament aquest model i hi afegeix càlculs derivats a nivell d'aplicació
 
 ## 7. Flux principal del programa
 
@@ -289,7 +307,45 @@ La iteració 4 ha afegit:
 - estats buits que orienten sobre el següent pas
 - missatges d'error i ajuda més coherents entre pantalles
 
-### 10.7. Preparació per a l'entrega
+### 10.7. Preparació DAN a partir de dades reals
+
+La iteració 5 és la que connecta millor el projecte amb el procés real de treball.
+
+La nova pantalla de preparació DAN s'ha dissenyat revisant dos PDFs reals deixats a `docs/`:
+
+- `docs/DANAgricolaExemple.pdf`
+- `docs/DANRamaderaExemple.pdf`
+
+A partir d'aquests documents s'ha detectat quina informació és especialment rellevant per a un tècnic quan ja està a punt de presentar la declaració:
+
+- identificació del titular
+- identificació de terres i recintes
+- campanya
+- aplicacions amb data, `kg N`, `UF`, `kg N/ha` i `kg N/UF`
+- marques oficials de granges
+- censos per bestiar i fase
+- entregues de dejeccions
+- totals que ajudin a comprovar coherència abans de traslladar dades
+
+La decisió funcional ha estat important: en lloc d'intentar generar ja un PDF oficial, el MVP ofereix una finestra de suport a la transcripció manual, que és més realista per al nivell del projecte i molt útil en una defensa acadèmica perquè explica clarament què es guarda, què es calcula i què encara s'ha de revisar fora de l'app.
+
+### 10.8. Càlculs derivats visibles
+
+La nova pantalla DAN no només llista dades, sinó que calcula:
+
+- total d'hectàrees del titular
+- total de `kg N`
+- total d'`UF`
+- `kg N/ha`
+- `kg N/UF`
+- total de granges
+- total de cens
+- total de quantitat entregada
+- campanyes detectades
+
+Aquests càlculs es fan a `DanPreparationViewModel` i no necessiten noves columnes a la BDD.
+
+### 10.9. Preparació per a l'entrega
 
 La millora posterior a la iteració 4 resol específicament la forma d'entregar el projecte en `.exe`.
 
@@ -312,6 +368,7 @@ També incorpora:
 - cerca més guiada
 - resum visual dels resultats
 - millor estat buit i millor estat d'error
+- accés directe a `Preparar DAN` per cada titular visible
 
 ### 11.2. Mòdul agrícola
 
@@ -332,15 +389,31 @@ Carrega i permet gestionar:
 - catàlegs de bestiar i fase productiva
 - terres del titular per oferir destí d'entrega
 
-### 11.4. Gestió de titulars
+### 11.4. Pantalla de preparació DAN
+
+Aquesta nova finestra té un paper diferent dels altres mòduls.
+
+No està pensada per editar massivament, sinó per presentar la informació de forma útil per omplir l'aplicatiu extern de la declaració.
+
+Conté:
+
+- resum del titular
+- mètriques calculades
+- bloc agrícola amb terres i aplicacions
+- bloc ramader amb granges, censos i entregues
+- bloc final de camps a revisar manualment
+
+Aquest últim bloc és especialment defensable perquè deixa clar el límit del MVP: l'app ajuda molt a preparar la DAN, però encara no modela tots els camps finals dels documents oficials.
+
+### 11.5. Gestió de titulars
 
 Permet crear, editar, cercar i eliminar titulars.
 
-### 11.5. Gestió de terres
+### 11.6. Gestió de terres
 
 Permet alta, edició i eliminació de terres.
 
-### 11.6. Gestió de tècnics
+### 11.7. Gestió de tècnics
 
 Permet:
 
@@ -353,7 +426,7 @@ Permet:
 - intentar eliminar també el seu usuari d'Auth si tenia login associat
 - gestionar assignacions de titulars
 
-### 11.7. Gestió d'oficines
+### 11.8. Gestió d'oficines
 
 CRUD simple d'oficines.
 
@@ -386,6 +459,8 @@ Matís important de defensa:
 - dades de titulars
 - dades agrícoles
 - dades ramaderes
+- resum DAN per titular
+- mètriques derivades visibles
 - missatges d'èxit i error
 - diàlegs de confirmació en accions destructives
 - avisos contextuals i estats buits més útils
@@ -403,7 +478,7 @@ Matís important de defensa:
 - activació o desactivació de tècnics
 - sessió local guardada
 
-## 14. Relació amb el full de càlcul original
+## 14. Relació amb el full de càlcul original i amb les DAN reals
 
 El full Excel de partida i el model de dades no són una còpia 1:1. El projecte guarda les dades base i deixa com a derivats alguns valors.
 
@@ -415,6 +490,13 @@ Correspondències importants:
 - `ha` -> `terra.superficie` o suma de terres
 - `UF` -> `aplicacions_fertilitzants.uf`
 - `kg N` -> `aplicacions_fertilitzants.kg_n`
+- `kg N/ha` -> càlcul derivat a la pantalla de preparació DAN
+- `kg N/UF` -> càlcul derivat a la pantalla de preparació DAN
+
+La revisió dels PDFs reals també ha servit per separar dues coses:
+
+- dades que el sistema ja pot guardar i resumir bé
+- camps finals de document oficial que encara s'han d'omplir o comprovar manualment
 
 ## 15. Seed i proves
 
@@ -431,12 +513,11 @@ Usuaris de prova previstos al seed:
 ## 16. Limitacions actuals del MVP
 
 - no hi ha importador automàtic des d'Excel
-- no hi ha informes oficials finals ni PDF
-- no hi ha dashboard de càlculs agregats
-- alguns camps del full original encara no estan modelats
+- no hi ha generació del PDF oficial final
+- alguns camps finals de les DAN reals encara no estan modelats
 - la `service_role` continua sent necessària per a funcions administratives avançades
 - `agrisync.properties` resol bé l'entrega acadèmica, però no seria la millor estratègia per a un producte final distribuït a gran escala
-- els càlculs derivats i els resums encara no formen part de la UI
+- la pantalla de preparació DAN ajuda a transcriure, però no substitueix encara l'aplicatiu extern ni automatitza la presentació
 
 ## 17. Estat actual verificat
 
@@ -451,10 +532,11 @@ Amb l'esquema SQL simplificat i els ajustos realitzats:
 - els mòduls agrícola i ramader ja permeten altes i baixes dels principals registres de treball
 - l'experiència d'usuari al login i a les pantalles principals és més clara i més guiada
 - l'app ja està preparada per ser entregada amb `.exe` + `agrisync.properties`
-- les iteracions 2, 3 i 4, i la millora d'entrega, s'han pogut resoldre sense refer la BDD
+- la iteració 5 ha afegit una finestra específica de preparació DAN basada en PDFs reals de declaracions ja presentades
+- la iteració 5 s'ha pogut resoldre sense refer la BDD
 
 ## 18. Resum final
 
 AgriSync és un MVP funcional de gestió agrària centrat en la DAN. Combina autenticació, model relacional, permisos reals, client desktop i una estructura neta per capes.
 
-Des del punt de vista de defensa del projecte, el valor principal és que no és només una maqueta visual: és una aplicació amb autenticació real, persistència real i control d'accés real sobre dades de negoci. A més, ara també està preparada per a una entrega acadèmica molt més pràctica gràcies al suport de configuració per fitxer.
+Des del punt de vista de defensa del projecte, el valor principal és que no és només una maqueta visual: és una aplicació amb autenticació real, persistència real i control d'accés real sobre dades de negoci. A més, ara també està preparada per a una entrega acadèmica molt més pràctica gràcies al suport de configuració per fitxer i incorpora una finestra específica que connecta clarament les dades del sistema amb el procés real de preparació de la DAN.

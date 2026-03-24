@@ -5,6 +5,7 @@ sealed interface Screen {
     data object Login : Screen
     data object TitularsHome : Screen
     data object Profile : Screen
+    data class DanPreparation(val titularId: String) : Screen
     data class TitularAgricola(val titularId: String) : Screen
     data class TitularRamader(val titularId: String) : Screen
     data object TecnicManagement : Screen
