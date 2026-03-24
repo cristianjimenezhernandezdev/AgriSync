@@ -50,6 +50,19 @@ Si has carregat el `seed_complet.sql`, els usuaris de prova previstos són aques
 - `ramader.test@agrisync.com` / `ramader1234`
 - `lectura.test@agrisync.com` / `lectura1234`
 
+Si has carregat `seed_final_demo.sql`, tindràs una demo molt més rica, amb titulars compartits entre tècnics de diverses oficines. Usuaris recomanats:
+
+- `admin.demo@agrisync.com` / `admin1234`
+- `manager.lleida.demo@agrisync.com` / `lleida1234`
+- `manager.girona.demo@agrisync.com` / `girona1234`
+- `sergi.agri.demo@agrisync.com` / `sergi1234`
+- `marta.ram.demo@agrisync.com` / `marta1234`
+- `laia.comu.demo@agrisync.com` / `laia1234`
+- `nil.shared.demo@agrisync.com` / `nil1234`
+- `joan.agri.demo@agrisync.com` / `joan1234`
+- `anna.ram.demo@agrisync.com` / `anna1234`
+- `lectura.demo@agrisync.com` / `lectura1234`
+
 ## 5. Inici de sessió
 
 Quan s'obre el programa apareix la pantalla de login.
@@ -522,3 +535,4 @@ Flux recomanat d'ús:
 8. comprova els totals i les dades per trasllat
 9. usa el bloc de comprovacions manuals com a checklist final
 10. si ets administrador, usa `Tecnics` per donar altes, canviar passwords, assignar titulars o fer baixes
+

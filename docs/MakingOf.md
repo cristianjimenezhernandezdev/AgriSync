@@ -111,7 +111,9 @@ La part principal del projecte està en:
 - `composeApp/src/commonMain/kotlin/cat/agrisync`
 - `composeApp/src/jvmMain/kotlin/cat/agrisync`
 - `SQLAgriSync.sql`
+- `fix_permisos.sql`
 - `seed_complet.sql`
+- `seed_final_demo.sql`
 - `agrisync.properties.example`
 - `docs/`
 
@@ -500,7 +502,10 @@ La revisió dels PDFs reals també ha servit per separar dues coses:
 
 ## 15. Seed i proves
 
-Per poder provar l'aplicació amb dades reals del MVP, el projecte inclou `seed_complet.sql`.
+Per poder provar l'aplicació amb dades reals del MVP, el projecte inclou dos seeds útils:
+
+- `seed_complet.sql`: versió ràpida i bàsica per validar el MVP amb pocs usuaris
+- `seed_final_demo.sql`: versió ampliada amb diverses oficines, tècnics, titulars compartits entre oficines i DAN més completes
 
 Usuaris de prova previstos al seed:
 
@@ -509,6 +514,19 @@ Usuaris de prova previstos al seed:
 - `agricola.test@agrisync.com` / `agricola1234`
 - `ramader.test@agrisync.com` / `ramader1234`
 - `lectura.test@agrisync.com` / `lectura1234`
+
+Usuaris de prova del seed ampliat:
+
+- `admin.demo@agrisync.com` / `admin1234`
+- `manager.lleida.demo@agrisync.com` / `lleida1234`
+- `manager.girona.demo@agrisync.com` / `girona1234`
+- `sergi.agri.demo@agrisync.com` / `sergi1234`
+- `marta.ram.demo@agrisync.com` / `marta1234`
+- `laia.comu.demo@agrisync.com` / `laia1234`
+- `nil.shared.demo@agrisync.com` / `nil1234`
+- `joan.agri.demo@agrisync.com` / `joan1234`
+- `anna.ram.demo@agrisync.com` / `anna1234`
+- `lectura.demo@agrisync.com` / `lectura1234`
 
 ## 16. Limitacions actuals del MVP
 
@@ -533,6 +551,7 @@ Amb l'esquema SQL simplificat i els ajustos realitzats:
 - l'experiència d'usuari al login i a les pantalles principals és més clara i més guiada
 - l'app ja està preparada per ser entregada amb `.exe` + `agrisync.properties`
 - la iteració 5 ha afegit una finestra específica de preparació DAN basada en PDFs reals de declaracions ja presentades
+- el paquet SQL del projecte ha quedat reduït a quatre scripts coherents: esquema, fix de permisos, seed bàsic i seed final ampliat
 - la iteració 5 s'ha pogut resoldre sense refer la BDD
 
 ## 18. Resum final
@@ -540,3 +559,4 @@ Amb l'esquema SQL simplificat i els ajustos realitzats:
 AgriSync és un MVP funcional de gestió agrària centrat en la DAN. Combina autenticació, model relacional, permisos reals, client desktop i una estructura neta per capes.
 
 Des del punt de vista de defensa del projecte, el valor principal és que no és només una maqueta visual: és una aplicació amb autenticació real, persistència real i control d'accés real sobre dades de negoci. A més, ara també està preparada per a una entrega acadèmica molt més pràctica gràcies al suport de configuració per fitxer i incorpora una finestra específica que connecta clarament les dades del sistema amb el procés real de preparació de la DAN.
+

@@ -1,8 +1,12 @@
 -- =========================================================
 -- seed_complet.sql
--- Seed complet de proves per a l'esquema MVP actual d'AgriSync
+-- Seed basic de proves per a l'esquema MVP actual d'AgriSync
 -- Executa'l DESPRES de SQLAgriSync.sql al SQL Editor de Supabase
 -- =========================================================
+--
+-- Aquest seed es el paquet rapid per validar el MVP amb pocs usuaris.
+-- Si vols una demo mes rica, amb titulars compartits entre oficines i
+-- mes volum de dades semblant a produccio, fes servir seed_final_demo.sql.
 --
 -- IMPORTANT:
 --   Aquest script JA NO crea usuaris dins d'auth.users.

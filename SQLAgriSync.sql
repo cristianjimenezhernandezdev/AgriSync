@@ -12,7 +12,6 @@ drop view if exists public.v_titular_access cascade;
 drop function if exists public.get_my_tecnic() cascade;
 drop function if exists public.audit_fill_actor() cascade;
 drop function if exists public.current_oficina_id() cascade;
-drop function if exists public.current_tecnic_id() cascade;
 drop function if exists public.is_admin() cascade;
 drop function if exists public.is_oficina_manager() cascade;
 drop function if exists public.same_oficina(uuid) cascade;
@@ -39,14 +38,12 @@ drop table if exists public.fase_productiva cascade;
 drop table if exists public.bestiar cascade;
 drop table if exists public.granja cascade;
 drop table if exists public.aplicacions_fertilitzants cascade;
-drop table if exists public.cessio_terra cascade;
 drop table if exists public.terra cascade;
 drop table if exists public.dan_declaracio cascade;
 drop table if exists public.tecnic_titular cascade;
 drop table if exists public.titular cascade;
 drop table if exists public.tecnic cascade;
 drop table if exists public.oficina cascade;
-drop table if exists public.emmagatzematge cascade;
 
 drop type if exists public.scope_titular cascade;
 drop type if exists public.rol_global cascade;
@@ -913,8 +910,6 @@ using (
 -- Es mantenen només les entitats que la app actual fa servir.
 -- S'han tret elements que ara mateix no aporten valor directe:
 --   - public.v_titular_access
---   - public.cessio_terra
---   - public.emmagatzematge
 --   - helper public.current_tecnic_id()
 --
 -- Les columnes tipus "kg N/ha" o "kg N/UF" es poden calcular,

@@ -92,7 +92,9 @@ AgriSync/
 ├── docs/ # Documentació del projecte
 ├── composeApp/ # Aplicació Compose Multiplatform Desktop
 ├── SQLAgriSync.sql # Esquema SQL i permisos
-├── seed_complet.sql # Dades de prova del MVP
+├── fix_permisos.sql # Reaplica grants i execució de funcions helper
+├── seed_complet.sql # Seed bàsic de prova del MVP
+├── seed_final_demo.sql # Seed ampliat de demo gairebé com a producció
 ├── agrisync.properties.example # Plantilla de configuració per a l'exe
 ├── build.gradle.kts
 └── README.md
@@ -122,6 +124,13 @@ Inclou:
 - RLS policies
 - Neteja inicial d'objectes previs per recrear l'esquema
 - Esquema MVP simplificat sense elements fora d'ús
+
+Scripts SQL útils que es mantenen al projecte:
+
+- `SQLAgriSync.sql`: esquema principal
+- `fix_permisos.sql`: utilitat per reaplicar grants i execució de funcions helper
+- `seed_complet.sql`: seed ràpid amb pocs usuaris per validar el MVP
+- `seed_final_demo.sql`: seed ampliat amb diverses oficines, tècnics i titulars compartits entre oficines
 
 ## Configuracio de l'app
 

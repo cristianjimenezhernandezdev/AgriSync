@@ -352,9 +352,14 @@ Exemples:
 
 ## 14. Relació amb els usuaris de prova
 
-El `seed_complet.sql` està pensat perquè puguis provar diferents perfils.
+El projecte manté dos seeds útils per provar permisos.
 
-Usuaris de prova previstos:
+Seed bàsic:
+
+- `seed_complet.sql`
+- orientat a validar el MVP ràpidament amb pocs perfils
+
+Usuaris del seed bàsic:
 
 - `admin.test@agrisync.com` / `admin1234`
 - `manager.test@agrisync.com` / `manager1234`
@@ -362,7 +367,25 @@ Usuaris de prova previstos:
 - `ramader.test@agrisync.com` / `ramader1234`
 - `lectura.test@agrisync.com` / `lectura1234`
 
-Això et permet validar el comportament del sistema de permisos amb casos reals.
+Seed ampliat:
+
+- `seed_final_demo.sql`
+- orientat a provar titulars compartits entre tècnics i oficines diferents
+
+Usuaris del seed ampliat:
+
+- `admin.demo@agrisync.com` / `admin1234`
+- `manager.lleida.demo@agrisync.com` / `lleida1234`
+- `manager.girona.demo@agrisync.com` / `girona1234`
+- `sergi.agri.demo@agrisync.com` / `sergi1234`
+- `marta.ram.demo@agrisync.com` / `marta1234`
+- `laia.comu.demo@agrisync.com` / `laia1234`
+- `nil.shared.demo@agrisync.com` / `nil1234`
+- `joan.agri.demo@agrisync.com` / `joan1234`
+- `anna.ram.demo@agrisync.com` / `anna1234`
+- `lectura.demo@agrisync.com` / `lectura1234`
+
+Això et permet validar el comportament del sistema de permisos amb casos reals i també comprovar l'accés compartit a un mateix titular des de diverses oficines.
 
 ## 15. Valor del model
 
@@ -395,3 +418,4 @@ La combinació de:
 - `policies`
 
 permet un control d'accés robust i adequat per a un MVP acadèmic amb dades sensibles.
+
