@@ -14,6 +14,7 @@ Per poder fer servir l'aplicació necessites:
 - tenir un usuari vàlid a Supabase Auth
 - tenir un registre de tècnic vinculat a aquest usuari
 - estar actiu dins del sistema
+- tenir configurades les variables `SUPABASE_URL`, `SUPABASE_ANON_KEY` i `SUPABASE_SERVICE_ROLE_KEY` en l'entorn on s'executa l'app
 
 ## 3. Usuaris de prova
 
@@ -57,6 +58,10 @@ Vol dir que l'usuari existeix a Auth però no està vinculat correctament a `pub
 ### 5.3. Tècnic inactiu
 
 Vol dir que el teu registre funcional existeix però està desactivat.
+
+### 5.4. Configuració incompleta
+
+Si l'app mostra un missatge de configuració incompleta, falten variables d'entorn obligatòries de Supabase i el programa no continuarà fins que estiguin definides.
 
 ## 6. Pantalla principal
 
@@ -114,21 +119,46 @@ Hi trobaràs normalment:
 - terres vinculades
 - aplicacions de fertilitzants
 
-### 9.1. Camps que es poden editar
+### 9.1. Què s'hi pot fer ara
 
 Segons els permisos:
 
-- NIF i nom del titular
-- superfície d'una terra
-- data d'una aplicació
+- editar NIF i nom del titular
+- crear terres noves
+- editar superfície d'una terra
+- eliminar terres
+- crear aplicacions de fertilitzants
+- editar data, `kg N` i `UF`
+- eliminar aplicacions
+
+### 9.2. Crear una terra
+
+Prem `+ Nova Terra` i informa:
+
+- codi municipal de 5 dígits
+- polígon
+- parcel·la
+- recinte
+- superfície
+
+### 9.3. Crear una aplicació
+
+Prem `+ Nova Aplicacio` i informa:
+
+- terra sobre la qual es registra
+- data amb format `YYYY-MM-DD`
 - `kg N`
 - `UF`
 
-### 9.2. Bones pràctiques
+Si el titular encara no tenia cap DAN, el sistema en crea una automàticament per poder guardar la nova aplicació.
 
-- comprova el NIF abans de guardar
-- introdueix superfície, `kg N` i `UF` com a nombres
-- revisa bé la data
+### 9.4. Validacions importants
+
+- el nom del titular no pot quedar buit
+- superfície, `kg N` i `UF` han de ser nombres vàlids
+- els valors numèrics no poden ser negatius
+- la data ha de tenir format `YYYY-MM-DD`
+- abans d'eliminar una terra o una aplicació, l'app demana confirmació
 
 ## 10. Mòdul ramader
 
@@ -141,20 +171,60 @@ Hi trobaràs:
 - cens de bestiar per granja
 - entregues de dejeccions
 
-### 10.1. Camps que es poden editar
+### 10.1. Què s'hi pot fer ara
 
 Segons permisos:
 
-- NIF i nom del titular
-- nom o marca oficial de la granja
+- editar NIF i nom del titular
+- crear granges
+- editar granja
+- eliminar granges
+- crear registres de granja-bestiar
+- editar cens
+- eliminar registres de bestiar
+- crear entregues de dejeccions
+- editar data i quantitat d'una entrega
+- eliminar entregues
+
+### 10.2. Crear una granja
+
+Prem `+ Nova Granja` i informa:
+
+- nom, si el vols guardar
+- marca oficial, que és obligatòria
+
+### 10.3. Crear un registre de granja-bestiar
+
+Prem `+ Nou Registre` i informa:
+
+- granja
+- tipus de bestiar
+- fase productiva
 - cens
-- data i quantitat d'una entrega
 
-### 10.2. Recomanacions
+### 10.4. Crear una entrega
 
-- revisa bé la marca oficial
-- introdueix cens i quantitat com a valors numèrics
-- si no tens permís ramader, no podràs guardar canvis
+Prem `+ Nova Entrega` i informa:
+
+- granja d'origen
+- data amb format `YYYY-MM-DD`
+- quantitat
+- tipus de receptor
+
+El receptor pot ser:
+
+- el mateix titular
+- una terra del titular
+
+Si el titular encara no tenia cap DAN, el sistema en crea una automàticament per poder guardar la nova entrega.
+
+### 10.5. Validacions importants
+
+- la marca oficial és obligatòria
+- cens i quantitat han de ser valors numèrics vàlids
+- la data ha de tenir format `YYYY-MM-DD`
+- els valors numèrics no poden ser negatius
+- abans d'eliminar una granja, un registre de bestiar o una entrega, l'app demana confirmació
 
 ## 11. Perfil
 
@@ -251,6 +321,22 @@ Un tècnic inactiu no pot operar normalment dins l'app.
 
 Des d'aquesta pantalla també es pot fer reset de password d'un tècnic.
 
+### 14.4. Eliminar tècnic
+
+Ara es pot eliminar directament des de la pantalla de gestió.
+
+Funcionament:
+
+1. prems `Eliminar`
+2. l'app mostra un diàleg de confirmació
+3. si el tècnic té login, l'app intenta eliminar tant el registre funcional com l'usuari d'Auth
+4. si no té login, només s'elimina el registre funcional
+
+Important:
+
+- l'acció és destructiva
+- les assignacions del tècnic a titulars també desapareixen
+
 ## 15. Detall de tècnic i assignacions
 
 En el detall d'un tècnic es poden veure o gestionar les assignacions de titulars.
@@ -267,6 +353,15 @@ Scopes possibles:
 - `agricola`
 - `ramader`
 - `lectura`
+
+### 15.1. Casos especials que veuràs a la pantalla
+
+- `Sense login`: vol dir que el tècnic no té `user_id` i no pot entrar a l'aplicació
+- `Cap titular assignat`: si el tècnic té rol normal, probablement no veurà titulars a la home fins que tingui alguna assignació activa
+
+### 15.2. Eliminar assignacions
+
+Quan elimines una assignació, l'app demana confirmació abans de fer l'acció.
 
 ## 16. Gestió d'oficines
 
@@ -290,6 +385,22 @@ Pot passar si:
 - un camp numèric no és vàlid
 - una contrasenya és massa curta
 - el codi municipal no compleix el format
+- una data no té format correcte
+- no has seleccionat una dada obligatòria en un formulari nou
+
+### 17.3. Error en esborrar un tècnic
+
+Pot passar si:
+
+- no tens permisos suficients
+- hi ha un problema amb Supabase Auth
+- s'ha pogut eliminar el tècnic funcional però no l'usuari d'Auth
+
+En aquest últim cas, l'app t'ho indicarà al missatge final.
+
+### 17.4. Error en eliminar una granja
+
+Pot passar si aquella granja està sent referenciada per entregues o per altres dades que la BDD no permet esborrar en aquell moment.
 
 ## 18. Bones pràctiques d'ús
 
@@ -298,6 +409,7 @@ Pot passar si:
 - no repeteixis operacions si t'ha aparegut un error de permisos
 - revisa les dades abans de desar
 - si no veus un titular que esperes veure, revisa assignacions i permisos
+- llegeix els diàlegs de confirmació abans d'eliminar dades
 
 ## 19. Resum ràpid de treball
 
@@ -308,5 +420,6 @@ Flux recomanat d'ús:
 3. entra a `Titulars`
 4. busca el titular
 5. obre el mòdul agrícola o ramader
-6. revisa i edita les dades permeses
+6. crea o edita les dades necessàries directament al mòdul
 7. desa i comprova el missatge de confirmació
+8. si ets administrador, usa `Tecnics` per donar altes, canviar passwords, assignar titulars o fer baixes

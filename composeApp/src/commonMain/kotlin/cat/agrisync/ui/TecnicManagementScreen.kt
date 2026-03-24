@@ -55,7 +55,8 @@ internal fun TecnicManagementScreen(
                                 oficines = ui.oficines,
                                 onToggleActiu = { viewModel.toggleActiu(tecnic) },
                                 onOpenDetail = { onOpenDetail(tecnic.id) },
-                                onResetPassword = { viewModel.showPasswordDialog(tecnic) }
+                                onResetPassword = { viewModel.showPasswordDialog(tecnic) },
+                                onDelete = { viewModel.showDeleteDialog(tecnic) }
                             )
                         }
                     }
@@ -98,6 +99,16 @@ internal fun TecnicManagementScreen(
                 onDismiss = viewModel::hidePasswordDialog
             )
         }
+
+        val deleteTecnic = ui.deleteTecnic
+        if (ui.showDeleteDialog && deleteTecnic != null) {
+            DeleteTecnicDialog(
+                tecnic = deleteTecnic,
+                isDeleting = ui.isDeleting,
+                onConfirm = viewModel::confirmDeleteTecnic,
+                onDismiss = viewModel::hideDeleteDialog
+            )
+        }
     }
 }
 
@@ -107,7 +118,8 @@ private fun TecnicCard(
     oficines: List<OficinaDto>,
     onToggleActiu: () -> Unit,
     onOpenDetail: () -> Unit,
-    onResetPassword: () -> Unit
+    onResetPassword: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val oficinaNom = oficines.find { it.id == tecnic.oficina_id }?.nom ?: tecnic.oficina_id
 
@@ -137,6 +149,7 @@ private fun TecnicCard(
                 if (tecnic.user_id != null) {
                     TextButton(onClick = onResetPassword) { Text("Password") }
                 }
+                TextButton(onClick = onDelete) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
             }
         }
     }
@@ -245,6 +258,55 @@ private fun ResetPasswordDialog(
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss, enabled = !isResetting) { Text("Cancel·lar") }
+        }
+    )
+}
+
+@Composable
+private fun DeleteTecnicDialog(
+    tecnic: TecnicDto,
+    isDeleting: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Eliminar tecnic") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("S'eliminara el tecnic '${tecnic.nom}' del sistema.")
+                if (tecnic.user_id != null) {
+                    Text(
+                        "Com que te login associat, tambe s'intentara eliminar el seu usuari de Supabase Auth.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        "Aquest tecnic no te login, aixi que nomes s'eliminara el registre funcional.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    "Aquesta accio es destructiva i les assignacions de titulars d'aquest tecnic tambe desapareixeran.",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (isDeleting) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = !isDeleting,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) { Text("Eliminar") }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss, enabled = !isDeleting) { Text("Cancel·lar") }
         }
     )
 }

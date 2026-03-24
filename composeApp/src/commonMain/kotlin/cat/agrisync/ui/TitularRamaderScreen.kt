@@ -1,16 +1,51 @@
 package cat.agrisync.ui
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import cat.agrisync.data.BestiarDto
 import cat.agrisync.data.EntregaDejeccioDto
+import cat.agrisync.data.FaseProductivaDto
 import cat.agrisync.data.GranjaBestiarDto
 import cat.agrisync.data.GranjaDto
+import cat.agrisync.data.TerraDto
 import cat.agrisync.data.TitularDto
 import cat.agrisync.viewmodel.TitularRamaderViewModel
 
@@ -20,6 +55,12 @@ internal fun TitularRamaderScreen(
     onBack: () -> Unit
 ) {
     val ui by viewModel.uiState.collectAsState()
+    var showCreateGranjaDialog by remember { mutableStateOf(false) }
+    var showCreateGranjaBestiarDialog by remember { mutableStateOf(false) }
+    var showCreateEntregaDialog by remember { mutableStateOf(false) }
+    var pendingDeleteGranjaId by remember { mutableStateOf<String?>(null) }
+    var pendingDeleteGranjaBestiarId by remember { mutableStateOf<String?>(null) }
+    var pendingDeleteEntregaId by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(ui.saveMessage) {
@@ -38,7 +79,6 @@ internal fun TitularRamaderScreen(
                     modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Header
                     item {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             TextButton(onClick = onBack) { Text("< Tornar") }
@@ -46,7 +86,6 @@ internal fun TitularRamaderScreen(
                         }
                     }
 
-                    // Titular editable
                     item {
                         ui.titular?.let { titular ->
                             EditableRamaderTitularCard(titular) { nif, nom ->
@@ -55,53 +94,164 @@ internal fun TitularRamaderScreen(
                         }
                     }
 
-                    // Granges editables
-                    item { Text("Granges", style = MaterialTheme.typography.titleMedium) }
+                    item {
+                        SectionHeader(
+                            title = "Granges",
+                            actionLabel = "+ Nova Granja",
+                            onAction = { showCreateGranjaDialog = true }
+                        )
+                    }
                     if (ui.granges.isEmpty()) {
                         item { Text("Sense granges", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     } else {
                         items(ui.granges, key = { it.id }) { granja ->
-                            EditableGranjaCard(granja) { nom, marca ->
-                                viewModel.updateGranja(granja.id, nom, marca)
-                            }
+                            EditableGranjaCard(
+                                granja = granja,
+                                onSave = { nom, marca -> viewModel.updateGranja(granja.id, nom, marca) },
+                                onDelete = { pendingDeleteGranjaId = granja.id }
+                            )
                         }
                     }
 
                     item { Spacer(Modifier.height(8.dp)) }
 
-                    // Granja bestiar editable
-                    item { Text("Granja bestiar", style = MaterialTheme.typography.titleMedium) }
+                    item {
+                        SectionHeader(
+                            title = "Granja bestiar",
+                            actionLabel = "+ Nou Registre",
+                            onAction = { showCreateGranjaBestiarDialog = true }
+                        )
+                    }
                     if (ui.granjaBestiar.isEmpty()) {
                         item { Text("Sense registres", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     } else {
                         items(ui.granjaBestiar, key = { it.id }) { gb ->
-                            EditableGranjaBestiarCard(gb) { cens ->
-                                viewModel.updateGranjaBestiar(gb.id, cens)
-                            }
+                            EditableGranjaBestiarCard(
+                                gb = gb,
+                                onSave = { cens -> viewModel.updateGranjaBestiar(gb.id, cens) },
+                                onDelete = { pendingDeleteGranjaBestiarId = gb.id }
+                            )
                         }
                     }
 
                     item { Spacer(Modifier.height(8.dp)) }
 
-                    // Entregues editables
-                    item { Text("Entrega dejeccions", style = MaterialTheme.typography.titleMedium) }
+                    item {
+                        SectionHeader(
+                            title = "Entrega dejeccions",
+                            actionLabel = "+ Nova Entrega",
+                            onAction = { showCreateEntregaDialog = true }
+                        )
+                    }
                     if (ui.entregues.isEmpty()) {
                         item { Text("Sense entregues", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     } else {
                         items(ui.entregues, key = { it.id }) { e ->
-                            EditableEntregaCard(e) { data, quantitat ->
-                                viewModel.updateEntrega(e.id, data, quantitat)
-                            }
+                            EditableEntregaCard(
+                                e = e,
+                                onSave = { data, quantitat -> viewModel.updateEntrega(e.id, data, quantitat) },
+                                onDelete = { pendingDeleteEntregaId = e.id }
+                            )
                         }
                     }
                 }
             }
         }
+
+        if (showCreateGranjaDialog) {
+            CreateGranjaDialog(
+                onConfirm = { nom, marca ->
+                    if (viewModel.createGranja(nom, marca)) {
+                        showCreateGranjaDialog = false
+                    }
+                },
+                onDismiss = { showCreateGranjaDialog = false }
+            )
+        }
+
+        if (showCreateGranjaBestiarDialog) {
+            CreateGranjaBestiarDialog(
+                granges = ui.granges,
+                bestiars = ui.bestiars,
+                fases = ui.fasesProductives,
+                onConfirm = { granjaId, bestiarId, faseId, cens ->
+                    if (viewModel.createGranjaBestiar(granjaId, bestiarId, faseId, cens)) {
+                        showCreateGranjaBestiarDialog = false
+                    }
+                },
+                onDismiss = { showCreateGranjaBestiarDialog = false }
+            )
+        }
+
+        if (showCreateEntregaDialog) {
+            CreateEntregaDialog(
+                titular = ui.titular,
+                granges = ui.granges,
+                terres = ui.terres,
+                onConfirm = { granjaId, data, quantitat, terraDestiId, receptorTitularId ->
+                    if (viewModel.createEntrega(granjaId, data, quantitat, terraDestiId, receptorTitularId)) {
+                        showCreateEntregaDialog = false
+                    }
+                },
+                onDismiss = { showCreateEntregaDialog = false }
+            )
+        }
+
+        val granjaToDelete = ui.granges.find { it.id == pendingDeleteGranjaId }
+        if (granjaToDelete != null) {
+            ConfirmDeleteDialog(
+                title = "Eliminar granja",
+                message = "S'eliminara la granja '${granjaToDelete.nom ?: granjaToDelete.marca_oficial}'. Si te entregues associades, la base de dades pot impedir l'operacio.",
+                onConfirm = {
+                    viewModel.deleteGranja(granjaToDelete.id)
+                    pendingDeleteGranjaId = null
+                },
+                onDismiss = { pendingDeleteGranjaId = null }
+            )
+        }
+
+        val granjaBestiarToDelete = ui.granjaBestiar.find { it.id == pendingDeleteGranjaBestiarId }
+        if (granjaBestiarToDelete != null) {
+            ConfirmDeleteDialog(
+                title = "Eliminar registre de bestiar",
+                message = "S'eliminara aquest registre de bestiar de la granja. Aquesta accio es destructiva.",
+                onConfirm = {
+                    viewModel.deleteGranjaBestiar(granjaBestiarToDelete.id)
+                    pendingDeleteGranjaBestiarId = null
+                },
+                onDismiss = { pendingDeleteGranjaBestiarId = null }
+            )
+        }
+
+        val entregaToDelete = ui.entregues.find { it.id == pendingDeleteEntregaId }
+        if (entregaToDelete != null) {
+            ConfirmDeleteDialog(
+                title = "Eliminar entrega",
+                message = "S'eliminara l'entrega del dia '${entregaToDelete.data ?: "-"}'. Aquesta accio es destructiva.",
+                onConfirm = {
+                    viewModel.deleteEntrega(entregaToDelete.id)
+                    pendingDeleteEntregaId = null
+                },
+                onDismiss = { pendingDeleteEntregaId = null }
+            )
+        }
     }
 }
 
 @Composable
-private fun EditableRamaderTitularCard(titular: TitularDto, onSave: (String, String) -> Unit) {
+private fun SectionHeader(title: String, actionLabel: String, onAction: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, style = MaterialTheme.typography.titleMedium)
+        OutlinedButton(onClick = onAction) { Text(actionLabel) }
+    }
+}
+
+@Composable
+private fun EditableRamaderTitularCard(titular: TitularDto, onSave: (String, String) -> Boolean) {
     var editing by remember { mutableStateOf(false) }
     var nif by remember(titular.id) { mutableStateOf(titular.nif ?: "") }
     var nom by remember(titular.id) { mutableStateOf(titular.nom_rao) }
@@ -113,7 +263,7 @@ private fun EditableRamaderTitularCard(titular: TitularDto, onSave: (String, Str
                 OutlinedTextField(value = nom, onValueChange = { nom = it }, label = { Text("Nom / Rao social") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = nif, onValueChange = { nif = it }, label = { Text("NIF") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { onSave(nif, nom); editing = false }) { Text("Guardar") }
+                    Button(onClick = { if (onSave(nif, nom)) editing = false }) { Text("Guardar") }
                     OutlinedButton(onClick = { nif = titular.nif ?: ""; nom = titular.nom_rao; editing = false }) { Text("Cancel·lar") }
                 }
             } else {
@@ -126,7 +276,11 @@ private fun EditableRamaderTitularCard(titular: TitularDto, onSave: (String, Str
 }
 
 @Composable
-private fun EditableGranjaCard(granja: GranjaDto, onSave: (String, String) -> Unit) {
+private fun EditableGranjaCard(
+    granja: GranjaDto,
+    onSave: (String, String) -> Boolean,
+    onDelete: () -> Unit
+) {
     var editing by remember { mutableStateOf(false) }
     var nom by remember(granja.id, granja.nom) { mutableStateOf(granja.nom ?: "") }
     var marca by remember(granja.id, granja.marca_oficial) { mutableStateOf(granja.marca_oficial) }
@@ -137,20 +291,27 @@ private fun EditableGranjaCard(granja: GranjaDto, onSave: (String, String) -> Un
                 OutlinedTextField(value = nom, onValueChange = { nom = it }, label = { Text("Nom granja") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = marca, onValueChange = { marca = it }, label = { Text("Marca oficial") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { onSave(nom, marca); editing = false }) { Text("Guardar") }
+                    Button(onClick = { if (onSave(nom, marca)) editing = false }) { Text("Guardar") }
                     OutlinedButton(onClick = { nom = granja.nom ?: ""; marca = granja.marca_oficial; editing = false }) { Text("Cancel·lar") }
                 }
             } else {
                 Text(granja.nom ?: granja.marca_oficial, style = MaterialTheme.typography.bodyLarge)
                 Text("Marca oficial: ${granja.marca_oficial}")
-                TextButton(onClick = { editing = true }) { Text("Editar") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { editing = true }) { Text("Editar") }
+                    TextButton(onClick = onDelete) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun EditableGranjaBestiarCard(gb: GranjaBestiarDto, onSave: (Double) -> Unit) {
+private fun EditableGranjaBestiarCard(
+    gb: GranjaBestiarDto,
+    onSave: (String) -> Boolean,
+    onDelete: () -> Unit
+) {
     var editing by remember { mutableStateOf(false) }
     var cens by remember(gb.id, gb.cens) { mutableStateOf((gb.cens ?: 0.0).toString()) }
 
@@ -161,20 +322,27 @@ private fun EditableGranjaBestiarCard(gb: GranjaBestiarDto, onSave: (Double) -> 
                 Text("Bestiar: ${gb.bestiar?.codi ?: "-"} · Fase: ${gb.fase_productiva?.codi ?: "-"}")
                 OutlinedTextField(value = cens, onValueChange = { cens = it }, label = { Text("Cens") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { cens.toDoubleOrNull()?.let { onSave(it) }; editing = false }) { Text("Guardar") }
+                    Button(onClick = { if (onSave(cens)) editing = false }) { Text("Guardar") }
                     OutlinedButton(onClick = { cens = (gb.cens ?: 0.0).toString(); editing = false }) { Text("Cancel·lar") }
                 }
             } else {
                 Text("Bestiar: ${gb.bestiar?.codi ?: "-"} · Fase: ${gb.fase_productiva?.codi ?: "-"}")
                 Text("Cens: ${gb.cens ?: 0.0}")
-                TextButton(onClick = { editing = true }) { Text("Editar") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { editing = true }) { Text("Editar") }
+                    TextButton(onClick = onDelete) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun EditableEntregaCard(e: EntregaDejeccioDto, onSave: (String, Double) -> Unit) {
+private fun EditableEntregaCard(
+    e: EntregaDejeccioDto,
+    onSave: (String, String) -> Boolean,
+    onDelete: () -> Unit
+) {
     var editing by remember { mutableStateOf(false) }
     var data by remember(e.id, e.data) { mutableStateOf(e.data ?: "") }
     var quantitat by remember(e.id, e.quantitat) { mutableStateOf((e.quantitat ?: 0.0).toString()) }
@@ -186,18 +354,307 @@ private fun EditableEntregaCard(e: EntregaDejeccioDto, onSave: (String, Double) 
                 OutlinedTextField(value = quantitat, onValueChange = { quantitat = it }, label = { Text("Quantitat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Text("Receptor: ${e.receptor_titular_id ?: "terra:${e.terra_desti_id ?: "-"}"}", style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = {
-                        val q = quantitat.toDoubleOrNull() ?: 0.0
-                        onSave(data, q)
-                        editing = false
-                    }) { Text("Guardar") }
+                    Button(onClick = { if (onSave(data, quantitat)) editing = false }) { Text("Guardar") }
                     OutlinedButton(onClick = { data = e.data ?: ""; quantitat = (e.quantitat ?: 0.0).toString(); editing = false }) { Text("Cancel·lar") }
                 }
             } else {
                 Text("Data: ${e.data ?: "-"}")
                 Text("Quantitat: ${e.quantitat ?: 0.0}")
                 Text("Receptor: ${e.receptor_titular_id ?: "terra:${e.terra_desti_id ?: "-"}"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = { editing = true }) { Text("Editar") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { editing = true }) { Text("Editar") }
+                    TextButton(onClick = onDelete) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CreateGranjaDialog(
+    onConfirm: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var nom by remember { mutableStateOf("") }
+    var marca by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nova granja") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = nom, onValueChange = { nom = it }, label = { Text("Nom granja") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = marca, onValueChange = { marca = it }, label = { Text("Marca oficial") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(nom, marca) }) { Text("Crear") }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) { Text("Cancel·lar") }
+        }
+    )
+}
+
+@Composable
+private fun CreateGranjaBestiarDialog(
+    granges: List<GranjaDto>,
+    bestiars: List<BestiarDto>,
+    fases: List<FaseProductivaDto>,
+    onConfirm: (String, String, String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedGranjaId by remember(granges) { mutableStateOf(granges.firstOrNull()?.id ?: "") }
+    var selectedBestiarId by remember(bestiars) { mutableStateOf(bestiars.firstOrNull()?.id ?: "") }
+    var selectedFaseId by remember(fases) { mutableStateOf(fases.firstOrNull()?.id ?: "") }
+    var cens by remember { mutableStateOf("") }
+    val canCreate = granges.isNotEmpty() && bestiars.isNotEmpty() && fases.isNotEmpty()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nou registre de bestiar") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!canCreate) {
+                    Text(
+                        "Per crear aquest registre necessites almenys una granja i catalegs de bestiar i fase productiva disponibles.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    GranjaDropdown(granges = granges, selectedId = selectedGranjaId, onSelect = { selectedGranjaId = it }, label = "Granja")
+                    BestiarDropdown(bestiars = bestiars, selectedId = selectedBestiarId, onSelect = { selectedBestiarId = it })
+                    FaseDropdown(fases = fases, selectedId = selectedFaseId, onSelect = { selectedFaseId = it })
+                    OutlinedTextField(value = cens, onValueChange = { cens = it }, label = { Text("Cens") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(selectedGranjaId, selectedBestiarId, selectedFaseId, cens) }, enabled = canCreate) { Text("Crear") }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) { Text("Cancel·lar") }
+        }
+    )
+}
+
+@Composable
+private fun CreateEntregaDialog(
+    titular: TitularDto?,
+    granges: List<GranjaDto>,
+    terres: List<TerraDto>,
+    onConfirm: (String, String, String, String?, String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedGranjaId by remember(granges) { mutableStateOf(granges.firstOrNull()?.id ?: "") }
+    var receptorMode by remember { mutableStateOf("titular") }
+    var selectedTerraId by remember(terres) { mutableStateOf(terres.firstOrNull()?.id ?: "") }
+    var data by remember { mutableStateOf("") }
+    var quantitat by remember { mutableStateOf("") }
+    val canCreate = granges.isNotEmpty() && titular != null
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nova entrega") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!canCreate) {
+                    Text(
+                        "Per crear una entrega necessites almenys una granja d'origen i un titular carregat.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    GranjaDropdown(granges = granges, selectedId = selectedGranjaId, onSelect = { selectedGranjaId = it }, label = "Granja d'origen")
+                    OutlinedTextField(value = data, onValueChange = { data = it }, label = { Text("Data (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = quantitat, onValueChange = { quantitat = it }, label = { Text("Quantitat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+
+                    Text("Tipus de receptor", style = MaterialTheme.typography.labelMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = receptorMode == "titular", onClick = { receptorMode = "titular" })
+                            Text("Titular")
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = receptorMode == "terra", onClick = { receptorMode = "terra" })
+                            Text("Terra")
+                        }
+                    }
+
+                    if (receptorMode == "titular") {
+                        Text(
+                            "Receptor: ${titular.nom_rao}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    } else {
+                        if (terres.isEmpty()) {
+                            Text("Aquest titular no te terres disponibles per seleccionar.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            TerraDropdown(terres = terres, selectedId = selectedTerraId, onSelect = { selectedTerraId = it }, label = "Terra desti")
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val terraId = if (receptorMode == "terra") selectedTerraId else null
+                    val receptorTitularId = if (receptorMode == "titular") titular?.id else null
+                    onConfirm(selectedGranjaId, data, quantitat, terraId, receptorTitularId)
+                },
+                enabled = canCreate && (receptorMode == "titular" || terres.isNotEmpty())
+            ) { Text("Crear") }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) { Text("Cancel·lar") }
+        }
+    )
+}
+
+@Composable
+private fun ConfirmDeleteDialog(
+    title: String,
+    message: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(message) },
+        confirmButton = { Button(onClick = onConfirm) { Text("Eliminar") } },
+        dismissButton = { OutlinedButton(onClick = onDismiss) { Text("Cancel·lar") } }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GranjaDropdown(
+    granges: List<GranjaDto>,
+    selectedId: String,
+    onSelect: (String) -> Unit,
+    label: String
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selected = granges.find { it.id == selectedId }
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selected?.let { it.nom ?: it.marca_oficial } ?: "Selecciona una granja",
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            granges.forEach { granja ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text("${granja.nom ?: granja.marca_oficial} (${granja.marca_oficial})") },
+                    onClick = {
+                        onSelect(granja.id)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BestiarDropdown(
+    bestiars: List<BestiarDto>,
+    selectedId: String,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selected = bestiars.find { it.id == selectedId }
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selected?.let { "${it.codi} - ${it.descripcio ?: ""}".trim() } ?: "Selecciona bestiar",
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+            label = { Text("Bestiar") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            bestiars.forEach { bestiar ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text("${bestiar.codi} - ${bestiar.descripcio ?: ""}".trim()) },
+                    onClick = {
+                        onSelect(bestiar.id)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FaseDropdown(
+    fases: List<FaseProductivaDto>,
+    selectedId: String,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selected = fases.find { it.id == selectedId }
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selected?.let { "${it.codi} - ${it.descripcio ?: ""}".trim() } ?: "Selecciona fase",
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+            label = { Text("Fase productiva") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            fases.forEach { fase ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text("${fase.codi} - ${fase.descripcio ?: ""}".trim()) },
+                    onClick = {
+                        onSelect(fase.id)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TerraDropdown(
+    terres: List<TerraDto>,
+    selectedId: String,
+    onSelect: (String) -> Unit,
+    label: String
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selected = terres.find { it.id == selectedId }
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selected?.codi_sigpac_complet ?: "Selecciona una terra",
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            terres.forEach { terra ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(terra.codi_sigpac_complet ?: terra.id) },
+                    onClick = {
+                        onSelect(terra.id)
+                        expanded = false
+                    }
+                )
             }
         }
     }

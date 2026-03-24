@@ -65,6 +65,7 @@ La part client està dins de `composeApp` i s'encarrega de:
 - validar entrada bàsica
 - llançar consultes i actualitzacions
 - mostrar errors, càrregues i resultats
+- confirmar accions destructives abans d'executar-les
 
 ### 4.2. Capa de dades
 
@@ -132,12 +133,19 @@ Això significa que:
 
 Quan l'app arrenca:
 
-1. carrega la configuració de Supabase
-2. construeix els serveis a `AppServices`
-3. intenta recuperar una sessió guardada localment
-4. si la troba, refresca el token
-5. carrega el perfil tècnic de l'usuari autenticat
-6. entra a l'aplicació si tot és correcte
+1. carrega la configuració de Supabase des de variables d'entorn o propietats JVM
+2. si falta alguna variable obligatòria, mostra una pantalla de configuració incompleta i no continua
+3. construeix els serveis a `AppServices`
+4. intenta recuperar una sessió guardada localment
+5. si la troba, refresca el token
+6. carrega el perfil tècnic de l'usuari autenticat
+7. entra a l'aplicació si tot és correcte
+
+Les variables obligatòries actuals són:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
 ### 7.2. Login
 
@@ -152,7 +160,7 @@ Flux:
 5. l'app recupera el tècnic associat amb `get_my_tecnic()`
 6. si el tècnic existeix i està actiu, es guarda la sessió localment
 
-### 7.3. Perfil tècnic
+### 7.3. Recuperació del perfil tècnic
 
 Un usuari autenticat no n'hi ha prou. També ha d'existir a `public.tecnic`.
 
@@ -161,6 +169,12 @@ Això és clau perquè:
 - el login real es fa contra Auth
 - els permisos reals es calculen des de la BDD funcional
 
+La recuperació del tècnic funciona així:
+
+1. primer es prova l'RPC `get_my_tecnic()`
+2. si l'RPC falla, es fa una consulta directa a `public.tecnic` amb el mateix token de l'usuari autenticat
+3. aquesta consulta alternativa continua respectant RLS, perquè només intenta llegir el registre del mateix usuari
+
 ## 8. Model funcional de dades
 
 El model del MVP queda reduït a les entitats realment necessàries.
@@ -168,12 +182,6 @@ El model del MVP queda reduït a les entitats realment necessàries.
 ### 8.1. `oficina`
 
 Agrupa tècnics i permet limitar accés d'un `oficina_manager`.
-
-Camps principals:
-
-- `id`
-- `nom`
-- `created_at`
 
 ### 8.2. `tecnic`
 
@@ -270,6 +278,8 @@ L'aplicació treballa amb tres grans tipus d'entrada.
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+Aquestes dades no van hardcodejades dins del projecte. S'han d'injectar a l'entorn d'execució.
+
 ### 9.2. Entrada d'usuari
 
 - email i password per fer login
@@ -279,6 +289,7 @@ L'aplicació treballa amb tres grans tipus d'entrada.
 - dades de terres
 - dades agrícoles
 - dades ramaderes
+- accions d'administració com alta, baixa, canvi de password i assignacions
 
 ### 9.3. Catàlegs i estructura
 
@@ -300,16 +311,25 @@ Exemples:
 - nom obligatori a titular i oficina
 - `mun_codi` de 5 dígits
 - camps numèrics per superfície, cens i quantitats
+- format de data `YYYY-MM-DD` als editors inline que ho requereixen
+- comprovació que els camps de selecció obligatoris estiguin informats abans de crear registres nous
+
+A la iteració 1 es va reforçar aquesta part perquè els mòduls agrícola i ramader no guardin `0` per defecte quan l'usuari escriu un valor invàlid. Ara, si la conversió falla o el valor és negatiu quan no toca, el guardat es bloqueja i es mostra un missatge a l'usuari.
+
+A la iteració 2 es va reforçar també el control d'accions destructives. Abans d'eliminar tècnics o assignacions, la UI demana confirmació explícita.
+
+A la iteració 3 aquesta mateixa idea s'ha estès als mòduls agrícola i ramader: crear i eliminar registres des del detall també passa per validació prèvia i confirmació quan l'acció és destructiva.
 
 ### 10.2. Transformació
 
 El sistema també transforma dades:
 
 - normalitza NIF per a cerques
-- converteix text a enters o decimals
+- converteix text a enters o decimals quan la validació és correcta
 - genera `codi_sigpac_complet` a la BDD
 - converteix JSON de Supabase a DTOs Kotlin
 - guarda la sessió en format serialitzable
+- resol automàticament l'any actual de campanya mitjançant una petita utilitat multiplataforma (`PlatformDateTime`) quan cal crear una DAN nova
 
 ### 10.3. Filtratge i càrrega
 
@@ -326,18 +346,40 @@ També hi ha filtratge local:
 - cerca de terres per titular o codi SIGPAC
 - paginació simple
 
-### 10.4. Edició
+### 10.4. Edició i administració
 
-Quan l'usuari edita:
+Quan l'usuari edita o administra:
 
-1. la UI recull el canvi
+1. la UI recull el canvi o l'acció
 2. el ViewModel valida
-3. el Repository envia la petició REST
-4. la base de dades aplica RLS
-5. Supabase retorna la representació actualitzada
-6. la pantalla es refresca
+3. si la validació falla, el formulari queda obert i es mostra un missatge d'error
+4. si l'acció és destructiva, la UI demana confirmació
+5. el Repository envia la petició REST o la crida a Admin API
+6. la base de dades aplica RLS quan toca
+7. Supabase retorna el resultat
+8. la pantalla es refresca
 
-### 10.5. Sessió persistent
+Aquest patró s'aplica especialment a:
+
+- edició de dades agrícola i ramaderes
+- alta i baixa de registres als mòduls agrícola i ramader
+- reset de password
+- eliminació de tècnics
+- eliminació d'assignacions
+
+### 10.5. Gestió automàtica de DAN
+
+Per crear una aplicació agrícola o una entrega ramadera, la BDD exigeix un `dan_id`.
+
+Per evitar que l'usuari hagi de gestionar manualment aquesta dependència en un MVP d'escriptori, el repositori segueix aquesta regla:
+
+1. busca si el titular ja té alguna `dan_declaracio`
+2. si en troba, fa servir la més recent
+3. si no en troba cap, crea automàticament una DAN per a la campanya actual
+
+Això simplifica l'ús del programa sense haver de canviar l'esquema SQL.
+
+### 10.6. Sessió persistent
 
 La sessió es guarda localment amb `Preferences`.
 
@@ -361,6 +403,18 @@ Carrega:
 - terres
 - aplicacions de fertilitzants
 
+També permet:
+
+- editar titular
+- editar terres
+- crear terres
+- eliminar terres
+- editar aplicacions
+- crear aplicacions
+- eliminar aplicacions
+
+Això fa que el mòdul passi de ser només de consulta i edició a ser realment operatiu.
+
 ### 11.3. Mòdul ramader
 
 Carrega:
@@ -369,6 +423,15 @@ Carrega:
 - granges
 - cens de bestiar
 - entregues de dejeccions
+- catàlegs de bestiar i fase productiva necessaris per crear nous registres
+- terres del titular, necessàries per oferir destí d'entrega quan el receptor és una terra
+
+També permet:
+
+- editar titular
+- crear, editar i eliminar granges
+- crear, editar i eliminar registres de granja-bestiar
+- crear, editar i eliminar entregues de dejeccions
 
 ### 11.4. Gestió de titulars
 
@@ -387,6 +450,11 @@ Permet:
 - activar o desactivar tècnics
 - canviar dades bàsiques
 - reset de password
+- eliminar un tècnic des de la mateixa app
+- intentar eliminar també el seu usuari d'Auth si tenia login associat
+- gestionar assignacions de titulars amb confirmació abans d'eliminar-les
+
+Aquí continua fent falta `service_role`, perquè aquestes operacions són administratives i no formen part del flux normal d'un usuari estàndard.
 
 ### 11.7. Gestió d'oficines
 
@@ -412,6 +480,13 @@ La base de dades decideix:
 - sobre quin titular
 - en quin àmbit
 
+A nivell d'aplicació s'ha fet una separació important:
+
+- el flux normal de login i lectura de perfil funciona amb el token de l'usuari
+- les operacions administratives especials es reserven a les parts que realment necessiten privilegis elevats
+
+La iteració 2 no va requerir canviar l'esquema SQL. La iteració 3 tampoc no l'ha requerit: la base de dades ja estava preparada per suportar les insercions, actualitzacions i eliminacions necessàries als mòduls, sempre sota control de les policies i els helpers de permisos.
+
 ## 13. Sortides del sistema
 
 ### 13.1. Sortida visual
@@ -422,10 +497,14 @@ La base de dades decideix:
 - dades agrícoles
 - dades ramaderes
 - missatges d'èxit i error
+- diàlegs de confirmació en accions destructives
+- avisos contextuals en casos com "sense login" o "sense assignacions"
 
 ### 13.2. Sortida persistent
 
 - registres nous i actualitzacions a Supabase
+- eliminacions administratives de tècnics i assignacions
+- altes i baixes de registres dins dels mòduls agrícola i ramader
 
 ### 13.3. Sortida de control
 
@@ -474,7 +553,9 @@ Usuaris de prova previstos al seed:
 - no hi ha informes oficials finals ni PDF
 - no hi ha dashboard de càlculs agregats
 - alguns camps del full original encara no estan modelats
-- hi ha configuració de desenvolupament dins del codi que en producció caldria externalitzar millor
+- la `service_role` continua sent necessària per a funcions administratives avançades
+- encara hi ha marge per polir més la UX visual general
+- els càlculs derivats i els resums encara no formen part de la UI
 
 ## 17. Estat actual verificat
 
@@ -483,9 +564,14 @@ Amb l'esquema SQL simplificat i els ajustos realitzats:
 - l'aplicació compila correctament
 - el login amb usuaris de prova ja s'ha pogut validar
 - el codi i la documentació han quedat alineats amb la BDD real
+- la configuració sensible ja no queda embeguda dins del codi
+- les validacions del detall agrícola i ramader són més estrictes i eviten guardats incorrectes per defecte
+- la gestió de tècnics és més completa i ja inclou baixa directa des de la UI
+- els mòduls agrícola i ramader ja permeten altes i baixes dels principals registres de treball
+- les iteracions 2 i 3 s'han pogut resoldre sense refer la BDD
 
 ## 18. Resum final
 
 AgriSync és un MVP funcional de gestió agrària centrat en la DAN. Combina autenticació, model relacional, permisos reals, client desktop i una estructura neta per capes.
 
-Des del punt de vista de defensa del projecte, el valor principal és que no és només una maqueta visual: és una aplicació amb autenticació real, persistència real i control d'accés real sobre dades de negoci.
+Des del punt de vista de defensa del projecte, el valor principal és que no és només una maqueta visual: és una aplicació amb autenticació real, persistència real i control d'accés real sobre dades de negoci. Després de les iteracions 1, 2 i 3, el projecte queda més sòlid tècnicament, més segur, més complet des del punt de vista d'administració interna i també més operatiu per a la feina del dia a dia.

@@ -95,17 +95,17 @@ class SupabaseAuthApi(
             println("[AUTH-API] RPC get_my_tecnic exception: ${ex.message}")
         }
 
-        // Intent 2: Consulta directa amb service_role key (bypassa RLS)
-        // Primer obtenim el user_id del token JWT decodificant-lo
+        // Intent 2: consulta directa amb el mateix token de l'usuari.
+        // La policy de public.tecnic permet que cada usuari llegeixi el seu propi registre.
         val userId = extractUserIdFromToken(accessToken)
         if (userId != null) {
-            println("[AUTH-API] Fallback: buscant tecnic per user_id=$userId amb service_role")
+            println("[AUTH-API] Fallback: buscant tecnic per user_id=$userId amb token usuari")
             try {
                 val response = httpClient.get {
                     url("${config.url}/rest/v1/tecnic?user_id=eq.$userId&limit=1")
                     contentType(ContentType.Application.Json)
-                    headers.append("apikey", config.serviceRoleKey.ifBlank { config.anonKey })
-                    headers.append(HttpHeaders.Authorization, "Bearer ${config.serviceRoleKey.ifBlank { accessToken }}")
+                    headers.append("apikey", config.anonKey)
+                    headers.append(HttpHeaders.Authorization, "Bearer $accessToken")
                 }
                 if (response.status.isSuccess()) {
                     val list: List<TecnicDto> = response.body()

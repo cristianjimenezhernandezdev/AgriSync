@@ -86,10 +86,33 @@ data class TerraUpdateRequest(
 )
 
 @Serializable
+data class DanCreateRequest(
+    val titular_id: String,
+    val campanya: Int,
+    val estat: String = "en_curs"
+)
+
+@Serializable
+data class AplicacioCreateRequest(
+    val dan_id: String,
+    val terra_id: String,
+    val data: String,
+    val kg_n: Double,
+    val uf: Double
+)
+
+@Serializable
 data class AplicacioUpdateRequest(
     val data: String? = null,
     val kg_n: Double? = null,
     val uf: Double? = null
+)
+
+@Serializable
+data class GranjaCreateRequest(
+    val titular_id: String,
+    val marca_oficial: String,
+    val nom: String? = null
 )
 
 @Serializable
@@ -99,8 +122,26 @@ data class GranjaUpdateRequest(
 )
 
 @Serializable
+data class GranjaBestiarCreateRequest(
+    val granja_id: String,
+    val bestiar_id: String,
+    val fase_productiva_id: String,
+    val cens: Double
+)
+
+@Serializable
 data class GranjaBestiarUpdateRequest(
     val cens: Double? = null
+)
+
+@Serializable
+data class EntregaCreateRequest(
+    val dan_id: String,
+    val granja_origen_id: String,
+    val data: String,
+    val quantitat: Double,
+    val terra_desti_id: String? = null,
+    val receptor_titular_id: String? = null
 )
 
 @Serializable

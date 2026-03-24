@@ -19,6 +19,7 @@ internal fun TecnicDetailScreen(
     onBack: () -> Unit
 ) {
     val ui by viewModel.uiState.collectAsState()
+    var pendingDeleteAssignacioId by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(ui.message) {
@@ -85,6 +86,13 @@ internal fun TecnicDetailScreen(
                                     Text("ID: ${t.id}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text("User ID: ${t.user_id ?: "Sense login"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text("Actiu: ${if (t.actiu) "Si" else "No"}", style = MaterialTheme.typography.bodySmall)
+                                    if (t.user_id == null) {
+                                        Text(
+                                            "Aquest tecnic no te compte Auth i no pot entrar a l'aplicacio fins que se li crei un login.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
 
                                     // Canvi de password
                                     if (t.user_id != null) {
@@ -117,7 +125,16 @@ internal fun TecnicDetailScreen(
                     }
 
                     if (ui.assignacions.isEmpty()) {
-                        item { Text("Cap titular assignat", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("Cap titular assignat", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    "Si aquest tecnic te rol 'tecnic', no veura titulars a la home fins que tingui alguna assignacio activa.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     } else {
                         items(ui.assignacions, key = { it.id }) { assig ->
                             Card(Modifier.fillMaxWidth()) {
@@ -126,7 +143,7 @@ internal fun TecnicDetailScreen(
                                         Text(assig.titular?.nom_rao ?: assig.titular_id, style = MaterialTheme.typography.bodyLarge)
                                         Text("NIF: ${assig.titular?.nif ?: "-"} · Scope: ${assig.scope}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
-                                    IconButton(onClick = { viewModel.deleteAssignacio(assig.id) }) {
+                                    IconButton(onClick = { pendingDeleteAssignacioId = assig.id }) {
                                         Text("✕", color = MaterialTheme.colorScheme.error)
                                     }
                                 }
@@ -168,6 +185,36 @@ internal fun TecnicDetailScreen(
                     }
                 }
             }
+        }
+
+        val pendingAssignacio = ui.assignacions.find { it.id == pendingDeleteAssignacioId }
+        if (pendingAssignacio != null) {
+            AlertDialog(
+                onDismissRequest = { pendingDeleteAssignacioId = null },
+                title = { Text("Eliminar assignacio") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("S'eliminara l'assignacio del titular '${pendingAssignacio.titular?.nom_rao ?: pendingAssignacio.titular_id}'.")
+                        Text(
+                            "Aquesta accio es immediata i el tecnic pot perdre acces a aquest titular segons el seu rol i la resta d'assignacions.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteAssignacio(pendingAssignacio.id)
+                            pendingDeleteAssignacioId = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) { Text("Eliminar") }
+                },
+                dismissButton = {
+                    OutlinedButton(onClick = { pendingDeleteAssignacioId = null }) { Text("Cancel·lar") }
+                }
+            )
         }
     }
 }

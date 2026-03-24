@@ -2,6 +2,7 @@ package cat.agrisync.data
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -86,6 +87,11 @@ internal class TecnicRepository(
         restClient.delete("tecnic_titular", "?id=eq.$assignacioId")
     }
 
+    /** Elimina un tècnic de public.tecnic. Les assignacions tecnic_titular cauen per cascade. */
+    internal suspend fun deleteTecnic(tecnicId: String) {
+        restClient.delete("tecnic", "?id=eq.$tecnicId")
+    }
+
     /** Canvia el password d'un usuari Auth via Admin API (requereix service_role key) */
     internal suspend fun updateAuthUserPassword(userId: String, newPassword: String) {
         val response = httpClient.put {
@@ -99,6 +105,20 @@ internal class TecnicRepository(
         if (!response.status.isSuccess()) {
             val msg = response.bodyAsText()
             throw ApiException(response.status.value, "Error canviant password: $msg")
+        }
+    }
+
+    /** Elimina un usuari Auth via Admin API (requereix service_role key). */
+    internal suspend fun deleteAuthUser(userId: String) {
+        val response = httpClient.delete {
+            url("${config.url}/auth/v1/admin/users/$userId")
+            headers.append("apikey", config.serviceRoleKey)
+            headers.append(HttpHeaders.Authorization, "Bearer ${config.serviceRoleKey}")
+        }
+
+        if (!response.status.isSuccess()) {
+            val msg = response.bodyAsText()
+            throw ApiException(response.status.value, "Error eliminant usuari Auth: $msg")
         }
     }
 }

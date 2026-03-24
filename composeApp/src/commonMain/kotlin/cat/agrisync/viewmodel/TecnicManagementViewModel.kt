@@ -30,7 +30,11 @@ data class TecnicManagementUiState(
     val passwordTecnic: TecnicDto? = null,
     val resetPassword: String = "",
     val resetPasswordConfirm: String = "",
-    val isResettingPassword: Boolean = false
+    val isResettingPassword: Boolean = false,
+    // Delete tecnic
+    val showDeleteDialog: Boolean = false,
+    val deleteTecnic: TecnicDto? = null,
+    val isDeleting: Boolean = false
 )
 
 internal class TecnicManagementViewModel(
@@ -154,6 +158,54 @@ internal class TecnicManagementViewModel(
 
     fun clearMessage() {
         _uiState.update { it.copy(message = null) }
+    }
+
+    fun showDeleteDialog(tecnic: TecnicDto) {
+        _uiState.update { it.copy(showDeleteDialog = true, deleteTecnic = tecnic) }
+    }
+
+    fun hideDeleteDialog() {
+        _uiState.update { it.copy(showDeleteDialog = false, deleteTecnic = null) }
+    }
+
+    fun confirmDeleteTecnic() {
+        val st = _uiState.value
+        val tecnic = st.deleteTecnic ?: return
+
+        scope.launch {
+            _uiState.update { it.copy(isDeleting = true) }
+            try {
+                repository.deleteTecnic(tecnic.id)
+                var message = "Tecnic '${tecnic.nom}' eliminat correctament"
+
+                if (tecnic.user_id != null) {
+                    try {
+                        repository.deleteAuthUser(tecnic.user_id)
+                        message += " i usuari Auth eliminat"
+                    } catch (authEx: Exception) {
+                        message += ". El registre funcional s'ha eliminat, pero l'usuari Auth no s'ha pogut esborrar: ${authEx.message}"
+                    }
+                }
+
+                val tecnics = repository.listAll()
+                _uiState.update {
+                    it.copy(
+                        tecnics = tecnics,
+                        showDeleteDialog = false,
+                        deleteTecnic = null,
+                        isDeleting = false,
+                        message = message
+                    )
+                }
+            } catch (ex: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isDeleting = false,
+                        message = "Error eliminant tecnic: ${ex.message}"
+                    )
+                }
+            }
+        }
     }
 
     // ── Reset password ──

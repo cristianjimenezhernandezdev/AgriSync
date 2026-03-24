@@ -45,18 +45,38 @@ internal class TitularAgricolaViewModel(
         }
     }
 
-    fun updateTitular(nif: String, nom: String) {
+    fun updateTitular(nif: String, nom: String): Boolean {
+        if (nom.isBlank()) {
+            _uiState.update { it.copy(saveMessage = "El nom del titular es obligatori") }
+            return false
+        }
         scope.launch {
             try {
-                val updated = repository.updateTitular(currentTitularId, TitularUpdateRequest(nif = nif, nom_rao = nom))
+                val updated = repository.updateTitular(
+                    currentTitularId,
+                    TitularUpdateRequest(
+                        nif = nif.trim().ifBlank { null },
+                        nom_rao = nom.trim()
+                    )
+                )
                 _uiState.update { it.copy(titular = updated, saveMessage = "Titular guardat") }
             } catch (ex: Exception) {
                 _uiState.update { it.copy(saveMessage = "Error: ${ex.message}") }
             }
         }
+        return true
     }
 
-    fun updateTerra(terraId: String, superficie: Double) {
+    fun updateTerra(terraId: String, superficieText: String): Boolean {
+        val superficie = superficieText.toDoubleOrNull()
+        if (superficie == null) {
+            _uiState.update { it.copy(saveMessage = "La superficie ha de ser un nombre valid") }
+            return false
+        }
+        if (superficie < 0) {
+            _uiState.update { it.copy(saveMessage = "La superficie no pot ser negativa") }
+            return false
+        }
         scope.launch {
             try {
                 val updated = repository.updateTerra(terraId, TerraUpdateRequest(superficie = superficie))
@@ -70,16 +90,175 @@ internal class TitularAgricolaViewModel(
                 _uiState.update { it.copy(saveMessage = "Error: ${ex.message}") }
             }
         }
+        return true
     }
 
-    fun updateAplicacio(id: String, data: String, kgN: Double, uf: Double) {
+    fun createTerra(
+        munCodi: String,
+        poligonText: String,
+        parcelaText: String,
+        recinteText: String,
+        superficieText: String
+    ): Boolean {
+        val cleanMunCodi = munCodi.trim()
+        val poligon = poligonText.toIntOrNull()
+        val parcela = parcelaText.toIntOrNull()
+        val recinte = recinteText.toIntOrNull()
+        val superficie = superficieText.toDoubleOrNull()
+
+        when {
+            !cleanMunCodi.matches(Regex("^\\d{5}$")) -> {
+                _uiState.update { it.copy(saveMessage = "El codi municipal ha de tenir 5 digits") }
+                return false
+            }
+            poligon == null || poligon <= 0 -> {
+                _uiState.update { it.copy(saveMessage = "El poligon ha de ser un enter positiu") }
+                return false
+            }
+            parcela == null || parcela <= 0 -> {
+                _uiState.update { it.copy(saveMessage = "La parcela ha de ser un enter positiu") }
+                return false
+            }
+            recinte == null || recinte <= 0 -> {
+                _uiState.update { it.copy(saveMessage = "El recinte ha de ser un enter positiu") }
+                return false
+            }
+            superficie == null -> {
+                _uiState.update { it.copy(saveMessage = "La superficie ha de ser un nombre valid") }
+                return false
+            }
+            superficie < 0 -> {
+                _uiState.update { it.copy(saveMessage = "La superficie no pot ser negativa") }
+                return false
+            }
+        }
+
         scope.launch {
             try {
-                val updated = repository.updateAplicacio(id, AplicacioUpdateRequest(data = data, kg_n = kgN, uf = uf))
+                val created = repository.createTerra(
+                    TerraCreateRequest(
+                        titular_id = currentTitularId,
+                        mun_codi = cleanMunCodi,
+                        poligon = poligon,
+                        parcela = parcela,
+                        recinte = recinte,
+                        superficie = superficie
+                    )
+                )
+                _uiState.update { st ->
+                    st.copy(
+                        terres = listOf(created) + st.terres,
+                        saveMessage = "Terra creada correctament"
+                    )
+                }
+            } catch (ex: Exception) {
+                _uiState.update { it.copy(saveMessage = "Error: ${ex.message}") }
+            }
+        }
+        return true
+    }
+
+    fun deleteTerra(terraId: String) {
+        scope.launch {
+            try {
+                repository.deleteTerra(terraId)
+                _uiState.update { st ->
+                    st.copy(
+                        terres = st.terres.filterNot { it.id == terraId },
+                        saveMessage = "Terra eliminada"
+                    )
+                }
+            } catch (ex: Exception) {
+                _uiState.update { it.copy(saveMessage = "Error: ${ex.message}") }
+            }
+        }
+    }
+
+    fun updateAplicacio(id: String, data: String, kgNText: String, ufText: String): Boolean {
+        val cleanData = data.trim()
+        val kgN = kgNText.toDoubleOrNull()
+        val uf = ufText.toDoubleOrNull()
+        if (!isValidIsoDate(cleanData)) {
+            _uiState.update { it.copy(saveMessage = "La data ha de tenir format YYYY-MM-DD") }
+            return false
+        }
+        if (kgN == null || uf == null) {
+            _uiState.update { it.copy(saveMessage = "Kg N i UF han de ser nombres valids") }
+            return false
+        }
+        if (kgN < 0 || uf < 0) {
+            _uiState.update { it.copy(saveMessage = "Kg N i UF no poden ser negatius") }
+            return false
+        }
+        scope.launch {
+            try {
+                val updated = repository.updateAplicacio(
+                    id,
+                    AplicacioUpdateRequest(data = cleanData, kg_n = kgN, uf = uf)
+                )
                 _uiState.update { st ->
                     st.copy(
                         aplicacions = st.aplicacions.map { if (it.id == id) updated else it },
                         saveMessage = "Aplicacio guardada"
+                    )
+                }
+            } catch (ex: Exception) {
+                _uiState.update { it.copy(saveMessage = "Error: ${ex.message}") }
+            }
+        }
+        return true
+    }
+
+    fun createAplicacio(terraId: String, data: String, kgNText: String, ufText: String): Boolean {
+        val cleanData = data.trim()
+        val kgN = kgNText.toDoubleOrNull()
+        val uf = ufText.toDoubleOrNull()
+        if (terraId.isBlank()) {
+            _uiState.update { it.copy(saveMessage = "Has de seleccionar una terra") }
+            return false
+        }
+        if (!isValidIsoDate(cleanData)) {
+            _uiState.update { it.copy(saveMessage = "La data ha de tenir format YYYY-MM-DD") }
+            return false
+        }
+        if (kgN == null || uf == null) {
+            _uiState.update { it.copy(saveMessage = "Kg N i UF han de ser nombres valids") }
+            return false
+        }
+        if (kgN < 0 || uf < 0) {
+            _uiState.update { it.copy(saveMessage = "Kg N i UF no poden ser negatius") }
+            return false
+        }
+        scope.launch {
+            try {
+                val created = repository.createAplicacio(
+                    titularId = currentTitularId,
+                    terraId = terraId,
+                    data = cleanData,
+                    kgN = kgN,
+                    uf = uf
+                )
+                _uiState.update { st ->
+                    st.copy(
+                        aplicacions = listOf(created) + st.aplicacions,
+                        saveMessage = "Aplicacio creada correctament"
+                    )
+                }
+            } catch (ex: Exception) {
+                _uiState.update { it.copy(saveMessage = "Error: ${ex.message}") }
+            }
+        }
+        return true
+    }
+
+    fun deleteAplicacio(id: String) {
+        scope.launch {
+            try {
+                repository.deleteAplicacio(id)
+                _uiState.update { st ->
+                    st.copy(
+                        aplicacions = st.aplicacions.filterNot { it.id == id },
+                        saveMessage = "Aplicacio eliminada"
                     )
                 }
             } catch (ex: Exception) {
@@ -104,4 +283,8 @@ private fun mapHttpError(message: String?): String {
         msg.contains("403") -> "No tens permis per aquest titular (403)."
         else -> msg
     }
+}
+
+private fun isValidIsoDate(value: String): Boolean {
+    return value.matches(Regex("^\\d{4}-\\d{2}-\\d{2}$"))
 }
