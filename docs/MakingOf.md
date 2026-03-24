@@ -66,6 +66,7 @@ La part client està dins de `composeApp` i s'encarrega de:
 - llançar consultes i actualitzacions
 - mostrar errors, càrregues i resultats
 - confirmar accions destructives abans d'executar-les
+- orientar l'usuari amb textos d'ajuda, placeholders i estats buits més clars
 
 ### 4.2. Capa de dades
 
@@ -160,6 +161,12 @@ Flux:
 5. l'app recupera el tècnic associat amb `get_my_tecnic()`
 6. si el tècnic existeix i està actiu, es guarda la sessió localment
 
+Des de la iteració 4, la pantalla de login també fa millor aquesta feina a nivell d'UX:
+
+- té millor jerarquia visual
+- mostra textos d'ajuda sobre què s'espera de l'usuari
+- diferencia millor l'error general dels errors de camps buits
+
 ### 7.3. Recuperació del perfil tècnic
 
 Un usuari autenticat no n'hi ha prou. També ha d'existir a `public.tecnic`.
@@ -187,38 +194,13 @@ Agrupa tècnics i permet limitar accés d'un `oficina_manager`.
 
 Representa l'usuari operatiu del sistema.
 
-Camps principals:
-
-- `id`
-- `oficina_id`
-- `user_id`
-- `nom`
-- `email`
-- `rol`
-- `actiu`
-- timestamps i camps d'auditoria
-
 ### 8.3. `titular`
 
 Entitat central del domini.
 
-Camps principals:
-
-- `id`
-- `nif`
-- `nom_rao`
-- timestamps i camps d'auditoria
-
 ### 8.4. `tecnic_titular`
 
 Defineix l'assignació entre tècnic i titular.
-
-Camps principals:
-
-- `tecnic_id`
-- `titular_id`
-- `scope`
-- `actiu`
 
 Scopes previstos:
 
@@ -234,15 +216,6 @@ Capçalera de campanya per titular.
 ### 8.6. `terra`
 
 Representa una parcel·la o recinte agrícola.
-
-Camps clau:
-
-- `mun_codi`
-- `poligon`
-- `parcela`
-- `recinte`
-- `codi_sigpac_complet`
-- `superficie`
 
 ### 8.7. `aplicacions_fertilitzants`
 
@@ -278,8 +251,6 @@ L'aplicació treballa amb tres grans tipus d'entrada.
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-Aquestes dades no van hardcodejades dins del projecte. S'han d'injectar a l'entorn d'execució.
-
 ### 9.2. Entrada d'usuari
 
 - email i password per fer login
@@ -314,12 +285,6 @@ Exemples:
 - format de data `YYYY-MM-DD` als editors inline que ho requereixen
 - comprovació que els camps de selecció obligatoris estiguin informats abans de crear registres nous
 
-A la iteració 1 es va reforçar aquesta part perquè els mòduls agrícola i ramader no guardin `0` per defecte quan l'usuari escriu un valor invàlid. Ara, si la conversió falla o el valor és negatiu quan no toca, el guardat es bloqueja i es mostra un missatge a l'usuari.
-
-A la iteració 2 es va reforçar també el control d'accions destructives. Abans d'eliminar tècnics o assignacions, la UI demana confirmació explícita.
-
-A la iteració 3 aquesta mateixa idea s'ha estès als mòduls agrícola i ramader: crear i eliminar registres des del detall també passa per validació prèvia i confirmació quan l'acció és destructiva.
-
 ### 10.2. Transformació
 
 El sistema també transforma dades:
@@ -346,6 +311,11 @@ També hi ha filtratge local:
 - cerca de terres per titular o codi SIGPAC
 - paginació simple
 
+Des de la iteració 4, la pantalla de titulars també acompanya més la lectura:
+
+- mostra resum de resultats i pàgines
+- diferencia millor error, buit per filtre i buit per manca d'accés
+
 ### 10.4. Edició i administració
 
 Quan l'usuari edita o administra:
@@ -359,14 +329,6 @@ Quan l'usuari edita o administra:
 7. Supabase retorna el resultat
 8. la pantalla es refresca
 
-Aquest patró s'aplica especialment a:
-
-- edició de dades agrícola i ramaderes
-- alta i baixa de registres als mòduls agrícola i ramader
-- reset de password
-- eliminació de tècnics
-- eliminació d'assignacions
-
 ### 10.5. Gestió automàtica de DAN
 
 Per crear una aplicació agrícola o una entrega ramadera, la BDD exigeix un `dan_id`.
@@ -377,23 +339,30 @@ Per evitar que l'usuari hagi de gestionar manualment aquesta dependència en un 
 2. si en troba, fa servir la més recent
 3. si no en troba cap, crea automàticament una DAN per a la campanya actual
 
-Això simplifica l'ús del programa sense haver de canviar l'esquema SQL.
+### 10.6. Poliment d'UX
 
-### 10.6. Sessió persistent
+La iteració 4 ha afegit una capa de tractament menys tècnica però molt important:
+
+- formularis amb més context i més guia
+- capçaleres de secció que expliquen què representa cada bloc
+- estats buits que no només diuen "no hi ha dades", sinó que orienten sobre el següent pas
+- missatges d'error i ajuda més coherents entre pantalles
+
+### 10.7. Sessió persistent
 
 La sessió es guarda localment amb `Preferences`.
-
-Això permet:
-
-- reobrir l'app sense fer login immediatament
-- refrescar el token automàticament
-- recuperar el perfil tècnic després d'arrencar
 
 ## 11. Tractament per mòduls
 
 ### 11.1. Home de titulars
 
 Mostra els titulars accessibles segons rol i assignacions.
+
+També incorpora:
+
+- cerca més guiada
+- resum visual dels resultats
+- millor estat buit i millor estat d'error
 
 ### 11.2. Mòdul agrícola
 
@@ -406,14 +375,10 @@ Carrega:
 També permet:
 
 - editar titular
-- editar terres
-- crear terres
-- eliminar terres
-- editar aplicacions
-- crear aplicacions
-- eliminar aplicacions
+- editar, crear i eliminar terres
+- editar, crear i eliminar aplicacions
 
-Això fa que el mòdul passi de ser només de consulta i edició a ser realment operatiu.
+Des de la iteració 4, cada secció també mostra una petita explicació funcional i un estat buit més útil quan encara no hi ha registres.
 
 ### 11.3. Mòdul ramader
 
@@ -423,8 +388,8 @@ Carrega:
 - granges
 - cens de bestiar
 - entregues de dejeccions
-- catàlegs de bestiar i fase productiva necessaris per crear nous registres
-- terres del titular, necessàries per oferir destí d'entrega quan el receptor és una terra
+- catàlegs de bestiar i fase productiva
+- terres del titular per oferir destí d'entrega
 
 També permet:
 
@@ -432,6 +397,8 @@ També permet:
 - crear, editar i eliminar granges
 - crear, editar i eliminar registres de granja-bestiar
 - crear, editar i eliminar entregues de dejeccions
+
+Des de la iteració 4, aquestes seccions també tenen més context visual, millor estat buit i formularis nous més guiats.
 
 ### 11.4. Gestió de titulars
 
@@ -454,8 +421,6 @@ Permet:
 - intentar eliminar també el seu usuari d'Auth si tenia login associat
 - gestionar assignacions de titulars amb confirmació abans d'eliminar-les
 
-Aquí continua fent falta `service_role`, perquè aquestes operacions són administratives i no formen part del flux normal d'un usuari estàndard.
-
 ### 11.7. Gestió d'oficines
 
 CRUD simple d'oficines.
@@ -473,19 +438,7 @@ Punts clau:
 - funcions helper de permisos
 - policies RLS per operació
 
-La base de dades decideix:
-
-- què pot veure cada usuari
-- què pot modificar
-- sobre quin titular
-- en quin àmbit
-
-A nivell d'aplicació s'ha fet una separació important:
-
-- el flux normal de login i lectura de perfil funciona amb el token de l'usuari
-- les operacions administratives especials es reserven a les parts que realment necessiten privilegis elevats
-
-La iteració 2 no va requerir canviar l'esquema SQL. La iteració 3 tampoc no l'ha requerit: la base de dades ja estava preparada per suportar les insercions, actualitzacions i eliminacions necessàries als mòduls, sempre sota control de les policies i els helpers de permisos.
+La iteració 4 no ha requerit cap canvi a permisos ni a l'esquema SQL. Tot el treball ha estat a nivell de presentació, orientació d'ús i consistència visual.
 
 ## 13. Sortides del sistema
 
@@ -499,6 +452,7 @@ La iteració 2 no va requerir canviar l'esquema SQL. La iteració 3 tampoc no l'
 - missatges d'èxit i error
 - diàlegs de confirmació en accions destructives
 - avisos contextuals en casos com "sense login" o "sense assignacions"
+- estats buits i missatges de context més útils
 
 ### 13.2. Sortida persistent
 
@@ -526,18 +480,9 @@ Correspondències importants:
 - `UF` -> `aplicacions_fertilitzants.uf`
 - `kg N` -> `aplicacions_fertilitzants.kg_n`
 
-Valors com `kg N/ha` o `kg N/UF` són derivables, per això no cal guardar-los com a camps físics en aquest MVP.
-
 ## 15. Seed i proves
 
 Per poder provar l'aplicació amb dades reals del MVP, el projecte inclou `seed_complet.sql`.
-
-Funcionament del seed actual:
-
-- no escriu directament a `auth.users`
-- espera que els usuaris existeixin abans a `Authentication > Users`
-- després vincula aquests usuaris a `public.tecnic`
-- carrega dades a totes les taules actives del MVP
 
 Usuaris de prova previstos al seed:
 
@@ -554,7 +499,7 @@ Usuaris de prova previstos al seed:
 - no hi ha dashboard de càlculs agregats
 - alguns camps del full original encara no estan modelats
 - la `service_role` continua sent necessària per a funcions administratives avançades
-- encara hi ha marge per polir més la UX visual general
+- encara hi ha marge per polir més la UX visual general si es vol un acabat més de producte
 - els càlculs derivats i els resums encara no formen part de la UI
 
 ## 17. Estat actual verificat
@@ -568,10 +513,11 @@ Amb l'esquema SQL simplificat i els ajustos realitzats:
 - les validacions del detall agrícola i ramader són més estrictes i eviten guardats incorrectes per defecte
 - la gestió de tècnics és més completa i ja inclou baixa directa des de la UI
 - els mòduls agrícola i ramader ja permeten altes i baixes dels principals registres de treball
-- les iteracions 2 i 3 s'han pogut resoldre sense refer la BDD
+- l'experiència d'usuari al login i a les pantalles principals és més clara i més guiada
+- les iteracions 2, 3 i 4 s'han pogut resoldre sense refer la BDD
 
 ## 18. Resum final
 
 AgriSync és un MVP funcional de gestió agrària centrat en la DAN. Combina autenticació, model relacional, permisos reals, client desktop i una estructura neta per capes.
 
-Des del punt de vista de defensa del projecte, el valor principal és que no és només una maqueta visual: és una aplicació amb autenticació real, persistència real i control d'accés real sobre dades de negoci. Després de les iteracions 1, 2 i 3, el projecte queda més sòlid tècnicament, més segur, més complet des del punt de vista d'administració interna i també més operatiu per a la feina del dia a dia.
+Des del punt de vista de defensa del projecte, el valor principal és que no és només una maqueta visual: és una aplicació amb autenticació real, persistència real i control d'accés real sobre dades de negoci. Després de les iteracions 1, 2, 3 i 4, el projecte queda més sòlid tècnicament, més segur, més complet des del punt de vista funcional i també més clar de cara a ús real i presentació.

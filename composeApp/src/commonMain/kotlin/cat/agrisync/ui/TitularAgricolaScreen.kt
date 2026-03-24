@@ -90,12 +90,18 @@ internal fun TitularAgricolaScreen(
                     item {
                         SectionHeader(
                             title = "Terres",
+                            description = "Parcel·les i recintes associats al titular.",
                             actionLabel = "+ Nova Terra",
                             onAction = { showCreateTerraDialog = true }
                         )
                     }
                     if (ui.terres.isEmpty()) {
-                        item { Text("Sense terres", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        item {
+                            EmptySectionCard(
+                                title = "Encara no hi ha terres",
+                                message = "Dona d'alta una terra des d'aquest mateix mòdul per començar a treballar la part agrícola."
+                            )
+                        }
                     } else {
                         items(ui.terres, key = { it.id }) { terra ->
                             EditableTerraCard(
@@ -111,12 +117,18 @@ internal fun TitularAgricolaScreen(
                     item {
                         SectionHeader(
                             title = "Aplicacions fertilitzants",
+                            description = "Registres d'aplicació de nitrogen vinculats a la DAN.",
                             actionLabel = "+ Nova Aplicacio",
                             onAction = { showCreateAplicacioDialog = true }
                         )
                     }
                     if (ui.aplicacions.isEmpty()) {
-                        item { Text("Sense aplicacions", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        item {
+                            EmptySectionCard(
+                                title = "Encara no hi ha aplicacions",
+                                message = "Quan tinguis terres disponibles, pots registrar des d'aquí les aplicacions de fertilitzants del titular."
+                            )
+                        }
                     } else {
                         items(ui.aplicacions, key = { it.id }) { app ->
                             EditableAplicacioCard(
@@ -182,14 +194,30 @@ internal fun TitularAgricolaScreen(
 }
 
 @Composable
-private fun SectionHeader(title: String, actionLabel: String, onAction: () -> Unit) {
+private fun SectionHeader(title: String, description: String, actionLabel: String, onAction: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         OutlinedButton(onClick = onAction) { Text(actionLabel) }
+    }
+}
+
+@Composable
+private fun EmptySectionCard(title: String, message: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -299,6 +327,11 @@ private fun CreateTerraDialog(
         title = { Text("Nova terra") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Introdueix la identificació SIGPAC bàsica i la superfície de la nova terra.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 OutlinedTextField(value = munCodi, onValueChange = { munCodi = it }, label = { Text("Codi municipal (5 digits)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = poligon, onValueChange = { poligon = it }, label = { Text("Poligon") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = parcela, onValueChange = { parcela = it }, label = { Text("Parcela") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -337,6 +370,11 @@ private fun CreateAplicacioDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
+                    Text(
+                        "Selecciona la terra i informa la data i les unitats aplicades.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     TerraDropdown(
                         terres = terres,
                         selectedId = selectedTerraId,

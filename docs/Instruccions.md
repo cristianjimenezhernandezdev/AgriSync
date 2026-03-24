@@ -26,8 +26,6 @@ Si has carregat el `seed_complet.sql`, els usuaris de prova previstos són aques
 - `ramader.test@agrisync.com` / `ramader1234`
 - `lectura.test@agrisync.com` / `lectura1234`
 
-Aquests usuaris s'han de crear abans a `Supabase > Authentication > Users` i després executar el seed.
-
 ## 4. Inici de sessió
 
 Quan s'obre el programa apareix la pantalla de login.
@@ -37,7 +35,7 @@ Has d'introduir:
 - email
 - password
 
-Després prem `Entrar`.
+La pantalla et guia amb textos d'ajuda perquè sàpigues què s'espera a cada camp.
 
 Si tot va bé:
 
@@ -71,6 +69,7 @@ Allà veuràs:
 
 - la llista de titulars accessibles segons els teus permisos
 - una cerca per nom o NIF
+- un resum de resultats visibles i pàgines
 - accés al mòdul agrícola si tens permís agrícola
 - accés al mòdul ramader si tens permís ramader
 - accés al teu perfil
@@ -108,6 +107,7 @@ Recorda:
 
 - no tots els usuaris veuen els mateixos titulars
 - la visibilitat depèn del rol i de les assignacions a `tecnic_titular`
+- si no surt cap resultat, la pantalla t'indicarà si és per filtre o per manca de titulars accessibles
 
 ## 9. Mòdul agrícola
 
@@ -118,6 +118,8 @@ Hi trobaràs normalment:
 - dades bàsiques del titular
 - terres vinculades
 - aplicacions de fertilitzants
+
+Cada secció incorpora una explicació curta sobre què representa i què hi pots fer.
 
 ### 9.1. Què s'hi pot fer ara
 
@@ -159,6 +161,7 @@ Si el titular encara no tenia cap DAN, el sistema en crea una automàticament pe
 - els valors numèrics no poden ser negatius
 - la data ha de tenir format `YYYY-MM-DD`
 - abans d'eliminar una terra o una aplicació, l'app demana confirmació
+- si una secció és buida, la pantalla t'indicarà quin és el següent pas recomanat
 
 ## 10. Mòdul ramader
 
@@ -171,9 +174,11 @@ Hi trobaràs:
 - cens de bestiar per granja
 - entregues de dejeccions
 
+Cada secció incorpora una explicació curta sobre què representa i què hi pots fer.
+
 ### 10.1. Què s'hi pot fer ara
 
-Segons permisos:
+Segons els permisos:
 
 - editar NIF i nom del titular
 - crear granges
@@ -225,6 +230,7 @@ Si el titular encara no tenia cap DAN, el sistema en crea una automàticament pe
 - la data ha de tenir format `YYYY-MM-DD`
 - els valors numèrics no poden ser negatius
 - abans d'eliminar una granja, un registre de bestiar o una entrega, l'app demana confirmació
+- si una secció és buida, la pantalla t'indicarà quin és el següent pas recomanat
 
 ## 11. Perfil
 
@@ -396,8 +402,6 @@ Pot passar si:
 - hi ha un problema amb Supabase Auth
 - s'ha pogut eliminar el tècnic funcional però no l'usuari d'Auth
 
-En aquest últim cas, l'app t'ho indicarà al missatge final.
-
 ### 17.4. Error en eliminar una granja
 
 Pot passar si aquella granja està sent referenciada per entregues o per altres dades que la BDD no permet esborrar en aquell moment.
@@ -410,6 +414,7 @@ Pot passar si aquella granja està sent referenciada per entregues o per altres 
 - revisa les dades abans de desar
 - si no veus un titular que esperes veure, revisa assignacions i permisos
 - llegeix els diàlegs de confirmació abans d'eliminar dades
+- fixa't en els textos de suport de la pantalla, perquè acostumen a indicar quin és el següent pas útil
 
 ## 19. Resum ràpid de treball
 

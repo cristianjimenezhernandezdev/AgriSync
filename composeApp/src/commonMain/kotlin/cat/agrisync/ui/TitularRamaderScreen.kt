@@ -97,12 +97,18 @@ internal fun TitularRamaderScreen(
                     item {
                         SectionHeader(
                             title = "Granges",
+                            description = "Explotacions ramaderes vinculades al titular.",
                             actionLabel = "+ Nova Granja",
                             onAction = { showCreateGranjaDialog = true }
                         )
                     }
                     if (ui.granges.isEmpty()) {
-                        item { Text("Sense granges", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        item {
+                            EmptySectionCard(
+                                title = "Encara no hi ha granges",
+                                message = "Crea una granja per poder afegir bestiar i registrar entregues de dejeccions."
+                            )
+                        }
                     } else {
                         items(ui.granges, key = { it.id }) { granja ->
                             EditableGranjaCard(
@@ -118,12 +124,18 @@ internal fun TitularRamaderScreen(
                     item {
                         SectionHeader(
                             title = "Granja bestiar",
+                            description = "Relació entre granja, tipus de bestiar, fase productiva i cens.",
                             actionLabel = "+ Nou Registre",
                             onAction = { showCreateGranjaBestiarDialog = true }
                         )
                     }
                     if (ui.granjaBestiar.isEmpty()) {
-                        item { Text("Sense registres", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        item {
+                            EmptySectionCard(
+                                title = "Encara no hi ha registres de bestiar",
+                                message = "Quan tinguis una granja creada, pots afegir-hi aquí les línies de cens per bestiar i fase productiva."
+                            )
+                        }
                     } else {
                         items(ui.granjaBestiar, key = { it.id }) { gb ->
                             EditableGranjaBestiarCard(
@@ -139,12 +151,18 @@ internal fun TitularRamaderScreen(
                     item {
                         SectionHeader(
                             title = "Entrega dejeccions",
+                            description = "Sortides de dejeccions amb receptor titular o terra.",
                             actionLabel = "+ Nova Entrega",
                             onAction = { showCreateEntregaDialog = true }
                         )
                     }
                     if (ui.entregues.isEmpty()) {
-                        item { Text("Sense entregues", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        item {
+                            EmptySectionCard(
+                                title = "Encara no hi ha entregues",
+                                message = "Des d'aquí pots registrar noves entregues quan ja hi hagi una granja d'origen disponible."
+                            )
+                        }
                     } else {
                         items(ui.entregues, key = { it.id }) { e ->
                             EditableEntregaCard(
@@ -239,14 +257,30 @@ internal fun TitularRamaderScreen(
 }
 
 @Composable
-private fun SectionHeader(title: String, actionLabel: String, onAction: () -> Unit) {
+private fun SectionHeader(title: String, description: String, actionLabel: String, onAction: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         OutlinedButton(onClick = onAction) { Text(actionLabel) }
+    }
+}
+
+@Composable
+private fun EmptySectionCard(title: String, message: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -383,6 +417,11 @@ private fun CreateGranjaDialog(
         title = { Text("Nova granja") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Identifica la granja pel seu nom i per la marca oficial.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 OutlinedTextField(value = nom, onValueChange = { nom = it }, label = { Text("Nom granja") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = marca, onValueChange = { marca = it }, label = { Text("Marca oficial") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             }
@@ -421,6 +460,11 @@ private fun CreateGranjaBestiarDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
+                    Text(
+                        "Selecciona la granja, el tipus de bestiar, la fase productiva i el cens.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     GranjaDropdown(granges = granges, selectedId = selectedGranjaId, onSelect = { selectedGranjaId = it }, label = "Granja")
                     BestiarDropdown(bestiars = bestiars, selectedId = selectedBestiarId, onSelect = { selectedBestiarId = it })
                     FaseDropdown(fases = fases, selectedId = selectedFaseId, onSelect = { selectedFaseId = it })
@@ -463,6 +507,11 @@ private fun CreateEntregaDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
+                    Text(
+                        "Registra la sortida de dejeccions indicant origen, data, quantitat i receptor.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     GranjaDropdown(granges = granges, selectedId = selectedGranjaId, onSelect = { selectedGranjaId = it }, label = "Granja d'origen")
                     OutlinedTextField(value = data, onValueChange = { data = it }, label = { Text("Data (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = quantitat, onValueChange = { quantitat = it }, label = { Text("Quantitat") }, singleLine = true, modifier = Modifier.fillMaxWidth())

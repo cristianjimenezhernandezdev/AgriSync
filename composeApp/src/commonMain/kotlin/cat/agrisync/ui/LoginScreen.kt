@@ -1,13 +1,17 @@
 package cat.agrisync.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -24,45 +28,101 @@ import cat.agrisync.viewmodel.LoginViewModel
 @Composable
 internal fun LoginScreen(viewModel: LoginViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    val showEmailError = !uiState.error.isNullOrBlank() && uiState.email.isBlank()
+    val showPasswordError = !uiState.error.isNullOrBlank() && uiState.password.isBlank()
 
-    Column(
+    Box(
         modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        contentAlignment = Alignment.Center
     ) {
-        Text("AgriSync", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(
-            value = uiState.email,
-            onValueChange = viewModel::onEmailChange,
-            label = { Text("Email") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(0.6f)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = uiState.password,
-            onValueChange = viewModel::onPasswordChange,
-            label = { Text("Password") },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(0.6f)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = viewModel::login,
-            enabled = !uiState.isLoading,
-            modifier = Modifier.fillMaxWidth(0.4f)
+        Card(
+            modifier = Modifier.fillMaxWidth().widthIn(max = 520.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
         ) {
-            Text("Entrar")
-        }
-        if (uiState.isLoading) {
-            Spacer(modifier = Modifier.height(12.dp))
-            CircularProgressIndicator()
-        }
-        if (!uiState.error.isNullOrBlank()) {
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(uiState.error ?: "", color = MaterialTheme.colorScheme.error)
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(28.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text("AgriSync", style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    "Gestio centralitzada de titulars, mòdul agrícola i mòdul ramader.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                OutlinedTextField(
+                    value = uiState.email,
+                    onValueChange = viewModel::onEmailChange,
+                    label = { Text("Email") },
+                    placeholder = { Text("nom@domini.cat") },
+                    singleLine = true,
+                    isError = showEmailError,
+                    supportingText = {
+                        if (showEmailError) {
+                            Text("L'email és obligatori")
+                        } else {
+                            Text("Introdueix l'usuari de Supabase Auth")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = uiState.password,
+                    onValueChange = viewModel::onPasswordChange,
+                    label = { Text("Password") },
+                    placeholder = { Text("Minim 6 caracters") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = showPasswordError,
+                    supportingText = {
+                        if (showPasswordError) {
+                            Text("La contrasenya és obligatòria")
+                        } else {
+                            Text("La contrasenya no es mostra a pantalla")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (!uiState.error.isNullOrBlank()) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Text(
+                            text = uiState.error ?: "",
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = viewModel::login,
+                    enabled = !uiState.isLoading,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.height(18.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.height(0.dp))
+                        Text(" Verificant...")
+                    } else {
+                        Text("Entrar")
+                    }
+                }
+
+                Text(
+                    "Si el login és correcte però no entres, revisa que el teu usuari també existeixi a public.tecnic i estigui actiu.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

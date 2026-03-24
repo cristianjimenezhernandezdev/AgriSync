@@ -10,13 +10,13 @@ La conclusio actual és aquesta:
 
 - sí, el projecte compleix bé els objectius principals del MVP
 - sí, es pot defensar com a projecte funcional i coherent
-- sí, després de les iteracions 1, 2 i 3 ha quedat més sòlid i més complet
-- el que queda ara és sobretot poliment visual i valor afegit funcional, no mancances greus del nucli
+- sí, després de les iteracions 1, 2, 3 i 4 ha quedat més sòlid, més complet i més presentable
+- el que queda ara és sobretot valor afegit funcional, no mancances greus del nucli ni de l'experiència bàsica d'ús
 
 En altres paraules:
 
 - com a MVP acadèmic, el projecte ja està clarament tancat i defensable
-- si es vol pujar el nivell, les següents passes passen per UX i càlculs o sortides més riques
+- si es vol pujar el nivell, la següent passa passa per càlculs, resums i sortides amb més valor funcional
 
 ## 3. Què compleix bé ara mateix
 
@@ -36,10 +36,11 @@ Actualment el projecte ja resol bé aquests punts:
 - reset de password des de gestió de tècnics
 - alta de tècnics nous des de l'aplicació
 - baixa completa de tècnics des de la UI
-- confirmacions abans de destruccions importants dins de gestió de tècnics
 - alta i baixa directa de dades dins dels mòduls agrícola i ramader
+- login més clar i més guiada la primera experiència d'ús
+- estats buits, errors i textos d'ajuda més coherents a les pantalles principals
 
-Per tant, el nucli del projecte, la part administrativa i la part operativa principal ja estan assolits.
+Per tant, el nucli del projecte, la part administrativa, la part operativa principal i la UX essencial ja estan assolits.
 
 ## 4. Valoració de si es pot donar per finalitzat
 
@@ -57,14 +58,15 @@ Per què:
 - la base de dades no és superficial: està pensada i protegida
 - ja no depèn de claus sensibles hardcodejades
 - l'administració bàsica i l'operació principal es poden fer des de l'app
+- la UX ja és prou clara per una defensa i una demostració sense sensació de prototip cru
 
 ### 4.2. Si el criteri és producte més rodó o entrega excel·lent
 
 Encara hi ha millores clares:
 
-- millorar la UX visual i els formularis
-- fer més consistent la presentació de missatges, estats buits i ajudes
 - afegir càlculs derivats, resums o exportacions amb més valor funcional
+- connectar millor el model de dades amb indicadors finals del procés real
+- fer una passada de poliment visual encara més fina si es vol una percepció més "producte"
 
 ## 5. Estat dels findings principals
 
@@ -92,27 +94,17 @@ Estat: millorat a la iteració 2.
 
 Estat: resolt a la iteració 3.
 
-Ara des dels mòduls es poden:
+### 5.7. UX massa funcional i poc guiada
 
-- crear i eliminar terres des del mòdul agrícola
-- crear i eliminar aplicacions de fertilitzants des del mòdul agrícola
-- crear i eliminar granges des del mòdul ramader
-- crear i eliminar registres de granja-bestiar des del mòdul ramader
-- crear i eliminar entregues de dejeccions des del mòdul ramader
+Estat: resolt a la iteració 4 en els punts de més impacte.
 
-També s'ha resolt una dependència funcional important:
+Ara s'ha millorat especialment:
 
-- si un titular encara no té cap `dan_declaracio`, l'aplicació pot crear-ne automàticament una per a la campanya actual quan es crea la primera aplicació o la primera entrega
-
-### 5.7. Millores visuals i de producte pendents
-
-Estat: pendent.
-
-Aquí encara hi ha feina amb valor real, sobretot en:
-
-- poliment visual
-- formularis més guiats i consistents
-- resums, càlculs derivats i sortides de negoci
+- la pantalla de login
+- la cerca i la presentació de la home de titulars
+- els estats buits i d'error de les pantalles principals
+- les capçaleres de secció i els textos d'ajuda als mòduls agrícola i ramader
+- la coherència visual dels formularis nous dins dels mòduls
 
 ## 6. Veredicte recomanat
 
@@ -122,10 +114,9 @@ Ja el pots defensar com a MVP acadèmic ben tancat.
 
 ### Si vols continuar evolucionant-lo
 
-Les següents iteracions amb més valor ara són:
+La següent iteració amb més valor ara és la 5:
 
-- iteració 4, per millorar la UX i la percepció de qualitat
-- iteració 5, per afegir valor funcional directe a partir de les dades
+- càlculs derivats, resums, informes o importació
 
 ## 7. Estat del roadmap
 
@@ -133,25 +124,9 @@ Les següents iteracions amb més valor ara són:
 
 Estat: completada.
 
-S'ha fet:
-
-- treure claus sensibles del codi
-- obligar a configurar-les per entorn
-- eliminar el fallback de login amb `service_role`
-- impedir guardats amb valors numèrics invàlids
-- millorar el comportament de validació
-
 ### Iteracio 2: Administració i operació
 
 Estat: completada.
-
-S'ha fet:
-
-- permetre esborrar tècnics des de la UI
-- optar per esborrat físic del registre funcional
-- intentar també l'esborrat de l'usuari d'Auth quan existeix login associat
-- afegir confirmacions clares abans d'eliminar tècnics i assignacions
-- millorar la informació mostrada en casos de tècnic sense login o sense assignacions
 
 Nota sobre BDD:
 
@@ -161,43 +136,36 @@ Nota sobre BDD:
 
 Estat: completada.
 
-S'ha fet:
-
-- crear i eliminar terres des del mòdul agrícola
-- crear i eliminar aplicacions de fertilitzants des del mòdul agrícola
-- crear i eliminar granges des del mòdul ramader
-- crear i eliminar línies de granja-bestiar des del mòdul ramader
-- crear i eliminar entregues de dejeccions des del mòdul ramader
-- resoldre la dependència de `dan_declaracio` creant-la automàticament quan cal
-- afegir confirmacions abans de destruccions dins d'aquests mòduls
-
-Resultat:
-
-- els mòduls ja es poden fer servir amb molta menys dependència de seeds o pantalles externes
-- l'app es pot demostrar millor de punta a punta
-
 Nota sobre BDD:
 
-- tampoc no ha calgut refer l'esquema SQL per aquesta iteració
+- tampoc no va caldre refer l'esquema SQL per aquesta iteració
 - les policies i restriccions actuals ja suportaven aquest comportament
 
 ### Iteracio 4: UX i poliment visual
 
-Estat: següent iteració recomanada.
+Estat: completada.
 
-Objectiu:
+S'ha fet:
 
-- millorar percepció de qualitat del producte
+- millorar la pantalla de login amb més guia visual i feedback més clar
+- afegir placeholders i textos d'ajuda als punts amb més impacte
+- fer més consistents els formularis nous dels mòduls
+- millorar la pantalla de titulars amb resum visual de resultats i millor estat buit
+- millorar navegació i estats buits als mòduls agrícola i ramader
+- reforçar la jerarquia visual de capçaleres i seccions
 
-Tasques:
+Resultat:
 
-- millorar la pantalla de login
-- afegir placeholders, ajudes i validacions més visibles
-- fer més consistents els formularis
-- millorar navegació i estats buits
-- revisar jerarquia visual i coherència general
+- l'app és més clara de cara a demostració i ús real
+- l'usuari entén millor què pot fer i què li falta quan una pantalla no té dades
+
+Nota sobre BDD:
+
+- no ha calgut tocar la base de dades tampoc en aquesta iteració
 
 ### Iteracio 5: Valor afegit funcional
+
+Estat: següent iteració recomanada.
 
 Objectiu:
 
@@ -214,12 +182,12 @@ Tasques:
 
 Ara mateix prioritzaria exactament això:
 
-1. polir la UX del login i dels formularis
-2. afegir estats buits i feedback encara més clars
-3. incorporar algun càlcul derivat o resum que connecti millor amb el procés real
+1. afegir algun càlcul derivat visible a la UI
+2. construir un resum per titular o campanya
+3. valorar exportació o informe simple
 
 ## 9. Resum final
 
-El projecte, en l'estat actual, compleix bé els objectius del MVP i es pot defensar amb criteri com a projecte final de curs funcional. Les tres primeres iteracions del roadmap ja han reforçat els punts que feien més mal: seguretat bàsica, validació, administració i operativa real dels mòduls.
+El projecte, en l'estat actual, compleix bé els objectius del MVP i es pot defensar amb criteri com a projecte final de curs funcional. Les quatre primeres iteracions del roadmap ja han reforçat els punts que feien més mal: seguretat bàsica, validació, administració, operativa real dels mòduls i experiència d'usuari.
 
-A partir d'aquí, el que queda ja no és tapar mancances crítiques, sinó convertir un MVP funcional en una aplicació més polida i amb més valor funcional.
+A partir d'aquí, el que queda ja no és tapar mancances crítiques, sinó afegir més valor funcional al que ja està construït.
