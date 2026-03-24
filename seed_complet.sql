@@ -4,20 +4,27 @@
 -- Executa'l DESPRES de SQLAgriSync.sql al SQL Editor de Supabase
 -- =========================================================
 --
--- Credencials de prova creades per aquest script:
+-- IMPORTANT:
+--   Aquest script JA NO crea usuaris dins d'auth.users.
+--   Per evitar errors de login a Supabase Auth, els usuaris s'han de crear
+--   des del Dashboard de Supabase:
 --
---   admin@agrisync.com    / admin1234
---   manager@agrisync.com  / manager1234
---   agricola@agrisync.com / agricola1234
---   ramader@agrisync.com  / ramader1234
---   lectura@agrisync.com  / lectura1234
+--   Authentication > Users > Add user
 --
--- Recomanacio:
---   1) Executa primer SQLAgriSync.sql
---   2) Executa aquest seed
---   3) Fes login amb admin@agrisync.com / admin1234
+-- Crea aquests usuaris abans d'executar aquest seed:
 --
--- Aquest seed omple totes les taules actives del MVP:
+--   admin.test@agrisync.com    / admin1234
+--   manager.test@agrisync.com  / manager1234
+--   agricola.test@agrisync.com / agricola1234
+--   ramader.test@agrisync.com  / ramader1234
+--   lectura.test@agrisync.com  / lectura1234
+--
+-- Un cop creats a Authentication, aquest script:
+--   - verifica que existeixin
+--   - carrega totes les taules del MVP
+--   - vincula cada usuari Auth amb public.tecnic
+--
+-- Taules que omple:
 --   oficina
 --   tecnic
 --   titular
@@ -32,163 +39,40 @@
 --   entrega_dejeccions
 -- =========================================================
 
-create extension if not exists pgcrypto;
-
 -- =========================================================
--- 0) NETEJA DELS USUARIS AUTH DE PROVA SI JA EXISTEIXEN
+-- 0) VERIFICAR USUARIS AUTH
 -- =========================================================
 
-delete from auth.identities
-where user_id in (
-  '90000000-0000-0000-0000-000000000001',
-  '90000000-0000-0000-0000-000000000002',
-  '90000000-0000-0000-0000-000000000003',
-  '90000000-0000-0000-0000-000000000004',
-  '90000000-0000-0000-0000-000000000005'
-);
+do $$
+declare
+  missing_emails text[];
+begin
+  select array_agg(req.email)
+  into missing_emails
+  from (
+    values
+      ('admin.test@agrisync.com'),
+      ('manager.test@agrisync.com'),
+      ('agricola.test@agrisync.com'),
+      ('ramader.test@agrisync.com'),
+      ('lectura.test@agrisync.com')
+  ) as req(email)
+  where not exists (
+    select 1
+    from auth.users u
+    where u.email = req.email
+  );
 
-delete from auth.users
-where id in (
-  '90000000-0000-0000-0000-000000000001',
-  '90000000-0000-0000-0000-000000000002',
-  '90000000-0000-0000-0000-000000000003',
-  '90000000-0000-0000-0000-000000000004',
-  '90000000-0000-0000-0000-000000000005'
-)
-or email in (
-  'admin@agrisync.com',
-  'manager@agrisync.com',
-  'agricola@agrisync.com',
-  'ramader@agrisync.com',
-  'lectura@agrisync.com'
-);
-
--- =========================================================
--- 1) CREACIO D'USUARIS AUTH
--- =========================================================
-
-insert into auth.users (
-  instance_id,
-  id,
-  aud,
-  role,
-  email,
-  encrypted_password,
-  email_confirmed_at,
-  raw_app_meta_data,
-  raw_user_meta_data,
-  created_at,
-  updated_at,
-  confirmation_token,
-  recovery_token
-)
-values
-(
-  '00000000-0000-0000-0000-000000000000',
-  '90000000-0000-0000-0000-000000000001',
-  'authenticated',
-  'authenticated',
-  'admin@agrisync.com',
-  crypt('admin1234', gen_salt('bf')),
-  now(),
-  '{"provider":"email","providers":["email"]}',
-  '{"nom":"Admin AgriSync"}',
-  now(),
-  now(),
-  '',
-  ''
-),
-(
-  '00000000-0000-0000-0000-000000000000',
-  '90000000-0000-0000-0000-000000000002',
-  'authenticated',
-  'authenticated',
-  'manager@agrisync.com',
-  crypt('manager1234', gen_salt('bf')),
-  now(),
-  '{"provider":"email","providers":["email"]}',
-  '{"nom":"Manager AgriSync"}',
-  now(),
-  now(),
-  '',
-  ''
-),
-(
-  '00000000-0000-0000-0000-000000000000',
-  '90000000-0000-0000-0000-000000000003',
-  'authenticated',
-  'authenticated',
-  'agricola@agrisync.com',
-  crypt('agricola1234', gen_salt('bf')),
-  now(),
-  '{"provider":"email","providers":["email"]}',
-  '{"nom":"Tecnic Agricola"}',
-  now(),
-  now(),
-  '',
-  ''
-),
-(
-  '00000000-0000-0000-0000-000000000000',
-  '90000000-0000-0000-0000-000000000004',
-  'authenticated',
-  'authenticated',
-  'ramader@agrisync.com',
-  crypt('ramader1234', gen_salt('bf')),
-  now(),
-  '{"provider":"email","providers":["email"]}',
-  '{"nom":"Tecnic Ramader"}',
-  now(),
-  now(),
-  '',
-  ''
-),
-(
-  '00000000-0000-0000-0000-000000000000',
-  '90000000-0000-0000-0000-000000000005',
-  'authenticated',
-  'authenticated',
-  'lectura@agrisync.com',
-  crypt('lectura1234', gen_salt('bf')),
-  now(),
-  '{"provider":"email","providers":["email"]}',
-  '{"nom":"Usuari Lectura"}',
-  now(),
-  now(),
-  '',
-  ''
-);
-
-insert into auth.identities (
-  id,
-  user_id,
-  provider_id,
-  identity_data,
-  provider,
-  last_sign_in_at,
-  created_at,
-  updated_at
-)
-select
-  u.id,
-  u.id,
-  u.email,
-  jsonb_build_object('sub', u.id::text, 'email', u.email),
-  'email',
-  now(),
-  now(),
-  now()
-from auth.users u
-where u.id in (
-  '90000000-0000-0000-0000-000000000001',
-  '90000000-0000-0000-0000-000000000002',
-  '90000000-0000-0000-0000-000000000003',
-  '90000000-0000-0000-0000-000000000004',
-  '90000000-0000-0000-0000-000000000005'
-);
+  if missing_emails is not null then
+    raise exception
+      'Falten usuaris a Authentication: %. Crea''ls primer al Dashboard de Supabase.',
+      array_to_string(missing_emails, ', ');
+  end if;
+end
+$$;
 
 -- =========================================================
--- 2) OFICINES
+-- 1) OFICINES
 -- =========================================================
 
 insert into public.oficina (id, nom)
@@ -199,7 +83,7 @@ on conflict (id) do update set
   nom = excluded.nom;
 
 -- =========================================================
--- 3) TECNICS
+-- 2) TECNICS
 -- =========================================================
 
 insert into public.tecnic (id, oficina_id, user_id, nom, email, rol, actiu)
@@ -207,45 +91,45 @@ values
   (
     'c0000000-0000-0000-0000-000000000001',
     'a0000000-0000-0000-0000-000000000001',
-    '90000000-0000-0000-0000-000000000001',
+    (select id from auth.users where email = 'admin.test@agrisync.com'),
     'Administrador',
-    'admin@agrisync.com',
+    'admin.test@agrisync.com',
     'admin',
     true
   ),
   (
     'c0000000-0000-0000-0000-000000000002',
     'a0000000-0000-0000-0000-000000000001',
-    '90000000-0000-0000-0000-000000000002',
+    (select id from auth.users where email = 'manager.test@agrisync.com'),
     'Gestora Oficina',
-    'manager@agrisync.com',
+    'manager.test@agrisync.com',
     'oficina_manager',
     true
   ),
   (
     'c0000000-0000-0000-0000-000000000003',
     'a0000000-0000-0000-0000-000000000001',
-    '90000000-0000-0000-0000-000000000003',
+    (select id from auth.users where email = 'agricola.test@agrisync.com'),
     'Tecnic Agricola',
-    'agricola@agrisync.com',
+    'agricola.test@agrisync.com',
     'tecnic',
     true
   ),
   (
     'c0000000-0000-0000-0000-000000000004',
     'a0000000-0000-0000-0000-000000000002',
-    '90000000-0000-0000-0000-000000000004',
+    (select id from auth.users where email = 'ramader.test@agrisync.com'),
     'Tecnic Ramader',
-    'ramader@agrisync.com',
+    'ramader.test@agrisync.com',
     'tecnic',
     true
   ),
   (
     'c0000000-0000-0000-0000-000000000005',
     'a0000000-0000-0000-0000-000000000002',
-    '90000000-0000-0000-0000-000000000005',
+    (select id from auth.users where email = 'lectura.test@agrisync.com'),
     'Usuari Lectura',
-    'lectura@agrisync.com',
+    'lectura.test@agrisync.com',
     'lectura',
     true
   )
@@ -258,7 +142,7 @@ on conflict (id) do update set
   actiu = excluded.actiu;
 
 -- =========================================================
--- 4) TITULARS
+-- 3) TITULARS
 -- =========================================================
 
 insert into public.titular (id, nif, nom_rao)
@@ -274,7 +158,7 @@ on conflict (id) do update set
   nom_rao = excluded.nom_rao;
 
 -- =========================================================
--- 5) ASSIGNACIONS TECNIC_TITULAR
+-- 4) ASSIGNACIONS TECNIC_TITULAR
 -- =========================================================
 
 insert into public.tecnic_titular (id, tecnic_id, titular_id, scope, actiu)
@@ -293,7 +177,7 @@ on conflict (id) do update set
   actiu = excluded.actiu;
 
 -- =========================================================
--- 6) DAN
+-- 5) DAN
 -- =========================================================
 
 insert into public.dan_declaracio (id, titular_id, campanya, estat)
@@ -311,7 +195,7 @@ on conflict (id) do update set
   estat = excluded.estat;
 
 -- =========================================================
--- 7) TERRES
+-- 6) TERRES
 -- =========================================================
 
 insert into public.terra (id, titular_id, mun_codi, poligon, parcela, recinte, superficie)
@@ -331,7 +215,7 @@ on conflict (id) do update set
   superficie = excluded.superficie;
 
 -- =========================================================
--- 8) APLICACIONS FERTILITZANTS
+-- 7) APLICACIONS FERTILITZANTS
 -- =========================================================
 
 insert into public.aplicacions_fertilitzants (id, dan_id, terra_id, data, kg_n, uf, tecnic_id)
@@ -350,7 +234,7 @@ on conflict (id) do update set
   tecnic_id = excluded.tecnic_id;
 
 -- =========================================================
--- 9) GRANJES
+-- 8) GRANJES
 -- =========================================================
 
 insert into public.granja (id, titular_id, marca_oficial, nom)
@@ -364,7 +248,7 @@ on conflict (id) do update set
   nom = excluded.nom;
 
 -- =========================================================
--- 10) CATALEG BESTIAR
+-- 9) CATALEG BESTIAR
 -- =========================================================
 
 insert into public.bestiar (id, codi, descripcio)
@@ -378,7 +262,7 @@ on conflict (id) do update set
   descripcio = excluded.descripcio;
 
 -- =========================================================
--- 11) CATALEG FASE PRODUCTIVA
+-- 10) CATALEG FASE PRODUCTIVA
 -- =========================================================
 
 insert into public.fase_productiva (id, codi, descripcio)
@@ -392,7 +276,7 @@ on conflict (id) do update set
   descripcio = excluded.descripcio;
 
 -- =========================================================
--- 12) GRANJA_BESTIAR
+-- 11) GRANJA_BESTIAR
 -- =========================================================
 
 insert into public.granja_bestiar (id, granja_id, bestiar_id, fase_productiva_id, cens)
@@ -408,7 +292,7 @@ on conflict (id) do update set
   cens = excluded.cens;
 
 -- =========================================================
--- 13) ENTREGA_DEJECCIONS
+-- 12) ENTREGA_DEJECCIONS
 -- =========================================================
 
 insert into public.entrega_dejeccions (id, dan_id, granja_origen_id, data, quantitat, terra_desti_id, receptor_titular_id)
@@ -425,7 +309,7 @@ on conflict (id) do update set
   receptor_titular_id = excluded.receptor_titular_id;
 
 -- =========================================================
--- 14) VERIFICACIO RAPIDA
+-- 13) VERIFICACIO RAPIDA
 -- =========================================================
 
 select 'oficina' as taula, count(*) as registres from public.oficina
@@ -457,10 +341,10 @@ select
   (u.email_confirmed_at is not null) as email_confirmat
 from auth.users u
 where u.email in (
-  'admin@agrisync.com',
-  'manager@agrisync.com',
-  'agricola@agrisync.com',
-  'ramader@agrisync.com',
-  'lectura@agrisync.com'
+  'admin.test@agrisync.com',
+  'manager.test@agrisync.com',
+  'agricola.test@agrisync.com',
+  'ramader.test@agrisync.com',
+  'lectura.test@agrisync.com'
 )
 order by u.email;

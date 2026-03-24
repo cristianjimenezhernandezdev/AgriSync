@@ -2,22 +2,32 @@
 
 ## 1. Què és AgriSync
 
-AgriSync és una aplicació d'escriptori per gestionar dades bàsiques de la Declaració Anual de Nitrogen (DAN) en un entorn agrícola i ramader. L'aplicació treballa sobre titulars, terres, granges, bestiar, aplicacions de fertilitzants i entregues de dejeccions.
+AgriSync és una aplicació d'escriptori per gestionar dades bàsiques de la Declaració Anual de Nitrogen (DAN) en entorns agrícoles i ramaders. El sistema treballa sobre titulars, terres, granges, bestiar, aplicacions de fertilitzants i entregues de dejeccions.
 
-L'objectiu d'aquest manual és explicar com fer servir l'aplicació de forma pràctica, com si fos una guia de treball diària.
+Aquest document és un manual pràctic per a l'usuari.
 
-## 2. Abans de començar
+## 2. Requisits previs
 
-Per poder entrar a l'aplicació necessites:
+Per poder fer servir l'aplicació necessites:
 
-- tenir l'aplicació en execució
-- disposar d'un usuari vàlid a Supabase Auth
-- tenir un registre de tècnic creat a la base de dades i vinculat al teu usuari
+- tenir l'app en execució
+- tenir un usuari vàlid a Supabase Auth
+- tenir un registre de tècnic vinculat a aquest usuari
 - estar actiu dins del sistema
 
-Si no tens compte o no pots entrar, ho ha de revisar un administrador o un gestor d'oficina.
+## 3. Usuaris de prova
 
-## 3. Inici de sessió
+Si has carregat el `seed_complet.sql`, els usuaris de prova previstos són aquests:
+
+- `admin.test@agrisync.com` / `admin1234`
+- `manager.test@agrisync.com` / `manager1234`
+- `agricola.test@agrisync.com` / `agricola1234`
+- `ramader.test@agrisync.com` / `ramader1234`
+- `lectura.test@agrisync.com` / `lectura1234`
+
+Aquests usuaris s'han de crear abans a `Supabase > Authentication > Users` i després executar el seed.
+
+## 4. Inici de sessió
 
 Quan s'obre el programa apareix la pantalla de login.
 
@@ -26,181 +36,169 @@ Has d'introduir:
 - email
 - password
 
-Després prem `Login`.
+Després prem `Entrar`.
 
-Què pot passar:
+Si tot va bé:
 
-- si les credencials són correctes, entraràs a l'aplicació
-- si l'usuari no existeix com a tècnic, no es podrà carregar el perfil
-- si el tècnic està inactiu, no podràs continuar
-- si no tens permís sobre certes dades, ho veuràs després com a error `401` o `403`
+- l'app valida les credencials a Supabase Auth
+- recupera el teu perfil tècnic
+- carrega la pantalla principal
 
-## 4. Pantalla principal
+## 5. Errors habituals al login
 
-Quan entres, arribes a la pantalla de `Titulars`.
+### 5.1. Credencials incorrectes
 
-Aquesta pantalla mostra els titulars als quals tens accés segons els teus permisos.
+Vol dir que l'email o la contrasenya no coincideixen.
 
-Hi trobaràs:
+### 5.2. No s'ha trobat perfil tècnic
 
-- llista de titulars
-- cerca per NIF o nom
+Vol dir que l'usuari existeix a Auth però no està vinculat correctament a `public.tecnic`.
+
+### 5.3. Tècnic inactiu
+
+Vol dir que el teu registre funcional existeix però està desactivat.
+
+## 6. Pantalla principal
+
+En entrar, s'obre la pantalla de `Titulars`.
+
+Allà veuràs:
+
+- la llista de titulars accessibles segons els teus permisos
+- una cerca per nom o NIF
 - accés al mòdul agrícola si tens permís agrícola
 - accés al mòdul ramader si tens permís ramader
 - accés al teu perfil
-- segons el teu rol, accessos de gestió
+- opcions de gestió si el teu rol ho permet
 
-## 5. Barra superior i navegació
+## 7. Barra superior
 
-A la barra superior tens les opcions principals.
+A la part superior tens la navegació principal.
 
 Opcions habituals:
 
-- `Titulars`: torna a la llista principal
-- `Perfil`: obre la pantalla del teu perfil
-- `Logout`: tanca la sessió
+- `Titulars`
+- `Perfil`
+- `Logout`
 
-Opcions visibles només si tens permisos suficients:
+Opcions visibles només si tens permisos:
 
 - `Gestio Titulars`
 - `Terres`
 - `Tecnics`
 - `Oficines`
 
-Si una opció no et surt, normalment és perquè el teu rol no la pot fer servir.
+## 8. Pantalla de titulars
 
-## 6. Pantalla de titulars
-
-Aquesta és la pantalla principal de treball.
+La pantalla principal serveix per localitzar el titular amb qui vols treballar.
 
 Què hi pots fer:
 
-- buscar un titular pel nom o NIF
-- navegar per pàgines si hi ha molts resultats
-- entrar al mòdul agrícola del titular
-- entrar al mòdul ramader del titular
+- buscar per nom o NIF
+- canviar de pàgina si hi ha molts resultats
+- obrir el mòdul agrícola
+- obrir el mòdul ramader
 
-Què has de tenir en compte:
+Recorda:
 
-- no tots els titulars són visibles per a tothom
-- un tècnic normal només veu els titulars assignats
-- un admin o gestor d'oficina en veu més segons la configuració de permisos
+- no tots els usuaris veuen els mateixos titulars
+- la visibilitat depèn del rol i de les assignacions a `tecnic_titular`
 
-## 7. Mòdul agrícola
+## 9. Mòdul agrícola
 
-El mòdul agrícola mostra la informació agrícola del titular seleccionat.
+Aquest mòdul mostra la informació agrícola del titular seleccionat.
 
-Normalment hi trobaràs:
+Hi trobaràs normalment:
 
 - dades bàsiques del titular
-- terres vinculades al titular
-- aplicacions de fertilitzants vinculades a les DAN del titular
+- terres vinculades
+- aplicacions de fertilitzants
 
-### 7.1. Què pots editar
+### 9.1. Camps que es poden editar
 
-Si tens permisos suficients, pots modificar:
+Segons els permisos:
 
 - NIF i nom del titular
 - superfície d'una terra
 - data d'una aplicació
-- kg N
-- UF
+- `kg N`
+- `UF`
 
-### 7.2. Què has de revisar quan edites
+### 9.2. Bones pràctiques
 
-- que el NIF sigui correcte
-- que la superfície sigui un número vàlid
-- que la data estigui ben escrita
-- que `kg N` i `UF` siguin valors numèrics
+- comprova el NIF abans de guardar
+- introdueix superfície, `kg N` i `UF` com a nombres
+- revisa bé la data
 
-### 7.3. Què passa quan guardes
+## 10. Mòdul ramader
 
-Quan guardes, l'aplicació envia els canvis a la base de dades. Si tens permís, els canvis es desaran. Si no tens permís, veuràs un error.
+Aquest mòdul mostra la informació ramadera del titular seleccionat.
 
-## 8. Mòdul ramader
+Hi trobaràs:
 
-El mòdul ramader mostra la informació ramadera del titular seleccionat.
-
-Normalment hi trobaràs:
-
-- dades bàsiques del titular
-- granges del titular
+- dades del titular
+- granges
 - cens de bestiar per granja
-- entregues de dejeccions relacionades amb les DAN del titular
+- entregues de dejeccions
 
-### 8.1. Què pots editar
+### 10.1. Camps que es poden editar
 
-Si tens permisos suficients, pots modificar:
+Segons permisos:
 
 - NIF i nom del titular
-- nom o marca oficial d'una granja
-- cens d'una línia de bestiar
+- nom o marca oficial de la granja
+- cens
 - data i quantitat d'una entrega
 
-### 8.2. Recomanacions pràctiques
+### 10.2. Recomanacions
 
-- revisa bé la `marca oficial` abans de guardar
-- introdueix el `cens` com a número
-- introdueix la `quantitat` de l'entrega com a valor numèric
-- si no tens permís ramader sobre el titular, no podràs guardar
+- revisa bé la marca oficial
+- introdueix cens i quantitat com a valors numèrics
+- si no tens permís ramader, no podràs guardar canvis
 
-## 9. Perfil
+## 11. Perfil
 
-A la pantalla `Perfil` pots consultar la teva informació com a usuari del sistema.
-
-Hi veuràs:
+La pantalla `Perfil` permet veure les teves dades:
 
 - nom
 - email
 - rol
 - oficina
 
-Segons el teu accés, també podràs:
+També pots, si tens permís:
 
-- editar el teu nom
-- editar el teu email
-- canviar la teva contrasenya
+- editar nom i email
+- canviar el password
 
-Si el canvi de password falla, revisa que:
+## 12. Gestió de titulars
 
-- el nou password tingui almenys 6 caràcters
-- la confirmació coincideixi
-- el teu tècnic tingui `user_id` associat
+Aquesta pantalla permet administrar titulars.
 
-## 10. Gestió de titulars
+### 12.1. Crear titular
 
-Aquesta pantalla està pensada per crear, editar i eliminar titulars.
+Cal informar:
 
-### 10.1. Crear un titular
-
-Passos:
-
-1. Entra a `Gestio Titulars`.
-2. Obre el diàleg de creació.
-3. Escriu el nom.
-4. Escriu el NIF si el tens.
-5. Desa.
+- nom
+- NIF, si es coneix
 
 El nom és obligatori.
 
-### 10.2. Editar un titular
+### 12.2. Editar titular
 
-Pots modificar:
+Es poden modificar:
 
 - nom
 - NIF
 
-Després de desar, la llista es recarrega.
+### 12.3. Eliminar titular
 
-### 10.3. Eliminar un titular
+Es pot eliminar des de la mateixa pantalla, però si té dades relacionades la base de dades pot impedir l'operació o provocar eliminacions en cascada segons la relació.
 
-Pots eliminar-lo des de la mateixa pantalla. Si aquell titular té dades relacionades, la base de dades pot impedir l'eliminació o eliminar també dades dependents segons la relació definida.
+## 13. Gestió de terres
 
-## 11. Gestió de terres
+La pantalla `Terres` permet administrar el catàleg de terres.
 
-La pantalla `Terres` serveix per mantenir les terres del sistema.
-
-### 11.1. Crear una terra
+### 13.1. Crear una terra
 
 Cal introduir:
 
@@ -211,28 +209,28 @@ Cal introduir:
 - recinte
 - superfície
 
-### 11.2. Validacions importants
+### 13.2. Validacions
 
-- el codi municipal ha de tenir exactament 5 dígits
-- polígon, parcel·la i recinte han de ser nombres enters
-- la superfície ha de ser numèrica
+- `mun_codi` ha de tenir exactament 5 dígits
+- polígon, parcel·la i recinte han de ser enters
+- superfície ha de ser numèrica
 
-### 11.3. Editar una terra
+### 13.3. Editar una terra
 
-Pots canviar:
+Es pot modificar:
 
 - titular associat
 - superfície
 
-El codi SIGPAC complet es calcula automàticament a partir dels camps base i no s'escriu manualment.
+El codi SIGPAC complet es genera automàticament.
 
-## 12. Gestió de tècnics
+## 14. Gestió de tècnics
 
-La pantalla `Tecnics` serveix per administrar usuaris operatius del sistema.
+La pantalla `Tecnics` serveix per administrar usuaris operatius.
 
-### 12.1. Crear un tècnic
+### 14.1. Crear tècnic
 
-Cal introduir:
+Cal indicar:
 
 - nom
 - email
@@ -240,28 +238,22 @@ Cal introduir:
 - oficina
 - rol
 
-Quan el crees, el sistema fa dues coses:
+El sistema farà dues operacions:
 
-1. crea l'usuari a Supabase Auth
-2. crea el registre funcional a la taula `tecnic`
+1. crear l'usuari a Supabase Auth
+2. crear el registre funcional a `public.tecnic`
 
-### 12.2. Activar o desactivar
+### 14.2. Activar o desactivar
 
-Pots activar o desactivar un tècnic. Si està inactiu, no podrà treballar normalment amb l'aplicació.
+Un tècnic inactiu no pot operar normalment dins l'app.
 
-### 12.3. Reset de password
+### 14.3. Canviar password
 
-Des d'aquesta pantalla també pots canviar el password d'un tècnic existent.
+Des d'aquesta pantalla també es pot fer reset de password d'un tècnic.
 
-Recomanacions:
+## 15. Detall de tècnic i assignacions
 
-- el nou password ha de tenir almenys 6 caràcters
-- comprova que el tècnic tingui `user_id`
-- revisa bé l'email abans de comunicar les noves credencials
-
-## 13. Detall de tècnic i assignacions
-
-Quan obres el detall d'un tècnic pots veure o gestionar les assignacions amb titulars.
+En el detall d'un tècnic es poden veure o gestionar les assignacions de titulars.
 
 Cada assignació té:
 
@@ -276,98 +268,45 @@ Scopes possibles:
 - `ramader`
 - `lectura`
 
-Interpretació pràctica:
+## 16. Gestió d'oficines
 
-- `comu`: accés ampli sobre el titular
-- `agricola`: només part agrícola
-- `ramader`: només part ramadera
-- `lectura`: pensat per lectura sense escriptura
+La pantalla `Oficines` permet:
 
-## 14. Gestió d'oficines
+- crear oficines
+- editar el nom d'una oficina
+- eliminar oficines si no hi ha dependències que ho impedeixin
 
-La pantalla `Oficines` permet crear, editar i eliminar oficines.
+## 17. Errors habituals dins l'app
 
-### 14.1. Crear
+### 17.1. `401` o `403`
 
-Només cal indicar:
+Vol dir que no tens permís per veure o modificar aquella dada.
 
-- nom de l'oficina
-
-### 14.2. Editar
-
-Pots canviar el nom de l'oficina.
-
-### 14.3. Eliminar
-
-Si hi ha tècnics associats a una oficina, la base de dades pot impedir l'eliminació.
-
-## 15. Missatges d'error més habituals
-
-### 15.1. Credencials incorrectes
-
-Vol dir que l'email o la contrasenya no són correctes.
-
-### 15.2. Sense permís
-
-Sol aparèixer com a `401` o `403`.
-
-Vol dir que:
-
-- no tens accés al titular
-- no tens l'scope necessari
-- el teu rol no permet aquella operació
-
-### 15.3. Error de validació
+### 17.2. Error de validació
 
 Pot passar si:
 
 - falta un camp obligatori
-- un número no està ben escrit
+- un camp numèric no és vàlid
 - una contrasenya és massa curta
-- el codi municipal no té 5 dígits
+- el codi municipal no compleix el format
 
-### 15.4. No s'ha trobat perfil tècnic
+## 18. Bones pràctiques d'ús
 
-Vol dir que tens usuari d'Auth però no hi ha un registre vàlid a `public.tecnic` per a tu.
+- entra sempre amb el teu usuari real o de prova vàlid
+- comprova si estàs al mòdul agrícola o ramader abans d'editar
+- no repeteixis operacions si t'ha aparegut un error de permisos
+- revisa les dades abans de desar
+- si no veus un titular que esperes veure, revisa assignacions i permisos
 
-## 16. Bones pràctiques d'ús
+## 19. Resum ràpid de treball
 
-Per treballar bé amb l'aplicació:
-
-- entra sempre amb el teu usuari real
-- revisa el titular abans d'editar dades
-- comprova si estàs al mòdul agrícola o al ramader
-- no intentis repetir una operació si t'ha sortit un error de permisos
-- avisa a l'administrador si no veus titulars que hauries de veure
-- mantén actualitzat el teu perfil i password
-
-## 17. Què fa el programa i què no fa encara
-
-L'aplicació actual permet:
-
-- iniciar sessió
-- carregar el perfil tècnic
-- veure titulars segons permisos
-- treballar dades agrícoles i ramaderes bàsiques
-- gestionar oficines, tècnics, titulars i terres
-
-Actualment encara no fa:
-
-- importació automàtica des d'Excel
-- càlculs avançats mostrats com a informes finals
-- exportacions PDF o informes oficials complets
-
-## 18. Resum ràpid per començar a treballar
-
-Si és el primer cop que la fas servir, l'ordre recomanat és aquest:
+Flux recomanat d'ús:
 
 1. inicia sessió
-2. comprova el teu perfil
+2. comprova el perfil
 3. entra a `Titulars`
-4. busca el titular amb el qual has de treballar
-5. entra al mòdul agrícola o ramader
-6. revisa les dades
-7. edita només els camps permesos
-8. desa i comprova el missatge de confirmació
-
-Aquest flux és el recorregut principal de l'aplicació.
+4. busca el titular
+5. obre el mòdul agrícola o ramader
+6. revisa i edita les dades permeses
+7. desa i comprova el missatge de confirmació

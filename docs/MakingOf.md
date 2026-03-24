@@ -2,47 +2,39 @@
 
 ## 1. Objectiu del projecte
 
-AgriSync és una aplicació d'escriptori pensada per centralitzar la gestió de dades relacionades amb la Declaració Anual de Nitrogen (DAN) en explotacions agrícoles i ramaderes. El problema de partida és que aquesta informació sovint es gestiona amb fulls de càlcul, documents separats i processos manuals. Això provoca duplicació, poca traçabilitat i dificultat per controlar qui pot veure o modificar cada dada.
+AgriSync és una aplicació d'escriptori orientada a centralitzar la informació necessària per gestionar la Declaració Anual de Nitrogen (DAN) en explotacions agrícoles i ramaderes. El punt de partida del projecte és un problema real: moltes d'aquestes dades es treballen amb fulls de càlcul, documents separats i procediments manuals, cosa que provoca duplicitats, incoherències i poca traçabilitat.
 
-L'objectiu del projecte no és construir encara un producte complet per a tota la gestió agrària, sinó un MVP funcional que demostri:
+L'objectiu del projecte és construir un MVP funcional que demostri:
 
-- que és possible unificar la informació en una sola base de dades
-- que es pot treballar amb control d'accés real segons usuari i rol
-- que la informació agrícola i ramadera es pot consultar i editar des d'una sola aplicació
-- que l'arquitectura ja queda preparada per créixer en el futur
-
-En resum, el projecte resol una necessitat real amb un abast acotat i defensable per a un projecte final de cicle.
+- centralització de dades en una única base de dades
+- autenticació real d'usuaris
+- control d'accés per rols i permisos reals
+- separació entre mòdul agrícola i mòdul ramader
+- arquitectura prou neta per poder créixer en el futur
 
 ## 2. Idea funcional del programa
 
-El programa treballa al voltant del concepte de `titular`. Un titular és la persona o entitat que té associada activitat agrícola, ramadera o totes dues.
+El concepte central del sistema és el `titular`. Un titular és la persona o entitat sobre la qual es gestionen dades agrícoles, ramaderes o de tots dos àmbits.
 
-A partir d'aquí, l'aplicació divideix la informació en dos grans blocs:
+A partir del titular, l'aplicació es divideix en dos grans blocs:
 
-- Bloc agrícola
-- Bloc ramader
+- bloc agrícola
+- bloc ramader
 
-Cada tècnic inicia sessió i el sistema només li mostra els titulars i les dades que li corresponen segons els permisos que té assignats.
+Quan un usuari entra al sistema:
 
-L'ús típic del programa és aquest:
+1. s'autentica amb email i password
+2. el sistema recupera el seu perfil tècnic
+3. es determina el seu rol i els titulars assignats
+4. es mostren només les dades que pot consultar o editar
 
-1. El tècnic inicia sessió.
-2. El sistema comprova qui és i quin rol té.
-3. Es carrega la llista de titulars als quals pot accedir.
-4. L'usuari entra al mòdul agrícola o ramader d'un titular.
-5. El sistema mostra les dades relacionades amb aquell titular.
-6. Si l'usuari té permisos d'escriptura, pot editar la informació.
-7. Les dades es guarden a Supabase i queden subjectes a RLS.
-
-## 3. Tecnologies i motius de la tria
+## 3. Tecnologies escollides
 
 ### Client
 
 - Kotlin Multiplatform
 - Compose Multiplatform Desktop
 - Ktor Client
-
-S'ha triat Kotlin perquè permet tenir una base moderna, fortament tipada i preparada per a compartir lògica si en el futur es vol una versió Android. Compose Desktop encaixa bé amb un MVP acadèmic perquè permet construir interfície d'escriptori ràpidament sense haver de fer una aplicació web.
 
 ### Backend i dades
 
@@ -52,27 +44,27 @@ S'ha triat Kotlin perquè permet tenir una base moderna, fortament tipada i prep
 - REST API automàtica de Supabase
 - Row Level Security (RLS)
 
-Supabase s'ha triat perquè resol tres necessitats del projecte amb una sola plataforma:
+La tria de Supabase permet resoldre amb una sola plataforma tres necessitats molt importants del projecte:
 
 - autenticació
 - base de dades relacional
-- API de dades sense haver de construir un backend tradicional des de zero
+- API de dades
 
-Per un projecte final de curs, això redueix complexitat però permet demostrar arquitectura real.
+Això redueix complexitat tècnica i fa possible enfocar l'esforç a model de dades, permisos i casos d'ús reals.
 
 ## 4. Arquitectura general
 
-L'aplicació està pensada amb arquitectura client-servidor.
+L'aplicació segueix una arquitectura client-servidor.
 
-### 4.1. Client
+### 4.1. Client desktop
 
-El client és la part desktop i està dins de `composeApp`. Aquesta capa s'encarrega de:
+La part client està dins de `composeApp` i s'encarrega de:
 
 - mostrar pantalles
 - gestionar formularis
-- validar dades bàsiques d'entrada
-- llançar crides a la capa de dades
-- representar errors, llistes i estats de càrrega
+- validar entrada bàsica
+- llançar consultes i actualitzacions
+- mostrar errors, càrregues i resultats
 
 ### 4.2. Capa de dades
 
@@ -81,26 +73,29 @@ Entre la UI i Supabase hi ha una capa pròpia formada per:
 - `AuthService`
 - `SupabaseAuthApi`
 - `RestClient`
-- repositoris (`AccessRepository`, `AgricolaRepository`, `RamaderRepository`, `TecnicRepository`, `OficinaRepository`, `TitularManagementRepository`)
+- `AccessRepository`
+- `AgricolaRepository`
+- `RamaderRepository`
+- `TecnicRepository`
+- `OficinaRepository`
+- `TitularManagementRepository`
 
-La idea és separar responsabilitats:
+Això permet separar responsabilitats:
 
-- la UI no parla directament amb HTTP
-- els repositoris encapsulen com es consulta o modifica cada conjunt de dades
-- l'autenticació té la seva pròpia lògica separada
+- la UI mostra dades
+- el ViewModel coordina l'estat
+- el Repository parla amb la base de dades
 
 ### 4.3. Base de dades
 
-La base de dades és PostgreSQL dins Supabase. Aquí és on hi ha:
+La base de dades es defineix a `SQLAgriSync.sql` i inclou:
 
-- les taules principals
-- les relacions entre entitats
-- els enums de rols i scopes
-- els triggers d'auditoria
-- les funcions de permisos
-- les polítiques RLS
-
-És una decisió important del projecte: part de la lògica de seguretat no es deixa a la UI, sinó a la base de dades.
+- taules principals del MVP
+- relacions entre entitats
+- enums de rols i scopes
+- triggers d'auditoria
+- funcions helper de permisos
+- RLS i policies per operació
 
 ## 5. Estructura real del codi
 
@@ -108,68 +103,71 @@ La part principal del projecte està en:
 
 - `composeApp/src/commonMain/kotlin/cat/agrisync`
 - `composeApp/src/jvmMain/kotlin/cat/agrisync`
+- `SQLAgriSync.sql`
+- `seed_complet.sql`
+- `docs/`
 
-La distribució funcional és aquesta:
+Distribució principal:
 
-- `App.kt`: punt d'entrada de l'app Compose, controla autenticació i navegació
-- `data/`: models, autenticació, REST i repositoris
-- `viewmodel/`: estat i lògica de pantalla
-- `ui/`: composables de cada pantalla
-- `ui/navigation/Screen.kt`: definició de les pantalles
-- `SQLAgriSync.sql`: base de dades del projecte
+- `App.kt`: entrada principal i navegació
+- `data/`: models, auth, REST i repositoris
+- `viewmodel/`: lògica d'estat de pantalles
+- `ui/`: pantalles Compose
+- `ui/navigation/Screen.kt`: mapa de pantalles
 
-### 5.1. Ajust a l'esquema actual
+## 6. Ajust del codi a l'esquema actual
 
-L'aplicació actual està alineada amb l'esquema SQL simplificat del MVP:
+L'aplicació actual està alineada amb l'esquema SQL simplificat del MVP.
+
+Això significa que:
 
 - la home de titulars consulta directament `titular` i `tecnic_titular`
 - ja no depèn de la vista `v_titular_access`
-- el codi actiu no fa servir `cessio_terra` ni `emmagatzematge`
-- el nucli funcional queda centrat en oficines, tècnics, titulars, terres, DAN, aplicacions, granges, bestiar, fases i entregues
+- el codi actiu no depèn de `cessio_terra` ni `emmagatzematge`
+- el model funcional actiu es concentra en oficines, tècnics, titulars, terres, DAN, aplicacions, granges, bestiar, fases i entregues
 
-## 6. Flux principal del programa
+## 7. Flux principal del programa
 
-### 6.1. Arrencada
+### 7.1. Arrencada
 
-Quan l'aplicació arrenca:
+Quan l'app arrenca:
 
-1. Carrega configuració de Supabase.
-2. Construeix els serveis principals a `AppServices`.
-3. Intenta recuperar una sessió guardada localment.
-4. Si existeix, refresca el token.
-5. Recupera el perfil tècnic associat a l'usuari.
-6. Si tot és correcte, entra a l'aplicació.
+1. carrega la configuració de Supabase
+2. construeix els serveis a `AppServices`
+3. intenta recuperar una sessió guardada localment
+4. si la troba, refresca el token
+5. carrega el perfil tècnic de l'usuari autenticat
+6. entra a l'aplicació si tot és correcte
 
-### 6.2. Login
+### 7.2. Login
 
-El login es fa amb email i password contra Supabase Auth.
+El login es fa amb Supabase Auth.
 
 Flux:
 
-1. L'usuari escriu email i contrasenya.
-2. `LoginViewModel` valida que no estiguin buits.
-3. `AuthService` crida `SupabaseAuthApi.signInWithPassword`.
-4. Supabase retorna `access_token` i `refresh_token`.
-5. Amb aquest token, l'app intenta obtenir el tècnic associat.
-6. Si existeix i està actiu, la sessió es guarda localment.
-7. L'usuari passa a estat autenticat.
+1. l'usuari introdueix email i password
+2. `LoginViewModel` valida que els camps no siguin buits
+3. `AuthService` crida `SupabaseAuthApi.signInWithPassword`
+4. Supabase retorna els tokens
+5. l'app recupera el tècnic associat amb `get_my_tecnic()`
+6. si el tècnic existeix i està actiu, es guarda la sessió localment
 
-### 6.3. Recuperació del perfil tècnic
+### 7.3. Perfil tècnic
 
-El perfil del tècnic és clau perquè defineix els permisos. Es resol principalment a través de la funció SQL `get_my_tecnic()`, que busca a la taula `public.tecnic` el registre que tingui `user_id = auth.uid()`.
+Un usuari autenticat no n'hi ha prou. També ha d'existir a `public.tecnic`.
 
-Això vol dir que:
+Això és clau perquè:
 
-- una identitat d'Auth sola no n'hi ha prou
-- l'usuari també ha d'existir com a tècnic dins la base de dades funcional
+- el login real es fa contra Auth
+- els permisos reals es calculen des de la BDD funcional
 
-## 7. Model funcional de dades
+## 8. Model funcional de dades
 
-El model de dades s'ha simplificat per quedar-se amb el mínim necessari per al MVP actual.
+El model del MVP queda reduït a les entitats realment necessàries.
 
-### 7.1. Oficina
+### 8.1. `oficina`
 
-Representa una oficina o unitat organitzativa.
+Agrupa tècnics i permet limitar accés d'un `oficina_manager`.
 
 Camps principals:
 
@@ -177,12 +175,7 @@ Camps principals:
 - `nom`
 - `created_at`
 
-Funció dins del sistema:
-
-- agrupar tècnics
-- limitar la visibilitat dels `oficina_manager`
-
-### 7.2. Tècnic
+### 8.2. `tecnic`
 
 Representa l'usuari operatiu del sistema.
 
@@ -195,243 +188,89 @@ Camps principals:
 - `email`
 - `rol`
 - `actiu`
-- `created_at`
-- `created_by`
-- `updated_at`
-- `updated_by`
+- timestamps i camps d'auditoria
 
-Funció:
+### 8.3. `titular`
 
-- identificar qui ha iniciat sessió
-- saber si és `admin`, `oficina_manager`, `tecnic` o `lectura`
-- controlar permisos
-
-### 7.3. Titular
-
-És l'entitat central del domini.
+Entitat central del domini.
 
 Camps principals:
 
 - `id`
 - `nif`
 - `nom_rao`
-- `created_at`
-- `created_by`
-- `updated_at`
-- `updated_by`
+- timestamps i camps d'auditoria
 
-Funció:
+### 8.4. `tecnic_titular`
 
-- representar la persona o entitat de referència
-- servir de punt d'unió entre mòdul agrícola i mòdul ramader
-
-### 7.4. Assignació tècnic-titular
-
-Relació entre un tècnic i un titular.
+Defineix l'assignació entre tècnic i titular.
 
 Camps principals:
 
-- `id`
 - `tecnic_id`
 - `titular_id`
 - `scope`
 - `actiu`
-- `created_at`
-- `created_by`
 
-`scope` pot ser:
+Scopes previstos:
 
 - `comu`
 - `agricola`
 - `ramader`
 - `lectura`
 
-Funció:
+### 8.5. `dan_declaracio`
 
-- definir sobre quin titular pot treballar un tècnic
-- definir si ho fa a nivell agrícola, ramader o general
+Capçalera de campanya per titular.
 
-### 7.5. DAN declaració
-
-Representa la declaració d'un titular per a una campanya.
-
-Camps principals:
-
-- `id`
-- `titular_id`
-- `campanya`
-- `estat`
-- `created_at`
-- `created_by`
-- `updated_at`
-- `updated_by`
-
-Funció:
-
-- actuar com a capçalera de campanya
-- lligar-hi aplicacions de fertilitzants i entregues de dejeccions
-
-### 7.6. Terra
+### 8.6. `terra`
 
 Representa una parcel·la o recinte agrícola.
 
-Camps principals:
+Camps clau:
 
-- `id`
-- `titular_id`
 - `mun_codi`
 - `poligon`
 - `parcela`
 - `recinte`
 - `codi_sigpac_complet`
 - `superficie`
-- `created_at`
-- `created_by`
-- `updated_at`
-- `updated_by`
 
-Funció:
+### 8.7. `aplicacions_fertilitzants`
 
-- emmagatzemar la base territorial de la part agrícola
-- identificar una terra mitjançant dades SIGPAC
-- relacionar aplicacions i destins
+Registra aplicacions de nitrogen vinculades a una DAN i una terra.
 
-Observació:
+### 8.8. `granja`
 
-`codi_sigpac_complet` no s'introdueix manualment. Es genera a partir de `mun_codi`, `poligon`, `parcela` i `recinte`.
+Representa una explotació ramadera del titular.
 
-### 7.7. Aplicacions de fertilitzants
-
-Representa una aplicació de nitrogen o fertilització vinculada a una DAN i una terra.
-
-Camps principals:
-
-- `id`
-- `dan_id`
-- `terra_id`
-- `data`
-- `kg_n`
-- `uf`
-- `tecnic_id`
-- `created_at`
-- `created_by`
-- `updated_at`
-- `updated_by`
-
-Funció:
-
-- registrar què s'ha aplicat, quan i sobre quina terra
-
-### 7.8. Granja
-
-Representa una explotació ramadera.
-
-Camps principals:
-
-- `id`
-- `titular_id`
-- `marca_oficial`
-- `nom`
-- `created_at`
-- `created_by`
-- `updated_at`
-- `updated_by`
-
-Funció:
-
-- identificar l'explotació ramadera associada al titular
-
-### 7.9. Bestiar
+### 8.9. `bestiar`
 
 Catàleg de tipus de bestiar.
 
-Camps principals:
-
-- `id`
-- `codi`
-- `descripcio`
-
-### 7.10. Fase productiva
+### 8.10. `fase_productiva`
 
 Catàleg de fases productives.
 
-Camps principals:
+### 8.11. `granja_bestiar`
 
-- `id`
-- `codi`
-- `descripcio`
+Relaciona granja, tipus de bestiar, fase productiva i cens.
 
-### 7.11. Granja bestiar
+### 8.12. `entrega_dejeccions`
 
-Relaciona una granja amb un tipus de bestiar i una fase productiva.
+Registra entregues de dejeccions amb destí a terra o a un altre titular.
 
-Camps principals:
+## 9. Dades d'entrada del sistema
 
-- `id`
-- `granja_id`
-- `bestiar_id`
-- `fase_productiva_id`
-- `cens`
-- `created_at`
-- `created_by`
-- `updated_at`
-- `updated_by`
+L'aplicació treballa amb tres grans tipus d'entrada.
 
-Funció:
-
-- emmagatzemar el cens ramader per explotació, espècie i fase
-
-### 7.12. Entrega de dejeccions
-
-Representa una sortida de dejeccions d'una granja d'origen.
-
-Camps principals:
-
-- `id`
-- `dan_id`
-- `granja_origen_id`
-- `data`
-- `quantitat`
-- `terra_desti_id`
-- `receptor_titular_id`
-- `created_at`
-- `created_by`
-- `updated_at`
-- `updated_by`
-
-Funció:
-
-- registrar una entrega ramadera
-- controlar si el destí és una terra o un altre titular
-
-Restricció important:
-
-La base de dades obliga que una entrega tingui exactament un dels dos destins:
-
-- o bé `terra_desti_id`
-- o bé `receptor_titular_id`
-
-No poden existir tots dos alhora ni tots dos buits.
-
-## 8. Dades d'entrada del sistema
-
-El programa treballa amb tres grans tipus d'entrada.
-
-### 8.1. Entrada de configuració
-
-Són valors necessaris perquè l'app es connecti a Supabase.
-
-Variables principals:
+### 9.1. Configuració
 
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-Actualment existeixen valors per defecte a `JvmEnvConfig.kt`. Això permet arrencar el projecte fàcilment en entorn de desenvolupament, però en un producte real seria millor no deixar claus sensibles dins del codi.
-
-### 8.2. Entrada d'usuari
-
-Són les dades que l'usuari escriu a l'app:
+### 9.2. Entrada d'usuari
 
 - email i password per fer login
 - dades de titular
@@ -441,506 +280,212 @@ Són les dades que l'usuari escriu a l'app:
 - dades agrícoles
 - dades ramaderes
 
-### 8.3. Entrada de catàleg i estructura
-
-Hi ha informació que no entra cada cop per formulari, sinó que forma part de l'estructura del sistema:
+### 9.3. Catàlegs i estructura
 
 - rols globals
-- scopes d'accés
+- scopes
 - catàleg de bestiar
 - catàleg de fase productiva
 
-## 9. Camps que entren i camps que es calculen
+## 10. Tractament de dades
 
-Un aspecte important del disseny és que no es guarda tot. Només s'emmagatzema el que té valor com a dada base, i la resta es pot calcular.
+### 10.1. Validació
 
-### 9.1. Camps que entren directament
-
-Exemples:
-
-- nom i NIF del titular
-- nom i email del tècnic
-- marca oficial d'una granja
-- codi municipal, polígon, parcel·la i recinte
-- superfície
-- data d'aplicació
-- kg de nitrogen
-- UF
-- cens
-- quantitat d'entrega
-
-### 9.2. Camps derivats o reconstruïbles
+La capa de ViewModel valida abans d'enviar a la base de dades.
 
 Exemples:
 
-- `codi_sigpac_complet`, generat a partir de parts SIGPAC
-- llista de titulars accessibles per un tècnic, derivada dels permisos
-- permisos de lectura o escriptura, derivats de rol i assignacions
-- valors com `kg N/ha` o `kg N/UF`, que es poden calcular a partir de `kg_n`, `uf` i `superficie`
+- email i password no poden ser buits
+- password mínim de 6 caràcters
+- nom obligatori a titular i oficina
+- `mun_codi` de 5 dígits
+- camps numèrics per superfície, cens i quantitats
 
-Per això, aquests valors no es guarden com a camp físic al model actual del MVP.
+### 10.2. Transformació
 
-## 10. Tractament de dades que fa el programa
+El sistema també transforma dades:
 
-Aquest és el bloc més important per explicar el funcionament intern.
+- normalitza NIF per a cerques
+- converteix text a enters o decimals
+- genera `codi_sigpac_complet` a la BDD
+- converteix JSON de Supabase a DTOs Kotlin
+- guarda la sessió en format serialitzable
 
-### 10.1. Validació d'entrada
+### 10.3. Filtratge i càrrega
 
-Abans de guardar, el programa fa validacions bàsiques a la capa de ViewModel.
+Cada pantalla:
 
-Exemples:
+- posa estat de càrrega
+- demana dades al repositori
+- rep models Kotlin
+- actualitza UI
 
-- login: email i password no poden ser buits
-- tècnic: cal nom, email, password i oficina
-- password: mínim 6 caràcters
-- titular: el nom és obligatori
-- oficina: el nom és obligatori
-- terra: `mun_codi` ha de tenir 5 dígits
-- terra: polígon, parcel·la, recinte i superfície han de ser numèrics
-- edicions de cens, superfície o quantitat: han de ser valors numèrics
+També hi ha filtratge local:
 
-Aquestes validacions no substitueixen la base de dades, però milloren l'experiència d'usuari i eviten errors evidents.
+- cerca de titulars per NIF o nom
+- cerca de terres per titular o codi SIGPAC
+- paginació simple
 
-### 10.2. Transformació de dades
+### 10.4. Edició
 
-El programa transforma dades a diferents punts:
+Quan l'usuari edita:
 
-- normalitza cerques de NIF eliminant espais, punts i guions
-- converteix textos del formulari a enters o decimals abans de guardar
-- genera el `codi_sigpac_complet` a base de dades
-- converteix respostes JSON de Supabase a DTOs Kotlin
-- converteix sessió autenticada a format serialitzable per poder-la guardar localment
+1. la UI recull el canvi
+2. el ViewModel valida
+3. el Repository envia la petició REST
+4. la base de dades aplica RLS
+5. Supabase retorna la representació actualitzada
+6. la pantalla es refresca
 
-### 10.3. Càrrega i filtratge
+### 10.5. Sessió persistent
 
-Quan l'usuari entra a una pantalla:
+La sessió es guarda localment amb `Preferences`.
 
-- el ViewModel posa `isLoading = true`
-- el repositori demana dades a Supabase
-- la resposta es transforma a models Kotlin
-- el ViewModel actualitza l'estat de pantalla
+Això permet:
 
-També hi ha filtratge local en memòria:
+- reobrir l'app sense fer login immediatament
+- refrescar el token automàticament
+- recuperar el perfil tècnic després d'arrencar
 
-- cerca de titulars per nom o NIF
-- cerca de terres per titular, NIF o codi SIGPAC
-- paginació simple en llistes
+## 11. Tractament per mòduls
 
-### 10.4. Edició de dades
+### 11.1. Home de titulars
 
-Quan l'usuari modifica una dada:
-
-1. La UI recull el canvi.
-2. El ViewModel valida.
-3. El repositori envia un `PATCH` a Supabase.
-4. La base de dades aplica RLS.
-5. Si l'operació és vàlida, Supabase retorna la representació actualitzada.
-6. El ViewModel actualitza l'estat local de la pantalla.
-
-### 10.5. Persistència de sessió
-
-La sessió autenticada es guarda localment a Desktop usant `Preferences`.
-
-Què es guarda:
-
-- access token
-- refresh token
-- id d'usuari
-- email
-- moment d'expiració
-
-Quan l'app es torna a obrir:
-
-- intenta recuperar la sessió
-- refresca el token
-- torna a carregar el perfil tècnic
-
-Això evita obligar l'usuari a iniciar sessió cada cop.
-
-## 11. Tractament específic per mòduls
-
-### 11.1. Mòdul de titulars
-
-Objectiu:
-
-- mostrar els titulars accessibles a l'usuari
-
-D'on surt la informació:
-
-- `titular`
-- `tecnic_titular`
-
-Tractament:
-
-- si l'usuari és `admin` o `oficina_manager`, veu tots els titulars
-- si és tècnic normal, només veu els assignats
-- es calcula si pot entrar al mòdul agrícola, ramader o tots dos
-
-Sortida:
-
-- llistat de titulars amb accions d'accés
+Mostra els titulars accessibles segons rol i assignacions.
 
 ### 11.2. Mòdul agrícola
 
-Objectiu:
+Carrega:
 
-- consultar i editar dades agrícoles del titular
-
-Entrades principals:
-
-- dades del titular
-- terres vinculades
+- titular
+- terres
 - aplicacions de fertilitzants
-
-Tractament:
-
-- carrega el titular
-- carrega terres del titular
-- busca les DAN del titular
-- a partir d'aquestes DAN, carrega aplicacions de fertilitzants
-
-Sortida:
-
-- pantalla amb dades del titular
-- llista de terres
-- llista d'aplicacions
-- missatges de guardat o errors de permisos
 
 ### 11.3. Mòdul ramader
 
-Objectiu:
+Carrega:
 
-- consultar i editar dades ramaderes del titular
-
-Entrades principals:
-
-- dades del titular
-- granges del titular
-- relacions de bestiar
+- titular
+- granges
+- cens de bestiar
 - entregues de dejeccions
-
-Tractament:
-
-- carrega el titular
-- carrega granges del titular
-- obté els ids de granja
-- recupera el cens ramader amb joins a bestiar i fase productiva
-- busca les DAN del titular
-- a partir d'aquestes DAN, carrega entregues
-
-Sortida:
-
-- pantalla amb granges
-- cens per granja/tipus/fase
-- entregues ramaderes
 
 ### 11.4. Gestió de titulars
 
-Objectiu:
-
-- crear, editar, cercar i eliminar titulars
-
-Entrades:
-
-- nom
-- NIF
-
-Tractament:
-
-- validació del nom
-- operacions CRUD sobre `titular`
-
-Sortida:
-
-- taula paginada de titulars
-- missatges de confirmació o error
+Permet crear, editar, cercar i eliminar titulars.
 
 ### 11.5. Gestió de terres
 
-Objectiu:
-
-- administrar terres del sistema
-
-Entrades:
-
-- titular associat
-- codi municipal
-- polígon
-- parcel·la
-- recinte
-- superfície
-
-Tractament:
-
-- validació del patró del municipi
-- validació numèrica
-- alta, edició o eliminació
-- consulta amb nom i NIF del titular relacionat
-
-Sortida:
-
-- llistat de terres filtrable
-- codi SIGPAC complet
-- titular relacionat
+Permet alta, edició i eliminació de terres.
 
 ### 11.6. Gestió de tècnics
 
-Objectiu:
+Permet:
 
-- crear tècnics i gestionar-los
-
-Entrades:
-
-- nom
-- email
-- password
-- oficina
-- rol
-
-Tractament:
-
-1. crea primer l'usuari a Supabase Auth
-2. després crea el registre funcional a `public.tecnic`
-3. permet activar o desactivar el tècnic
-4. permet canviar dades bàsiques
-5. permet reset de password
-
-És una de les parts més interessants del projecte perquè combina:
-
-- identitat a Auth
-- perfil funcional a base de dades
-- permisos per rol
+- crear usuaris d'Auth
+- crear el registre funcional a `public.tecnic`
+- activar o desactivar tècnics
+- canviar dades bàsiques
+- reset de password
 
 ### 11.7. Gestió d'oficines
 
-Objectiu:
+CRUD simple d'oficines.
 
-- crear i mantenir oficines
+## 12. Seguretat i permisos
 
-Entrades:
+La seguretat real es resol a la BDD.
 
-- nom d'oficina
+Punts clau:
 
-Tractament:
+- login real amb Supabase Auth
+- perfil funcional a `public.tecnic`
+- rols globals
+- scopes per titular
+- funcions helper de permisos
+- policies RLS per operació
 
-- CRUD simple
-- si hi ha tècnics assignats, l'eliminació pot fallar per integritat referencial
+La base de dades decideix:
 
-## 12. Seguretat i control d'accés
+- què pot veure cada usuari
+- què pot modificar
+- sobre quin titular
+- en quin àmbit
 
-Aquest és un dels punts més forts del projecte.
-
-El sistema no depèn només del que decideix la UI. El control real és a la base de dades amb RLS.
-
-### 12.1. Rols globals
-
-Els rols principals són:
-
-- `admin`
-- `oficina_manager`
-- `tecnic`
-- `lectura`
-
-### 12.2. Scope per titular
-
-Un tècnic pot tenir accés:
-
-- `comu`
-- `agricola`
-- `ramader`
-- `lectura`
-
-### 12.3. Funcions helper
-
-La base de dades incorpora funcions com:
-
-- `get_my_tecnic()`
-- `current_oficina_id()`
-- `is_admin()`
-- `is_oficina_manager()`
-- `same_oficina(...)`
-- `can_read_titular(...)`
-- `can_write_agricola(...)`
-- `can_write_ramader(...)`
-
-Aquestes funcions permeten escriure polítiques RLS més clares i reutilitzables.
-
-### 12.4. RLS
-
-Cada taula important té polítiques de:
-
-- `select`
-- `insert`
-- `update`
-- `delete`
-
-Exemples de comportament:
-
-- un tècnic només veu els titulars assignats
-- un manager veu el que toca dins el seu àmbit
-- un admin té control global
-- les terres, aplicacions, granges i entregues hereten el control d'accés del titular o de la DAN relacionada
-
-### 12.5. Resultat pràctic
-
-Això evita que un usuari amb token vàlid pugui consultar o modificar qualsevol registre lliurement només perquè coneix l'endpoint REST.
-
-## 13. Què surt del programa
-
-El programa produeix diferents tipus de sortida.
+## 13. Sortides del sistema
 
 ### 13.1. Sortida visual
-
-L'usuari veu:
 
 - formularis
 - llistes paginades
 - dades de titulars
 - dades agrícoles
 - dades ramaderes
-- missatges d'èxit
-- missatges d'error
-- estats de càrrega
+- missatges d'èxit i error
 
-### 13.2. Sortida estructurada a base de dades
+### 13.2. Sortida persistent
 
-Les operacions creen o actualitzen registres persistents a Supabase.
-
-Exemples:
-
-- alta d'un titular
-- edició d'una terra
-- canvi de cens
-- actualització d'una granja
-- registre o edició d'una entrega
+- registres nous i actualitzacions a Supabase
 
 ### 13.3. Sortida de control
 
-També es generen dades indirectes de control:
+- timestamps
+- `created_by` i `updated_by`
+- activació o desactivació de tècnics
+- sessió local guardada
 
-- timestamps d'alta i modificació
-- identificador de qui ha fet un canvi
-- estat d'activació d'un tècnic
-- sessió persistida localment
+## 14. Relació amb el full de càlcul original
 
-## 14. Relació amb les dades del full de càlcul
+El full Excel de partida i el model de dades no són una còpia 1:1. El projecte guarda les dades base i deixa com a derivats alguns valors.
 
-Les dades del full mostrat encaixen amb el model del projecte, però no es copien 1:1.
-
-Exemples de correspondència:
+Correspondències importants:
 
 - `Marca Oficial` -> `granja.marca_oficial`
-- `Ramader` -> titular o explotació vinculada a la part ramadera
 - `Agricultor` -> `titular.nom_rao`
 - `NIF Agr.` -> `titular.nif`
 - `ha` -> `terra.superficie` o suma de terres
 - `UF` -> `aplicacions_fertilitzants.uf`
 - `kg N` -> `aplicacions_fertilitzants.kg_n`
 
-Hi ha columnes del full que en el model MVP es consideren:
+Valors com `kg N/ha` o `kg N/UF` són derivables, per això no cal guardar-los com a camps físics en aquest MVP.
 
-- derivades
-- de validació manual
-- o futures ampliacions
+## 15. Seed i proves
 
-Per exemple:
+Per poder provar l'aplicació amb dades reals del MVP, el projecte inclou `seed_complet.sql`.
 
-- `kg N/ha`
-- `kg N/UF`
-- indicadors tipus `Llesta`, `Enviada`, `Conf`, `Dates`, `GPS`
+Funcionament del seed actual:
 
-Aquests camps es poden afegir més endavant si es decideix que formen part del flux real del producte, però per al MVP no és obligatori guardar-los si no intervenen directament en els casos d'ús actuals.
+- no escriu directament a `auth.users`
+- espera que els usuaris existeixin abans a `Authentication > Users`
+- després vincula aquests usuaris a `public.tecnic`
+- carrega dades a totes les taules actives del MVP
 
-## 15. Decisions importants de disseny
+Usuaris de prova previstos al seed:
 
-### 15.1. Fer un MVP i no un ERP complet
-
-Això ha permès prioritzar el que realment es pot demostrar:
-
-- login
-- rols
-- accés per tècnic
-- gestió de titulars
-- part agrícola
-- part ramadera
-
-### 15.2. Posar la seguretat a la base de dades
-
-És una decisió madura tècnicament perquè evita confiar massa en el client.
-
-### 15.3. Reutilitzar l'API REST de Supabase
-
-Ha evitat desenvolupar un backend complet i ha permès concentrar l'esforç en:
-
-- model de dades
-- permisos
-- experiència d'usuari
-
-### 15.4. Separar UI, ViewModel i Repository
-
-Això dona una estructura clara i fàcil d'explicar:
-
-- la UI mostra
-- el ViewModel coordina
-- el Repository accedeix a dades
+- `admin.test@agrisync.com` / `admin1234`
+- `manager.test@agrisync.com` / `manager1234`
+- `agricola.test@agrisync.com` / `agricola1234`
+- `ramader.test@agrisync.com` / `ramader1234`
+- `lectura.test@agrisync.com` / `lectura1234`
 
 ## 16. Limitacions actuals del MVP
 
-Per defensar bé el projecte, és important explicar també què no fa encara.
-
 - no hi ha importador automàtic des d'Excel
-- no hi ha informes finals ni exportació PDF
-- no hi ha dashboard amb càlculs agregats
+- no hi ha informes oficials finals ni PDF
+- no hi ha dashboard de càlculs agregats
 - alguns camps del full original encara no estan modelats
-- hi ha claus per defecte al codi de desenvolupament, cosa acceptable per prototip però no per producció
-- hi ha càlculs que encara no es presenten com a resultats derivats a la UI
+- hi ha configuració de desenvolupament dins del codi que en producció caldria externalitzar millor
 
-Aquestes limitacions són coherents amb l'abast d'un MVP acadèmic.
+## 17. Estat actual verificat
 
-## 17. Verificació de l'estat actual
+Amb l'esquema SQL simplificat i els ajustos realitzats:
 
-Després d'ajustar el projecte a l'esquema SQL simplificat del MVP, s'ha verificat que l'aplicació continua compilant correctament a nivell JVM. Això reforça que la relació actual entre codi, model de dades i permisos és coherent.
+- l'aplicació compila correctament
+- el login amb usuaris de prova ja s'ha pogut validar
+- el codi i la documentació han quedat alineats amb la BDD real
 
-També s'ha revisat que:
+## 18. Resum final
 
-- la home ja no depèn d'una vista SQL eliminada
-- el codi actiu no consumeix taules descartades del model antic
-- la documentació principal queda alineada amb l'estat real del programa
+AgriSync és un MVP funcional de gestió agrària centrat en la DAN. Combina autenticació, model relacional, permisos reals, client desktop i una estructura neta per capes.
 
-## 18. Valor tècnic que es pot defensar a la presentació
-
-Aquest projecte es pot defensar bé perquè combina diverses capes reals de desenvolupament:
-
-- modelatge relacional
-- autenticació
-- control d'accés amb RLS
-- arquitectura per capes
-- persistència local de sessió
-- interfície funcional d'escriptori
-- validació i transformació de dades
-
-No és només una maqueta visual. És una aplicació amb flux complet:
-
-1. un usuari real s'autentica
-2. el sistema identifica el seu perfil tècnic
-3. el sistema decideix què pot veure o editar
-4. l'usuari treballa amb dades reals de negoci
-5. la informació queda persistent i traçable
-
-## 19. Resum final
-
-AgriSync s'ha construït com un MVP de gestió agrària centrat en la DAN, amb una arquitectura simple però professional. El programa rep dades de configuració, dades d'autenticació i dades de negoci; les valida, les transforma, les filtra segons permisos i les persisteix en una base de dades relacional segura.
-
-El nucli conceptual del sistema és:
-
-- un tècnic autenticat
-- amb un rol concret
-- que treballa sobre titulars
-- i accedeix a dades agrícoles o ramaderes segons el seu scope
-
-Des del punt de vista de defensa del projecte, el més important és que cada part té una justificació clara:
-
-- la base de dades està pensada per la realitat del domini
-- la capa de permisos protegeix la informació
-- la UI resol els casos d'ús mínims del producte
-- l'abast està ajustat a un projecte final de cicle
+Des del punt de vista de defensa del projecte, el valor principal és que no és només una maqueta visual: és una aplicació amb autenticació real, persistència real i control d'accés real sobre dades de negoci.
