@@ -21,22 +21,8 @@ internal class AppServices private constructor(
                 authService.sessionOrNull()
             }
 
-            // Client admin amb service_role (per operacions que necessiten bypass RLS)
-            val adminConfig = SupabaseConfig(
-                url = config.url,
-                anonKey = config.serviceRoleKey.ifBlank { config.anonKey },
-                serviceRoleKey = config.serviceRoleKey
-            )
-            val adminRestClient = RestClient(httpClient, adminConfig) {
-                Session(
-                    accessToken = config.serviceRoleKey,
-                    refreshToken = "",
-                    user = AuthUser(id = "service_role", email = "admin")
-                )
-            }
-
             // Repositoris usen el token de l'usuari autenticat (RLS ho controla)
-            // TecnicRepository usa adminRestClient per gestió de tecnics (necessita service_role)
+            // TecnicRepository fa servir directament l'Admin API de Supabase quan cal
             return AppServices(
                 authService = authService,
                 accessRepository = AccessRepository(userRestClient),

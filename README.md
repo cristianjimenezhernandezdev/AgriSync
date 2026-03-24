@@ -72,12 +72,16 @@ El projecte es desenvolupa seguint la metodologia **SCRUM**:
 
 ## Estat del projecte
 
-🟡 **En desenvolupament (fase inicial)**
+🟡 **MVP funcional en evolució**
 
-Actualment el projecte es troba en la fase de:
-- Preparació de l’entorn de desenvolupament
-- Definició de l’arquitectura
-- Documentació inicial i planificació
+Actualment el projecte ja disposa de:
+- Aplicació desktop funcional
+- Login real amb Supabase Auth
+- Control d’accés amb RLS
+- Mòdul de titulars
+- Mòdul agrícola
+- Mòdul ramader
+- Pantalles de gestió per oficines, tècnics, titulars i terres
 
 ---
 
@@ -85,8 +89,8 @@ Actualment el projecte es troba en la fase de:
 
 AgriSync/
 ├── docs/ # Documentació del projecte
-├── shared/ # Codi compartit (Kotlin Multiplatform)
-├── desktop/ # Aplicació desktop (Compose)
+├── composeApp/ # Aplicació Compose Multiplatform Desktop
+├── SQLAgriSync.sql # Esquema SQL i permisos
 ├── build.gradle.kts
 └── README.md
 
@@ -98,9 +102,10 @@ Aplicacio KMP + Compose Desktop connectada a Supabase amb:
 
 - Login / logout amb `email + password` (Supabase Auth)
 - Sessio persistent local (Desktop) + refresh automàtic de token
-- Home de titulars assignats via vista `public.v_titular_access`
+- Home de titulars carregada directament des de `titular` + `tecnic_titular`
 - Navegacio simple: `Login` -> `Titulars` -> `Modul Agricola` / `Modul Ramader`
 - Pantalla `El meu perfil` (nom, rol, oficina, email)
+- Gestio de `Oficines`, `Tecnics`, `Titulars` i `Terres`
 - Errors visibles per casos de permisos RLS (`401/403`)
 
 ## SQL de base de dades
@@ -112,7 +117,8 @@ Inclou:
 - Taules i triggers d'auditoria
 - Funcions helpers de permisos (`can_read_titular`, `can_write_*`)
 - RLS policies
-- Vista `v_titular_access` per la Home del client Desktop
+- Neteja inicial d'objectes previs per recrear l'esquema
+- Esquema MVP simplificat sense elements fora d'ús
 
 ## Entorn (ENV)
 
@@ -120,6 +126,7 @@ Defineix aquestes variables abans d'arrencar l'app:
 
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
 ## Execucio (Desktop)
 

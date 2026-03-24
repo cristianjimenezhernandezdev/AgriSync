@@ -118,6 +118,15 @@ La distribució funcional és aquesta:
 - `ui/navigation/Screen.kt`: definició de les pantalles
 - `SQLAgriSync.sql`: base de dades del projecte
 
+### 5.1. Ajust a l'esquema actual
+
+L'aplicació actual està alineada amb l'esquema SQL simplificat del MVP:
+
+- la home de titulars consulta directament `titular` i `tecnic_titular`
+- ja no depèn de la vista `v_titular_access`
+- el codi actiu no fa servir `cessio_terra` ni `emmagatzematge`
+- el nucli funcional queda centrat en oficines, tècnics, titulars, terres, DAN, aplicacions, granges, bestiar, fases i entregues
+
 ## 6. Flux principal del programa
 
 ### 6.1. Arrencada
@@ -888,7 +897,17 @@ Per defensar bé el projecte, és important explicar també què no fa encara.
 
 Aquestes limitacions són coherents amb l'abast d'un MVP acadèmic.
 
-## 17. Valor tècnic que es pot defensar a la presentació
+## 17. Verificació de l'estat actual
+
+Després d'ajustar el projecte a l'esquema SQL simplificat del MVP, s'ha verificat que l'aplicació continua compilant correctament a nivell JVM. Això reforça que la relació actual entre codi, model de dades i permisos és coherent.
+
+També s'ha revisat que:
+
+- la home ja no depèn d'una vista SQL eliminada
+- el codi actiu no consumeix taules descartades del model antic
+- la documentació principal queda alineada amb l'estat real del programa
+
+## 18. Valor tècnic que es pot defensar a la presentació
 
 Aquest projecte es pot defensar bé perquè combina diverses capes reals de desenvolupament:
 
@@ -908,7 +927,7 @@ No és només una maqueta visual. És una aplicació amb flux complet:
 4. l'usuari treballa amb dades reals de negoci
 5. la informació queda persistent i traçable
 
-## 18. Resum final
+## 19. Resum final
 
 AgriSync s'ha construït com un MVP de gestió agrària centrat en la DAN, amb una arquitectura simple però professional. El programa rep dades de configuració, dades d'autenticació i dades de negoci; les valida, les transforma, les filtra segons permisos i les persisteix en una base de dades relacional segura.
 
@@ -925,4 +944,3 @@ Des del punt de vista de defensa del projecte, el més important és que cada pa
 - la capa de permisos protegeix la informació
 - la UI resol els casos d'ús mínims del producte
 - l'abast està ajustat a un projecte final de cicle
-
