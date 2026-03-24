@@ -82,12 +82,6 @@ Entre la UI i Supabase hi ha una capa pròpia formada per:
 - `OficinaRepository`
 - `TitularManagementRepository`
 
-Això permet separar responsabilitats:
-
-- la UI mostra dades
-- el ViewModel coordina l'estat
-- el Repository parla amb la base de dades
-
 ### 4.3. Base de dades
 
 La base de dades es defineix a `SQLAgriSync.sql` i inclou:
@@ -107,6 +101,7 @@ La part principal del projecte està en:
 - `composeApp/src/jvmMain/kotlin/cat/agrisync`
 - `SQLAgriSync.sql`
 - `seed_complet.sql`
+- `agrisync.properties.example`
 - `docs/`
 
 Distribució principal:
@@ -134,19 +129,23 @@ Això significa que:
 
 Quan l'app arrenca:
 
-1. carrega la configuració de Supabase des de variables d'entorn o propietats JVM
-2. si falta alguna variable obligatòria, mostra una pantalla de configuració incompleta i no continua
-3. construeix els serveis a `AppServices`
-4. intenta recuperar una sessió guardada localment
-5. si la troba, refresca el token
-6. carrega el perfil tècnic de l'usuari autenticat
-7. entra a l'aplicació si tot és correcte
+1. intenta carregar la configuració de Supabase des de propietats JVM o variables d'entorn
+2. si no hi són, en la versió JVM prova de llegir un fitxer `agrisync.properties`
+3. busca aquest fitxer al directori d'execució o al costat del `.exe` o `.jar`
+4. si continua faltant alguna dada obligatòria, mostra una pantalla de configuració incompleta i no continua
+5. construeix els serveis a `AppServices`
+6. intenta recuperar una sessió guardada localment
+7. si la troba, refresca el token
+8. carrega el perfil tècnic de l'usuari autenticat
+9. entra a l'aplicació si tot és correcte
 
-Les variables obligatòries actuals són:
+Les claus obligatòries actuals són:
 
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+
+Aquest canvi és important perquè resol un problema pràctic d'entrega: els professors o usuaris de demo poden executar l'aplicació amb un `.exe` i un fitxer de configuració al costat, sense haver de definir variables d'entorn manualment.
 
 ### 7.2. Login
 
@@ -161,11 +160,7 @@ Flux:
 5. l'app recupera el tècnic associat amb `get_my_tecnic()`
 6. si el tècnic existeix i està actiu, es guarda la sessió localment
 
-Des de la iteració 4, la pantalla de login també fa millor aquesta feina a nivell d'UX:
-
-- té millor jerarquia visual
-- mostra textos d'ajuda sobre què s'espera de l'usuari
-- diferencia millor l'error general dels errors de camps buits
+La pantalla de login també té millor jerarquia visual i més textos d'ajuda des de la iteració 4.
 
 ### 7.3. Recuperació del perfil tècnic
 
@@ -176,70 +171,22 @@ Això és clau perquè:
 - el login real es fa contra Auth
 - els permisos reals es calculen des de la BDD funcional
 
-La recuperació del tècnic funciona així:
-
-1. primer es prova l'RPC `get_my_tecnic()`
-2. si l'RPC falla, es fa una consulta directa a `public.tecnic` amb el mateix token de l'usuari autenticat
-3. aquesta consulta alternativa continua respectant RLS, perquè només intenta llegir el registre del mateix usuari
-
 ## 8. Model funcional de dades
 
-El model del MVP queda reduït a les entitats realment necessàries.
+El model del MVP queda reduït a les entitats realment necessàries:
 
-### 8.1. `oficina`
-
-Agrupa tècnics i permet limitar accés d'un `oficina_manager`.
-
-### 8.2. `tecnic`
-
-Representa l'usuari operatiu del sistema.
-
-### 8.3. `titular`
-
-Entitat central del domini.
-
-### 8.4. `tecnic_titular`
-
-Defineix l'assignació entre tècnic i titular.
-
-Scopes previstos:
-
-- `comu`
-- `agricola`
-- `ramader`
-- `lectura`
-
-### 8.5. `dan_declaracio`
-
-Capçalera de campanya per titular.
-
-### 8.6. `terra`
-
-Representa una parcel·la o recinte agrícola.
-
-### 8.7. `aplicacions_fertilitzants`
-
-Registra aplicacions de nitrogen vinculades a una DAN i una terra.
-
-### 8.8. `granja`
-
-Representa una explotació ramadera del titular.
-
-### 8.9. `bestiar`
-
-Catàleg de tipus de bestiar.
-
-### 8.10. `fase_productiva`
-
-Catàleg de fases productives.
-
-### 8.11. `granja_bestiar`
-
-Relaciona granja, tipus de bestiar, fase productiva i cens.
-
-### 8.12. `entrega_dejeccions`
-
-Registra entregues de dejeccions amb destí a terra o a un altre titular.
+- `oficina`
+- `tecnic`
+- `titular`
+- `tecnic_titular`
+- `dan_declaracio`
+- `terra`
+- `aplicacions_fertilitzants`
+- `granja`
+- `bestiar`
+- `fase_productiva`
+- `granja_bestiar`
+- `entrega_dejeccions`
 
 ## 9. Dades d'entrada del sistema
 
@@ -250,6 +197,11 @@ L'aplicació treballa amb tres grans tipus d'entrada.
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+
+Aquestes dades es poden injectar de dues maneres:
+
+- variables d'entorn o propietats JVM
+- fitxer `agrisync.properties`
 
 ### 9.2. Entrada d'usuari
 
@@ -294,7 +246,7 @@ El sistema també transforma dades:
 - genera `codi_sigpac_complet` a la BDD
 - converteix JSON de Supabase a DTOs Kotlin
 - guarda la sessió en format serialitzable
-- resol automàticament l'any actual de campanya mitjançant una petita utilitat multiplataforma (`PlatformDateTime`) quan cal crear una DAN nova
+- resol automàticament l'any actual de campanya mitjançant `PlatformDateTime`
 
 ### 10.3. Filtratge i càrrega
 
@@ -304,17 +256,6 @@ Cada pantalla:
 - demana dades al repositori
 - rep models Kotlin
 - actualitza UI
-
-També hi ha filtratge local:
-
-- cerca de titulars per NIF o nom
-- cerca de terres per titular o codi SIGPAC
-- paginació simple
-
-Des de la iteració 4, la pantalla de titulars també acompanya més la lectura:
-
-- mostra resum de resultats i pàgines
-- diferencia millor error, buit per filtre i buit per manca d'accés
 
 ### 10.4. Edició i administració
 
@@ -333,7 +274,7 @@ Quan l'usuari edita o administra:
 
 Per crear una aplicació agrícola o una entrega ramadera, la BDD exigeix un `dan_id`.
 
-Per evitar que l'usuari hagi de gestionar manualment aquesta dependència en un MVP d'escriptori, el repositori segueix aquesta regla:
+El repositori segueix aquesta regla:
 
 1. busca si el titular ja té alguna `dan_declaracio`
 2. si en troba, fa servir la més recent
@@ -341,16 +282,24 @@ Per evitar que l'usuari hagi de gestionar manualment aquesta dependència en un 
 
 ### 10.6. Poliment d'UX
 
-La iteració 4 ha afegit una capa de tractament menys tècnica però molt important:
+La iteració 4 ha afegit:
 
 - formularis amb més context i més guia
 - capçaleres de secció que expliquen què representa cada bloc
-- estats buits que no només diuen "no hi ha dades", sinó que orienten sobre el següent pas
+- estats buits que orienten sobre el següent pas
 - missatges d'error i ajuda més coherents entre pantalles
 
-### 10.7. Sessió persistent
+### 10.7. Preparació per a l'entrega
 
-La sessió es guarda localment amb `Preferences`.
+La millora posterior a la iteració 4 resol específicament la forma d'entregar el projecte en `.exe`.
+
+La decisió ha estat:
+
+- mantenir suport a variables d'entorn per desenvolupament
+- afegir suport a `agrisync.properties` per a execució empaquetada
+- proporcionar una plantilla `agrisync.properties.example`
+
+A nivell acadèmic això és molt útil perquè fa possible una entrega executable senzilla sense haver de tocar configuració del sistema operatiu del professor.
 
 ## 11. Tractament per mòduls
 
@@ -366,23 +315,15 @@ També incorpora:
 
 ### 11.2. Mòdul agrícola
 
-Carrega:
+Carrega i permet gestionar:
 
 - titular
 - terres
 - aplicacions de fertilitzants
 
-També permet:
-
-- editar titular
-- editar, crear i eliminar terres
-- editar, crear i eliminar aplicacions
-
-Des de la iteració 4, cada secció també mostra una petita explicació funcional i un estat buit més útil quan encara no hi ha registres.
-
 ### 11.3. Mòdul ramader
 
-Carrega:
+Carrega i permet gestionar:
 
 - titular
 - granges
@@ -390,15 +331,6 @@ Carrega:
 - entregues de dejeccions
 - catàlegs de bestiar i fase productiva
 - terres del titular per oferir destí d'entrega
-
-També permet:
-
-- editar titular
-- crear, editar i eliminar granges
-- crear, editar i eliminar registres de granja-bestiar
-- crear, editar i eliminar entregues de dejeccions
-
-Des de la iteració 4, aquestes seccions també tenen més context visual, millor estat buit i formularis nous més guiats.
 
 ### 11.4. Gestió de titulars
 
@@ -417,9 +349,9 @@ Permet:
 - activar o desactivar tècnics
 - canviar dades bàsiques
 - reset de password
-- eliminar un tècnic des de la mateixa app
+- eliminar tècnics des de la mateixa app
 - intentar eliminar també el seu usuari d'Auth si tenia login associat
-- gestionar assignacions de titulars amb confirmació abans d'eliminar-les
+- gestionar assignacions de titulars
 
 ### 11.7. Gestió d'oficines
 
@@ -438,7 +370,12 @@ Punts clau:
 - funcions helper de permisos
 - policies RLS per operació
 
-La iteració 4 no ha requerit cap canvi a permisos ni a l'esquema SQL. Tot el treball ha estat a nivell de presentació, orientació d'ús i consistència visual.
+La base de dades continua sent la que decideix què pot veure o modificar cada usuari.
+
+Matís important de defensa:
+
+- fer servir `agrisync.properties` és una solució pràctica d'entrega per al context acadèmic
+- no és la solució ideal de seguretat per a una distribució real a tercers, especialment mentre hi hagi operacions administratives que depenen de `service_role`
 
 ## 13. Sortides del sistema
 
@@ -451,8 +388,7 @@ La iteració 4 no ha requerit cap canvi a permisos ni a l'esquema SQL. Tot el tr
 - dades ramaderes
 - missatges d'èxit i error
 - diàlegs de confirmació en accions destructives
-- avisos contextuals en casos com "sense login" o "sense assignacions"
-- estats buits i missatges de context més útils
+- avisos contextuals i estats buits més útils
 
 ### 13.2. Sortida persistent
 
@@ -499,7 +435,7 @@ Usuaris de prova previstos al seed:
 - no hi ha dashboard de càlculs agregats
 - alguns camps del full original encara no estan modelats
 - la `service_role` continua sent necessària per a funcions administratives avançades
-- encara hi ha marge per polir més la UX visual general si es vol un acabat més de producte
+- `agrisync.properties` resol bé l'entrega acadèmica, però no seria la millor estratègia per a un producte final distribuït a gran escala
 - els càlculs derivats i els resums encara no formen part de la UI
 
 ## 17. Estat actual verificat
@@ -510,14 +446,15 @@ Amb l'esquema SQL simplificat i els ajustos realitzats:
 - el login amb usuaris de prova ja s'ha pogut validar
 - el codi i la documentació han quedat alineats amb la BDD real
 - la configuració sensible ja no queda embeguda dins del codi
-- les validacions del detall agrícola i ramader són més estrictes i eviten guardats incorrectes per defecte
-- la gestió de tècnics és més completa i ja inclou baixa directa des de la UI
+- les validacions del detall agrícola i ramader són més estrictes
+- la gestió de tècnics és més completa
 - els mòduls agrícola i ramader ja permeten altes i baixes dels principals registres de treball
 - l'experiència d'usuari al login i a les pantalles principals és més clara i més guiada
-- les iteracions 2, 3 i 4 s'han pogut resoldre sense refer la BDD
+- l'app ja està preparada per ser entregada amb `.exe` + `agrisync.properties`
+- les iteracions 2, 3 i 4, i la millora d'entrega, s'han pogut resoldre sense refer la BDD
 
 ## 18. Resum final
 
 AgriSync és un MVP funcional de gestió agrària centrat en la DAN. Combina autenticació, model relacional, permisos reals, client desktop i una estructura neta per capes.
 
-Des del punt de vista de defensa del projecte, el valor principal és que no és només una maqueta visual: és una aplicació amb autenticació real, persistència real i control d'accés real sobre dades de negoci. Després de les iteracions 1, 2, 3 i 4, el projecte queda més sòlid tècnicament, més segur, més complet des del punt de vista funcional i també més clar de cara a ús real i presentació.
+Des del punt de vista de defensa del projecte, el valor principal és que no és només una maqueta visual: és una aplicació amb autenticació real, persistència real i control d'accés real sobre dades de negoci. A més, ara també està preparada per a una entrega acadèmica molt més pràctica gràcies al suport de configuració per fitxer.

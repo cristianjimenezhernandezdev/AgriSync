@@ -14,9 +14,33 @@ Per poder fer servir l'aplicació necessites:
 - tenir un usuari vàlid a Supabase Auth
 - tenir un registre de tècnic vinculat a aquest usuari
 - estar actiu dins del sistema
-- tenir configurades les variables `SUPABASE_URL`, `SUPABASE_ANON_KEY` i `SUPABASE_SERVICE_ROLE_KEY` en l'entorn on s'executa l'app
+- tenir configurada la connexió amb Supabase
 
-## 3. Usuaris de prova
+La connexió es pot configurar de dues maneres:
+
+- amb variables d'entorn
+- o amb un fitxer `agrisync.properties`
+
+## 3. Configuració per a l'entrega o l'executable
+
+Si l'aplicació s'entrega en `.exe`, la manera recomanada és posar al mateix directori:
+
+- `AgriSync.exe`
+- `agrisync.properties`
+
+El fitxer `agrisync.properties` ha de contenir:
+
+```properties
+SUPABASE_URL=https://el-teu-projecte.supabase.co
+SUPABASE_ANON_KEY=enganxa_aqui_la_anon_key
+SUPABASE_SERVICE_ROLE_KEY=enganxa_aqui_la_service_role_key
+```
+
+L'aplicació també accepta aquestes mateixes dades com a variables d'entorn si s'executa en desenvolupament.
+
+Si falta la configuració, l'app mostrarà una pantalla indicant quines dades falten.
+
+## 4. Usuaris de prova
 
 Si has carregat el `seed_complet.sql`, els usuaris de prova previstos són aquests:
 
@@ -26,7 +50,7 @@ Si has carregat el `seed_complet.sql`, els usuaris de prova previstos són aques
 - `ramader.test@agrisync.com` / `ramader1234`
 - `lectura.test@agrisync.com` / `lectura1234`
 
-## 4. Inici de sessió
+## 5. Inici de sessió
 
 Quan s'obre el programa apareix la pantalla de login.
 
@@ -43,25 +67,25 @@ Si tot va bé:
 - recupera el teu perfil tècnic
 - carrega la pantalla principal
 
-## 5. Errors habituals al login
+## 6. Errors habituals al login
 
-### 5.1. Credencials incorrectes
+### 6.1. Credencials incorrectes
 
 Vol dir que l'email o la contrasenya no coincideixen.
 
-### 5.2. No s'ha trobat perfil tècnic
+### 6.2. No s'ha trobat perfil tècnic
 
 Vol dir que l'usuari existeix a Auth però no està vinculat correctament a `public.tecnic`.
 
-### 5.3. Tècnic inactiu
+### 6.3. Tècnic inactiu
 
 Vol dir que el teu registre funcional existeix però està desactivat.
 
-### 5.4. Configuració incompleta
+### 6.4. Configuració incompleta
 
-Si l'app mostra un missatge de configuració incompleta, falten variables d'entorn obligatòries de Supabase i el programa no continuarà fins que estiguin definides.
+Si l'app mostra un missatge de configuració incompleta, falten dades de connexió de Supabase. Revisa el fitxer `agrisync.properties` o les variables d'entorn.
 
-## 6. Pantalla principal
+## 7. Pantalla principal
 
 En entrar, s'obre la pantalla de `Titulars`.
 
@@ -75,7 +99,7 @@ Allà veuràs:
 - accés al teu perfil
 - opcions de gestió si el teu rol ho permet
 
-## 7. Barra superior
+## 8. Barra superior
 
 A la part superior tens la navegació principal.
 
@@ -92,7 +116,7 @@ Opcions visibles només si tens permisos:
 - `Tecnics`
 - `Oficines`
 
-## 8. Pantalla de titulars
+## 9. Pantalla de titulars
 
 La pantalla principal serveix per localitzar el titular amb qui vols treballar.
 
@@ -109,7 +133,7 @@ Recorda:
 - la visibilitat depèn del rol i de les assignacions a `tecnic_titular`
 - si no surt cap resultat, la pantalla t'indicarà si és per filtre o per manca de titulars accessibles
 
-## 9. Mòdul agrícola
+## 10. Mòdul agrícola
 
 Aquest mòdul mostra la informació agrícola del titular seleccionat.
 
@@ -121,7 +145,7 @@ Hi trobaràs normalment:
 
 Cada secció incorpora una explicació curta sobre què representa i què hi pots fer.
 
-### 9.1. Què s'hi pot fer ara
+### 10.1. Què s'hi pot fer ara
 
 Segons els permisos:
 
@@ -133,7 +157,7 @@ Segons els permisos:
 - editar data, `kg N` i `UF`
 - eliminar aplicacions
 
-### 9.2. Crear una terra
+### 10.2. Crear una terra
 
 Prem `+ Nova Terra` i informa:
 
@@ -143,7 +167,7 @@ Prem `+ Nova Terra` i informa:
 - recinte
 - superfície
 
-### 9.3. Crear una aplicació
+### 10.3. Crear una aplicació
 
 Prem `+ Nova Aplicacio` i informa:
 
@@ -154,7 +178,7 @@ Prem `+ Nova Aplicacio` i informa:
 
 Si el titular encara no tenia cap DAN, el sistema en crea una automàticament per poder guardar la nova aplicació.
 
-### 9.4. Validacions importants
+### 10.4. Validacions importants
 
 - el nom del titular no pot quedar buit
 - superfície, `kg N` i `UF` han de ser nombres vàlids
@@ -163,7 +187,7 @@ Si el titular encara no tenia cap DAN, el sistema en crea una automàticament pe
 - abans d'eliminar una terra o una aplicació, l'app demana confirmació
 - si una secció és buida, la pantalla t'indicarà quin és el següent pas recomanat
 
-## 10. Mòdul ramader
+## 11. Mòdul ramader
 
 Aquest mòdul mostra la informació ramadera del titular seleccionat.
 
@@ -176,7 +200,7 @@ Hi trobaràs:
 
 Cada secció incorpora una explicació curta sobre què representa i què hi pots fer.
 
-### 10.1. Què s'hi pot fer ara
+### 11.1. Què s'hi pot fer ara
 
 Segons els permisos:
 
@@ -191,14 +215,14 @@ Segons els permisos:
 - editar data i quantitat d'una entrega
 - eliminar entregues
 
-### 10.2. Crear una granja
+### 11.2. Crear una granja
 
 Prem `+ Nova Granja` i informa:
 
 - nom, si el vols guardar
 - marca oficial, que és obligatòria
 
-### 10.3. Crear un registre de granja-bestiar
+### 11.3. Crear un registre de granja-bestiar
 
 Prem `+ Nou Registre` i informa:
 
@@ -207,7 +231,7 @@ Prem `+ Nou Registre` i informa:
 - fase productiva
 - cens
 
-### 10.4. Crear una entrega
+### 11.4. Crear una entrega
 
 Prem `+ Nova Entrega` i informa:
 
@@ -223,7 +247,7 @@ El receptor pot ser:
 
 Si el titular encara no tenia cap DAN, el sistema en crea una automàticament per poder guardar la nova entrega.
 
-### 10.5. Validacions importants
+### 11.5. Validacions importants
 
 - la marca oficial és obligatòria
 - cens i quantitat han de ser valors numèrics vàlids
@@ -232,7 +256,7 @@ Si el titular encara no tenia cap DAN, el sistema en crea una automàticament pe
 - abans d'eliminar una granja, un registre de bestiar o una entrega, l'app demana confirmació
 - si una secció és buida, la pantalla t'indicarà quin és el següent pas recomanat
 
-## 11. Perfil
+## 12. Perfil
 
 La pantalla `Perfil` permet veure les teves dades:
 
@@ -246,11 +270,11 @@ També pots, si tens permís:
 - editar nom i email
 - canviar el password
 
-## 12. Gestió de titulars
+## 13. Gestió de titulars
 
 Aquesta pantalla permet administrar titulars.
 
-### 12.1. Crear titular
+### 13.1. Crear titular
 
 Cal informar:
 
@@ -259,22 +283,22 @@ Cal informar:
 
 El nom és obligatori.
 
-### 12.2. Editar titular
+### 13.2. Editar titular
 
 Es poden modificar:
 
 - nom
 - NIF
 
-### 12.3. Eliminar titular
+### 13.3. Eliminar titular
 
 Es pot eliminar des de la mateixa pantalla, però si té dades relacionades la base de dades pot impedir l'operació o provocar eliminacions en cascada segons la relació.
 
-## 13. Gestió de terres
+## 14. Gestió de terres
 
 La pantalla `Terres` permet administrar el catàleg de terres.
 
-### 13.1. Crear una terra
+### 14.1. Crear una terra
 
 Cal introduir:
 
@@ -285,13 +309,13 @@ Cal introduir:
 - recinte
 - superfície
 
-### 13.2. Validacions
+### 14.2. Validacions
 
 - `mun_codi` ha de tenir exactament 5 dígits
 - polígon, parcel·la i recinte han de ser enters
 - superfície ha de ser numèrica
 
-### 13.3. Editar una terra
+### 14.3. Editar una terra
 
 Es pot modificar:
 
@@ -300,11 +324,11 @@ Es pot modificar:
 
 El codi SIGPAC complet es genera automàticament.
 
-## 14. Gestió de tècnics
+## 15. Gestió de tècnics
 
 La pantalla `Tecnics` serveix per administrar usuaris operatius.
 
-### 14.1. Crear tècnic
+### 15.1. Crear tècnic
 
 Cal indicar:
 
@@ -319,15 +343,15 @@ El sistema farà dues operacions:
 1. crear l'usuari a Supabase Auth
 2. crear el registre funcional a `public.tecnic`
 
-### 14.2. Activar o desactivar
+### 15.2. Activar o desactivar
 
 Un tècnic inactiu no pot operar normalment dins l'app.
 
-### 14.3. Canviar password
+### 15.3. Canviar password
 
 Des d'aquesta pantalla també es pot fer reset de password d'un tècnic.
 
-### 14.4. Eliminar tècnic
+### 15.4. Eliminar tècnic
 
 Ara es pot eliminar directament des de la pantalla de gestió.
 
@@ -343,7 +367,7 @@ Important:
 - l'acció és destructiva
 - les assignacions del tècnic a titulars també desapareixen
 
-## 15. Detall de tècnic i assignacions
+## 16. Detall de tècnic i assignacions
 
 En el detall d'un tècnic es poden veure o gestionar les assignacions de titulars.
 
@@ -360,16 +384,16 @@ Scopes possibles:
 - `ramader`
 - `lectura`
 
-### 15.1. Casos especials que veuràs a la pantalla
+### 16.1. Casos especials que veuràs a la pantalla
 
 - `Sense login`: vol dir que el tècnic no té `user_id` i no pot entrar a l'aplicació
 - `Cap titular assignat`: si el tècnic té rol normal, probablement no veurà titulars a la home fins que tingui alguna assignació activa
 
-### 15.2. Eliminar assignacions
+### 16.2. Eliminar assignacions
 
 Quan elimines una assignació, l'app demana confirmació abans de fer l'acció.
 
-## 16. Gestió d'oficines
+## 17. Gestió d'oficines
 
 La pantalla `Oficines` permet:
 
@@ -377,13 +401,13 @@ La pantalla `Oficines` permet:
 - editar el nom d'una oficina
 - eliminar oficines si no hi ha dependències que ho impedeixin
 
-## 17. Errors habituals dins l'app
+## 18. Errors habituals dins l'app
 
-### 17.1. `401` o `403`
+### 18.1. `401` o `403`
 
 Vol dir que no tens permís per veure o modificar aquella dada.
 
-### 17.2. Error de validació
+### 18.2. Error de validació
 
 Pot passar si:
 
@@ -394,7 +418,7 @@ Pot passar si:
 - una data no té format correcte
 - no has seleccionat una dada obligatòria en un formulari nou
 
-### 17.3. Error en esborrar un tècnic
+### 18.3. Error en esborrar un tècnic
 
 Pot passar si:
 
@@ -402,11 +426,11 @@ Pot passar si:
 - hi ha un problema amb Supabase Auth
 - s'ha pogut eliminar el tècnic funcional però no l'usuari d'Auth
 
-### 17.4. Error en eliminar una granja
+### 18.4. Error en eliminar una granja
 
 Pot passar si aquella granja està sent referenciada per entregues o per altres dades que la BDD no permet esborrar en aquell moment.
 
-## 18. Bones pràctiques d'ús
+## 19. Bones pràctiques d'ús
 
 - entra sempre amb el teu usuari real o de prova vàlid
 - comprova si estàs al mòdul agrícola o ramader abans d'editar
@@ -416,15 +440,16 @@ Pot passar si aquella granja està sent referenciada per entregues o per altres 
 - llegeix els diàlegs de confirmació abans d'eliminar dades
 - fixa't en els textos de suport de la pantalla, perquè acostumen a indicar quin és el següent pas útil
 
-## 19. Resum ràpid de treball
+## 20. Resum ràpid de treball
 
 Flux recomanat d'ús:
 
-1. inicia sessió
-2. comprova el perfil
-3. entra a `Titulars`
-4. busca el titular
-5. obre el mòdul agrícola o ramader
-6. crea o edita les dades necessàries directament al mòdul
-7. desa i comprova el missatge de confirmació
-8. si ets administrador, usa `Tecnics` per donar altes, canviar passwords, assignar titulars o fer baixes
+1. assegura't que `agrisync.properties` o les variables d'entorn estan configurades
+2. inicia sessió
+3. comprova el perfil
+4. entra a `Titulars`
+5. busca el titular
+6. obre el mòdul agrícola o ramader
+7. crea o edita les dades necessàries directament al mòdul
+8. desa i comprova el missatge de confirmació
+9. si ets administrador, usa `Tecnics` per donar altes, canviar passwords, assignar titulars o fer baixes

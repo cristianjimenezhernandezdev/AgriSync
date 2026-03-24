@@ -72,7 +72,7 @@ El projecte es desenvolupa seguint la metodologia **SCRUM**:
 
 ## Estat del projecte
 
-🟡 **MVP funcional en evolució**
+🟢 **MVP funcional i demostrable**
 
 Actualment el projecte ja disposa de:
 - Aplicació desktop funcional
@@ -82,6 +82,7 @@ Actualment el projecte ja disposa de:
 - Mòdul agrícola
 - Mòdul ramader
 - Pantalles de gestió per oficines, tècnics, titulars i terres
+- Alta i baixa de dades principals directament dins dels mòduls
 
 ---
 
@@ -91,6 +92,8 @@ AgriSync/
 ├── docs/ # Documentació del projecte
 ├── composeApp/ # Aplicació Compose Multiplatform Desktop
 ├── SQLAgriSync.sql # Esquema SQL i permisos
+├── seed_complet.sql # Dades de prova del MVP
+├── agrisync.properties.example # Plantilla de configuració per a l'exe
 ├── build.gradle.kts
 └── README.md
 
@@ -120,30 +123,59 @@ Inclou:
 - Neteja inicial d'objectes previs per recrear l'esquema
 - Esquema MVP simplificat sense elements fora d'ús
 
-## Entorn (ENV)
+## Configuracio de l'app
 
-Defineix aquestes variables abans d'arrencar l'app:
+L'aplicació pot llegir la configuració de dues maneres:
+
+### Opcio 1. Variables d'entorn o propietats JVM
 
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+### Opcio 2. Fitxer `agrisync.properties`
+
+Si no hi ha variables d'entorn, la versió JVM també busca un fitxer anomenat `agrisync.properties`:
+
+- al directori des d'on s'executa l'app
+- o al costat del `.exe` / `.jar`
+
+Pots partir de `agrisync.properties.example` i crear el fitxer real així:
+
+```properties
+SUPABASE_URL=https://<PROJECT>.supabase.co
+SUPABASE_ANON_KEY=<ANON_KEY>
+SUPABASE_SERVICE_ROLE_KEY=<SERVICE_ROLE_KEY>
+```
+
 ## Execucio (Desktop)
 
-Exemple amb PowerShell:
+### Desenvolupament amb PowerShell
 
 ```powershell
 $env:SUPABASE_URL="https://<PROJECT>.supabase.co"
 $env:SUPABASE_ANON_KEY="<ANON_KEY>"
+$env:SUPABASE_SERVICE_ROLE_KEY="<SERVICE_ROLE_KEY>"
 ./gradlew :composeApp:run
 ```
+
+### Entrega als professors
+
+Per una entrega en `.exe`, la manera pràctica és distribuir:
+
+- `AgriSync.exe`
+- `agrisync.properties`
+
+al mateix directori.
+
+Així l'app arrenca sense haver de configurar variables d'entorn a l'ordinador del professor.
 
 ## Estructura rellevant
 
 - `composeApp/src/commonMain/kotlin/cat/agrisync/data`: auth, client REST i repositoris
 - `composeApp/src/commonMain/kotlin/cat/agrisync/viewmodel`: presenters + `UiState`
 - `composeApp/src/commonMain/kotlin/cat/agrisync/ui`: pantalles Compose Desktop
-- `composeApp/src/jvmMain/kotlin/cat/agrisync/data/JvmEnvConfig.kt`: lectura d'ENV
+- `composeApp/src/jvmMain/kotlin/cat/agrisync/data/JvmEnvConfig.kt`: lectura de configuració JVM i fitxer `agrisync.properties`
 - `composeApp/src/jvmMain/kotlin/cat/agrisync/data/SessionPersistence.kt`: persistencia de sessio local
 
 ---
