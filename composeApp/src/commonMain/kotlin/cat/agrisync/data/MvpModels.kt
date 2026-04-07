@@ -18,7 +18,9 @@ data class TerraDto(
     val id: String,
     val titular_id: String? = null,
     val codi_sigpac_complet: String? = null,
-    val superficie: Double? = null
+    val superficie: Double? = null,
+    val updated_at: String? = null,
+    val updated_by: String? = null
 )
 
 @Serializable
@@ -35,6 +37,8 @@ data class AplicacioFertilitzantDto(
     val kg_n: Double? = null,
     val uf: Double? = null,
     val tecnic_id: String? = null,
+    val updated_at: String? = null,
+    val updated_by: String? = null,
     val dan: DanRefDto? = null
 )
 
@@ -43,7 +47,9 @@ data class GranjaDto(
     val id: String,
     val titular_id: String,
     val marca_oficial: String,
-    val nom: String? = null
+    val nom: String? = null,
+    val updated_at: String? = null,
+    val updated_by: String? = null
 )
 
 @Serializable
@@ -64,6 +70,8 @@ data class FaseProductivaDto(
 data class GranjaBestiarDto(
     val id: String,
     val cens: Double? = null,
+    val updated_at: String? = null,
+    val updated_by: String? = null,
     val granja: GranjaDto? = null,
     val bestiar: BestiarDto? = null,
     val fase_productiva: FaseProductivaDto? = null
@@ -77,6 +85,8 @@ data class EntregaDejeccioDto(
     val granja_origen_id: String,
     val receptor_titular_id: String? = null,
     val terra_desti_id: String? = null,
+    val updated_at: String? = null,
+    val updated_by: String? = null,
     val dan: DanRefDto? = null
 )
 

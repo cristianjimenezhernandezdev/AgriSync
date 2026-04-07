@@ -81,7 +81,10 @@ internal fun TitularAgricolaScreen(
 
                     item {
                         ui.titular?.let { titular ->
-                            EditableTitularCard(titular) { nif, nom ->
+                            EditableTitularCard(
+                                titular = titular,
+                                actorLabel = ui.actorLabels[titular.updated_by]
+                            ) { nif, nom ->
                                 viewModel.updateTitular(nif, nom)
                             }
                         }
@@ -106,6 +109,7 @@ internal fun TitularAgricolaScreen(
                         items(ui.terres, key = { it.id }) { terra ->
                             EditableTerraCard(
                                 terra = terra,
+                                actorLabel = ui.actorLabels[terra.updated_by],
                                 onSave = { superficie -> viewModel.updateTerra(terra.id, superficie) },
                                 onDelete = { pendingDeleteTerraId = terra.id }
                             )
@@ -133,6 +137,7 @@ internal fun TitularAgricolaScreen(
                         items(ui.aplicacions, key = { it.id }) { app ->
                             EditableAplicacioCard(
                                 app = app,
+                                actorLabel = ui.actorLabels[app.updated_by],
                                 onSave = { data, kgN, uf -> viewModel.updateAplicacio(app.id, data, kgN, uf) },
                                 onDelete = { pendingDeleteAplicacioId = app.id }
                             )
@@ -222,7 +227,11 @@ private fun EmptySectionCard(title: String, message: String) {
 }
 
 @Composable
-private fun EditableTitularCard(titular: TitularDto, onSave: (String, String) -> Boolean) {
+private fun EditableTitularCard(
+    titular: TitularDto,
+    actorLabel: String?,
+    onSave: (String, String) -> Boolean
+) {
     var editing by remember { mutableStateOf(false) }
     var nif by remember(titular.id) { mutableStateOf(titular.nif ?: "") }
     var nom by remember(titular.id) { mutableStateOf(titular.nom_rao) }
@@ -240,6 +249,11 @@ private fun EditableTitularCard(titular: TitularDto, onSave: (String, String) ->
             } else {
                 Text(nom, style = MaterialTheme.typography.titleMedium)
                 Text("NIF: $nif")
+                AuditInfoBlock(
+                    updatedAt = titular.updated_at,
+                    updatedByLabel = actorLabel,
+                    fallbackUserId = titular.updated_by
+                )
                 TextButton(onClick = { editing = true }) { Text("Editar") }
             }
         }
@@ -249,6 +263,7 @@ private fun EditableTitularCard(titular: TitularDto, onSave: (String, String) ->
 @Composable
 private fun EditableTerraCard(
     terra: TerraDto,
+    actorLabel: String?,
     onSave: (String) -> Boolean,
     onDelete: () -> Unit
 ) {
@@ -266,6 +281,11 @@ private fun EditableTerraCard(
                 }
             } else {
                 Text("Superficie: ${terra.superficie ?: 0.0} ha")
+                AuditInfoBlock(
+                    updatedAt = terra.updated_at,
+                    updatedByLabel = actorLabel,
+                    fallbackUserId = terra.updated_by
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { editing = true }) { Text("Editar") }
                     TextButton(onClick = onDelete) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
@@ -278,6 +298,7 @@ private fun EditableTerraCard(
 @Composable
 private fun EditableAplicacioCard(
     app: AplicacioFertilitzantDto,
+    actorLabel: String?,
     onSave: (String, String, String) -> Boolean,
     onDelete: () -> Unit
 ) {
@@ -302,6 +323,11 @@ private fun EditableAplicacioCard(
             } else {
                 Text("Data: ${app.data ?: "-"}")
                 Text("Kg N: ${app.kg_n ?: 0.0} · UF: ${app.uf ?: 0.0}")
+                AuditInfoBlock(
+                    updatedAt = app.updated_at,
+                    updatedByLabel = actorLabel,
+                    fallbackUserId = app.updated_by
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { editing = true }) { Text("Editar") }
                     TextButton(onClick = onDelete) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }

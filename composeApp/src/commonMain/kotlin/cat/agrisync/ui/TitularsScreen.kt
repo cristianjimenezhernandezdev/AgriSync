@@ -99,6 +99,7 @@ internal fun TitularsScreen(
                     items(uiState.pageItems, key = { it.titular_id }) { item ->
                         TitularCard(
                             row = item,
+                            actorLabel = uiState.actorLabels[item.last_update_by],
                             onOpenDanPreparation = onOpenDanPreparation,
                             onOpenAgricola = onOpenAgricola,
                             onOpenRamader = onOpenRamader
@@ -148,6 +149,7 @@ private fun MessageCard(title: String, message: String, isError: Boolean = false
 @Composable
 private fun TitularCard(
     row: TitularAccessRow,
+    actorLabel: String?,
     onOpenDanPreparation: (String) -> Unit,
     onOpenAgricola: (String) -> Unit,
     onOpenRamader: (String) -> Unit
@@ -159,10 +161,10 @@ private fun TitularCard(
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(row.nom, style = MaterialTheme.typography.titleMedium)
             Text("NIF: ${row.nif ?: "-"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
-                "Ultima edicio: ${formatTimestamp(row.last_update_at)} · ${row.last_update_by ?: "-"}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            AuditInfoBlock(
+                updatedAt = row.last_update_at,
+                updatedByLabel = actorLabel,
+                fallbackUserId = row.last_update_by
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AssistChip(onClick = { onOpenDanPreparation(row.titular_id) }, label = { Text("Preparar DAN") })

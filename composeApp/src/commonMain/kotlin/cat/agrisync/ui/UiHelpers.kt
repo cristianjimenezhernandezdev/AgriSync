@@ -2,6 +2,8 @@ package cat.agrisync.ui
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,6 +21,26 @@ internal fun formatTimestamp(ts: String?): String {
 
 internal fun formatActorLabel(label: String?, fallbackUserId: String?): String {
     return label?.takeIf { it.isNotBlank() } ?: fallbackUserId?.takeIf { it.isNotBlank() } ?: "-"
+}
+
+@Composable
+internal fun AuditInfoBlock(
+    updatedAt: String?,
+    updatedByLabel: String?,
+    fallbackUserId: String?
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            "Ultima actualitzacio: ${formatTimestamp(updatedAt)}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            "Ultim editor: ${formatActorLabel(updatedByLabel, fallbackUserId)}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -2,6 +2,7 @@ package cat.agrisync.data
 
 internal class AppServices private constructor(
     val authService: AuthService,
+    val auditRepository: AuditRepository,
     val accessRepository: AccessRepository,
     val agricolaRepository: AgricolaRepository,
     val ramaderRepository: RamaderRepository,
@@ -26,6 +27,7 @@ internal class AppServices private constructor(
             // TecnicRepository fa servir directament l'Admin API de Supabase quan cal
             return AppServices(
                 authService = authService,
+                auditRepository = AuditRepository(httpClient, config),
                 accessRepository = AccessRepository(userRestClient),
                 agricolaRepository = AgricolaRepository(userRestClient),
                 ramaderRepository = RamaderRepository(userRestClient),

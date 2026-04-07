@@ -8,24 +8,24 @@ internal class RamaderRepository(private val restClient: RestClient) {
     }
 
     internal suspend fun updateTitular(titularId: String, body: TitularUpdateRequest): TitularDto {
-        val q = "?id=eq.$titularId"
+        val q = "?id=eq.$titularId&select=id,nif,nom_rao,updated_at,updated_by"
         val result: List<TitularDto> = restClient.patch("titular", body, q)
         return result.first()
     }
 
     internal suspend fun listGranges(titularId: String): List<GranjaDto> {
-        val q = "?select=id,titular_id,marca_oficial,nom&titular_id=eq.$titularId&order=updated_at.desc"
+        val q = "?select=id,titular_id,marca_oficial,nom,updated_at,updated_by&titular_id=eq.$titularId&order=updated_at.desc"
         return restClient.get("granja", q)
     }
 
     internal suspend fun createGranja(body: GranjaCreateRequest): GranjaDto {
-        val q = "?select=id,titular_id,marca_oficial,nom"
+        val q = "?select=id,titular_id,marca_oficial,nom,updated_at,updated_by"
         val result: List<GranjaDto> = restClient.post("granja", body, q)
         return result.first()
     }
 
     internal suspend fun updateGranja(granjaId: String, body: GranjaUpdateRequest): GranjaDto {
-        val q = "?id=eq.$granjaId"
+        val q = "?id=eq.$granjaId&select=id,titular_id,marca_oficial,nom,updated_at,updated_by"
         val result: List<GranjaDto> = restClient.patch("granja", body, q)
         return result.first()
     }
@@ -35,7 +35,7 @@ internal class RamaderRepository(private val restClient: RestClient) {
     }
 
     internal suspend fun listTerres(titularId: String): List<TerraDto> {
-        val q = "?select=id,titular_id,codi_sigpac_complet,superficie&titular_id=eq.$titularId&order=updated_at.desc"
+        val q = "?select=id,titular_id,codi_sigpac_complet,superficie,updated_at,updated_by&titular_id=eq.$titularId&order=updated_at.desc"
         return restClient.get("terra", q)
     }
 
@@ -52,18 +52,18 @@ internal class RamaderRepository(private val restClient: RestClient) {
         if (granjaIds.isEmpty()) return emptyList()
 
         val ids = granjaIds.joinToString(separator = ",")
-        val q = "?select=id,cens,granja:granja_id(id,titular_id,marca_oficial,nom),bestiar:bestiar_id(id,codi,descripcio),fase_productiva:fase_productiva_id(id,codi,descripcio)&granja_id=in.($ids)&order=updated_at.desc"
+        val q = "?select=id,cens,updated_at,updated_by,granja:granja_id(id,titular_id,marca_oficial,nom,updated_at,updated_by),bestiar:bestiar_id(id,codi,descripcio),fase_productiva:fase_productiva_id(id,codi,descripcio)&granja_id=in.($ids)&order=updated_at.desc"
         return restClient.get("granja_bestiar", q)
     }
 
     internal suspend fun createGranjaBestiar(body: GranjaBestiarCreateRequest): GranjaBestiarDto {
-        val q = "?select=id,cens,granja:granja_id(id,titular_id,marca_oficial,nom),bestiar:bestiar_id(id,codi,descripcio),fase_productiva:fase_productiva_id(id,codi,descripcio)"
+        val q = "?select=id,cens,updated_at,updated_by,granja:granja_id(id,titular_id,marca_oficial,nom,updated_at,updated_by),bestiar:bestiar_id(id,codi,descripcio),fase_productiva:fase_productiva_id(id,codi,descripcio)"
         val result: List<GranjaBestiarDto> = restClient.post("granja_bestiar", body, q)
         return result.first()
     }
 
     internal suspend fun updateGranjaBestiar(id: String, body: GranjaBestiarUpdateRequest): List<GranjaBestiarDto> {
-        val q = "?select=id,cens,granja:granja_id(id,titular_id,marca_oficial,nom),bestiar:bestiar_id(id,codi,descripcio),fase_productiva:fase_productiva_id(id,codi,descripcio)&id=eq.$id"
+        val q = "?select=id,cens,updated_at,updated_by,granja:granja_id(id,titular_id,marca_oficial,nom,updated_at,updated_by),bestiar:bestiar_id(id,codi,descripcio),fase_productiva:fase_productiva_id(id,codi,descripcio)&id=eq.$id"
         return restClient.patch("granja_bestiar", body, q)
     }
 
@@ -76,7 +76,7 @@ internal class RamaderRepository(private val restClient: RestClient) {
         if (danIds.isEmpty()) return emptyList()
 
         val ids = danIds.joinToString(separator = ",")
-        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,dan:dan_id(id,titular_id,campanya)&dan_id=in.($ids)&order=data.desc"
+        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)&dan_id=in.($ids)&order=data.desc"
         return restClient.get("entrega_dejeccions", q)
     }
 
@@ -89,7 +89,7 @@ internal class RamaderRepository(private val restClient: RestClient) {
         receptorTitularId: String? = null
     ): EntregaDejeccioDto {
         val dan = getOrCreateDan(titularId)
-        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,dan:dan_id(id,titular_id,campanya)"
+        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)"
         val result: List<EntregaDejeccioDto> = restClient.post(
             "entrega_dejeccions",
             EntregaCreateRequest(
@@ -106,7 +106,7 @@ internal class RamaderRepository(private val restClient: RestClient) {
     }
 
     internal suspend fun updateEntrega(id: String, body: EntregaUpdateRequest): List<EntregaDejeccioDto> {
-        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,dan:dan_id(id,titular_id,campanya)&id=eq.$id"
+        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)&id=eq.$id"
         return restClient.patch("entrega_dejeccions", body, q)
     }
 

@@ -1,6 +1,7 @@
 package cat.agrisync.viewmodel
 
 import cat.agrisync.data.AccessRepository
+import cat.agrisync.data.AuditRepository
 import cat.agrisync.data.TecnicDto
 import cat.agrisync.data.TitularAccessRow
 import kotlinx.coroutines.CoroutineScope
@@ -15,6 +16,7 @@ import kotlinx.coroutines.launch
 
 data class HomeUiState(
     val items: List<TitularAccessRow> = emptyList(),
+    val actorLabels: Map<String, String> = emptyMap(),
     val searchNif: String = "",
     val currentPage: Int = 0,
     val pageSize: Int = 12,
@@ -42,6 +44,7 @@ data class HomeUiState(
 
 internal class HomeViewModel(
     private val repository: AccessRepository,
+    private val auditRepository: AuditRepository,
     private val tecnic: TecnicDto
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -54,10 +57,12 @@ internal class HomeViewModel(
             try {
                 val rows = repository.listTitularAccessForTecnic(tecnic)
                     .filter { it.can_agricola || it.can_ramader }
+                val actorLabels = auditRepository.resolveActorLabels(rows.map { it.last_update_by })
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         items = rows,
+                        actorLabels = actorLabels,
                         currentPage = 0
                     )
                 }

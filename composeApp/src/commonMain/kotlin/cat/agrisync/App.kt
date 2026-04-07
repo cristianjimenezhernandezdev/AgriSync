@@ -154,7 +154,9 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
         Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             when (val screen = currentScreen) {
                 Screen.TitularsHome -> {
-                    val vm = remember(data.tecnic.id) { HomeViewModel(services.accessRepository, data.tecnic) }
+                    val vm = remember(data.tecnic.id) {
+                        HomeViewModel(services.accessRepository, services.auditRepository, data.tecnic)
+                    }
                     DisposableEffect(data.tecnic.id) { onDispose { vm.clear() } }
                     LaunchedEffect(data.tecnic.id) { vm.load() }
                     TitularsScreen(
@@ -189,7 +191,9 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                 }
 
                 is Screen.TitularAgricola -> {
-                    val vm = remember(screen.titularId) { TitularAgricolaViewModel(services.agricolaRepository) }
+                    val vm = remember(screen.titularId) {
+                        TitularAgricolaViewModel(services.agricolaRepository, services.auditRepository)
+                    }
                     DisposableEffect(screen.titularId) { onDispose { vm.clear() } }
                     LaunchedEffect(screen.titularId) { vm.load(screen.titularId) }
                     TitularAgricolaScreen(
@@ -199,7 +203,9 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                 }
 
                 is Screen.TitularRamader -> {
-                    val vm = remember(screen.titularId) { TitularRamaderViewModel(services.ramaderRepository) }
+                    val vm = remember(screen.titularId) {
+                        TitularRamaderViewModel(services.ramaderRepository, services.auditRepository)
+                    }
                     DisposableEffect(screen.titularId) { onDispose { vm.clear() } }
                     LaunchedEffect(screen.titularId) { vm.load(screen.titularId) }
                     TitularRamaderScreen(

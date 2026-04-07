@@ -19,13 +19,15 @@ data class TitularRamaderUiState(
     val terres: List<TerraDto> = emptyList(),
     val bestiars: List<BestiarDto> = emptyList(),
     val fasesProductives: List<FaseProductivaDto> = emptyList(),
+    val actorLabels: Map<String, String> = emptyMap(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val saveMessage: String? = null
 )
 
 internal class TitularRamaderViewModel(
-    private val repository: RamaderRepository
+    private val repository: RamaderRepository,
+    private val auditRepository: AuditRepository
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _uiState = MutableStateFlow(TitularRamaderUiState())
@@ -44,6 +46,7 @@ internal class TitularRamaderViewModel(
                 val terres = repository.listTerres(titularId)
                 val bestiars = repository.listBestiarCatalog()
                 val fases = repository.listFaseProductivaCatalog()
+                val actorLabels = resolveActorLabels(titular, granges, gb, entregues, terres)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -53,7 +56,8 @@ internal class TitularRamaderViewModel(
                         entregues = entregues,
                         terres = terres,
                         bestiars = bestiars,
-                        fasesProductives = fases
+                        fasesProductives = fases,
+                        actorLabels = actorLabels
                     )
                 }
             } catch (ex: Exception) {
@@ -76,7 +80,8 @@ internal class TitularRamaderViewModel(
                         nom_rao = nom.trim()
                     )
                 )
-                _uiState.update { it.copy(titular = updated, saveMessage = "Titular guardat") }
+                val actorLabels = updateActorLabels(_uiState.value.actorLabels, updated.updated_by)
+                _uiState.update { it.copy(titular = updated, actorLabels = actorLabels, saveMessage = "Titular guardat") }
             } catch (ex: Exception) {
                 _uiState.update { it.copy(saveMessage = "Error: ${ex.message}") }
             }
@@ -95,9 +100,11 @@ internal class TitularRamaderViewModel(
                     granjaId,
                     GranjaUpdateRequest(nom = nom.trim().ifBlank { null }, marca_oficial = marca.trim())
                 )
+                val actorLabels = updateActorLabels(_uiState.value.actorLabels, updated.updated_by)
                 _uiState.update { st ->
                     st.copy(
                         granges = st.granges.map { if (it.id == granjaId) updated else it },
+                        actorLabels = actorLabels,
                         saveMessage = "Granja guardada"
                     )
                 }
@@ -124,9 +131,11 @@ internal class TitularRamaderViewModel(
                         nom = cleanNom.ifBlank { null }
                     )
                 )
+                val actorLabels = updateActorLabels(_uiState.value.actorLabels, created.updated_by)
                 _uiState.update { st ->
                     st.copy(
                         granges = listOf(created) + st.granges,
+                        actorLabels = actorLabels,
                         saveMessage = "Granja creada correctament"
                     )
                 }
@@ -170,9 +179,11 @@ internal class TitularRamaderViewModel(
                 val result = repository.updateGranjaBestiar(id, GranjaBestiarUpdateRequest(cens = cens))
                 if (result.isNotEmpty()) {
                     val updated = result.first()
+                    val actorLabels = updateActorLabels(_uiState.value.actorLabels, updated.updated_by)
                     _uiState.update { st ->
                         st.copy(
                             granjaBestiar = st.granjaBestiar.map { if (it.id == id) updated else it },
+                            actorLabels = actorLabels,
                             saveMessage = "Bestiar guardat"
                         )
                     }
@@ -208,9 +219,11 @@ internal class TitularRamaderViewModel(
                         cens = cens
                     )
                 )
+                val actorLabels = updateActorLabels(_uiState.value.actorLabels, created.updated_by)
                 _uiState.update { st ->
                     st.copy(
                         granjaBestiar = listOf(created) + st.granjaBestiar,
+                        actorLabels = actorLabels,
                         saveMessage = "Registre de bestiar creat correctament"
                     )
                 }
@@ -257,9 +270,11 @@ internal class TitularRamaderViewModel(
                 val result = repository.updateEntrega(id, EntregaUpdateRequest(data = cleanData, quantitat = quantitat))
                 if (result.isNotEmpty()) {
                     val updated = result.first()
+                    val actorLabels = updateActorLabels(_uiState.value.actorLabels, updated.updated_by)
                     _uiState.update { st ->
                         st.copy(
                             entregues = st.entregues.map { if (it.id == id) updated else it },
+                            actorLabels = actorLabels,
                             saveMessage = "Entrega guardada"
                         )
                     }
@@ -313,9 +328,11 @@ internal class TitularRamaderViewModel(
                     terraDestiId = terraDestiId,
                     receptorTitularId = receptorTitularId
                 )
+                val actorLabels = updateActorLabels(_uiState.value.actorLabels, created.updated_by)
                 _uiState.update { st ->
                     st.copy(
                         entregues = listOf(created) + st.entregues,
+                        actorLabels = actorLabels,
                         saveMessage = "Entrega creada correctament"
                     )
                 }
@@ -357,6 +374,34 @@ internal class TitularRamaderViewModel(
             msg.contains("403") -> "No tens permis per aquest titular (403)."
             else -> msg
         }
+    }
+
+    private suspend fun resolveActorLabels(
+        titular: TitularDto?,
+        granges: List<GranjaDto>,
+        granjaBestiar: List<GranjaBestiarDto>,
+        entregues: List<EntregaDejeccioDto>,
+        terres: List<TerraDto>
+    ): Map<String, String> {
+        return auditRepository.resolveActorLabels(
+            buildList {
+                add(titular?.updated_by)
+                granges.forEach { add(it.updated_by) }
+                granjaBestiar.forEach { add(it.updated_by) }
+                entregues.forEach { add(it.updated_by) }
+                terres.forEach { add(it.updated_by) }
+            }
+        )
+    }
+
+    private suspend fun updateActorLabels(
+        current: Map<String, String>,
+        userId: String?
+    ): Map<String, String> {
+        val cleanUserId = userId?.takeIf { it.isNotBlank() } ?: return current
+        if (current.containsKey(cleanUserId)) return current
+        val label = auditRepository.resolveActorLabel(cleanUserId) ?: return current
+        return current + (cleanUserId to label)
     }
 }
 

@@ -88,7 +88,10 @@ internal fun TitularRamaderScreen(
 
                     item {
                         ui.titular?.let { titular ->
-                            EditableRamaderTitularCard(titular) { nif, nom ->
+                            EditableRamaderTitularCard(
+                                titular = titular,
+                                actorLabel = ui.actorLabels[titular.updated_by]
+                            ) { nif, nom ->
                                 viewModel.updateTitular(nif, nom)
                             }
                         }
@@ -113,6 +116,7 @@ internal fun TitularRamaderScreen(
                         items(ui.granges, key = { it.id }) { granja ->
                             EditableGranjaCard(
                                 granja = granja,
+                                actorLabel = ui.actorLabels[granja.updated_by],
                                 onSave = { nom, marca -> viewModel.updateGranja(granja.id, nom, marca) },
                                 onDelete = { pendingDeleteGranjaId = granja.id }
                             )
@@ -140,6 +144,7 @@ internal fun TitularRamaderScreen(
                         items(ui.granjaBestiar, key = { it.id }) { gb ->
                             EditableGranjaBestiarCard(
                                 gb = gb,
+                                actorLabel = ui.actorLabels[gb.updated_by],
                                 onSave = { cens -> viewModel.updateGranjaBestiar(gb.id, cens) },
                                 onDelete = { pendingDeleteGranjaBestiarId = gb.id }
                             )
@@ -167,6 +172,7 @@ internal fun TitularRamaderScreen(
                         items(ui.entregues, key = { it.id }) { e ->
                             EditableEntregaCard(
                                 e = e,
+                                actorLabel = ui.actorLabels[e.updated_by],
                                 onSave = { data, quantitat -> viewModel.updateEntrega(e.id, data, quantitat) },
                                 onDelete = { pendingDeleteEntregaId = e.id }
                             )
@@ -285,7 +291,11 @@ private fun EmptySectionCard(title: String, message: String) {
 }
 
 @Composable
-private fun EditableRamaderTitularCard(titular: TitularDto, onSave: (String, String) -> Boolean) {
+private fun EditableRamaderTitularCard(
+    titular: TitularDto,
+    actorLabel: String?,
+    onSave: (String, String) -> Boolean
+) {
     var editing by remember { mutableStateOf(false) }
     var nif by remember(titular.id) { mutableStateOf(titular.nif ?: "") }
     var nom by remember(titular.id) { mutableStateOf(titular.nom_rao) }
@@ -303,6 +313,11 @@ private fun EditableRamaderTitularCard(titular: TitularDto, onSave: (String, Str
             } else {
                 Text(nom, style = MaterialTheme.typography.titleMedium)
                 Text("NIF: $nif")
+                AuditInfoBlock(
+                    updatedAt = titular.updated_at,
+                    updatedByLabel = actorLabel,
+                    fallbackUserId = titular.updated_by
+                )
                 TextButton(onClick = { editing = true }) { Text("Editar") }
             }
         }
@@ -312,6 +327,7 @@ private fun EditableRamaderTitularCard(titular: TitularDto, onSave: (String, Str
 @Composable
 private fun EditableGranjaCard(
     granja: GranjaDto,
+    actorLabel: String?,
     onSave: (String, String) -> Boolean,
     onDelete: () -> Unit
 ) {
@@ -331,6 +347,11 @@ private fun EditableGranjaCard(
             } else {
                 Text(granja.nom ?: granja.marca_oficial, style = MaterialTheme.typography.bodyLarge)
                 Text("Marca oficial: ${granja.marca_oficial}")
+                AuditInfoBlock(
+                    updatedAt = granja.updated_at,
+                    updatedByLabel = actorLabel,
+                    fallbackUserId = granja.updated_by
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { editing = true }) { Text("Editar") }
                     TextButton(onClick = onDelete) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
@@ -343,6 +364,7 @@ private fun EditableGranjaCard(
 @Composable
 private fun EditableGranjaBestiarCard(
     gb: GranjaBestiarDto,
+    actorLabel: String?,
     onSave: (String) -> Boolean,
     onDelete: () -> Unit
 ) {
@@ -362,6 +384,11 @@ private fun EditableGranjaBestiarCard(
             } else {
                 Text("Bestiar: ${gb.bestiar?.codi ?: "-"} · Fase: ${gb.fase_productiva?.codi ?: "-"}")
                 Text("Cens: ${gb.cens ?: 0.0}")
+                AuditInfoBlock(
+                    updatedAt = gb.updated_at,
+                    updatedByLabel = actorLabel,
+                    fallbackUserId = gb.updated_by
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { editing = true }) { Text("Editar") }
                     TextButton(onClick = onDelete) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
@@ -374,6 +401,7 @@ private fun EditableGranjaBestiarCard(
 @Composable
 private fun EditableEntregaCard(
     e: EntregaDejeccioDto,
+    actorLabel: String?,
     onSave: (String, String) -> Boolean,
     onDelete: () -> Unit
 ) {
@@ -395,6 +423,11 @@ private fun EditableEntregaCard(
                 Text("Data: ${e.data ?: "-"}")
                 Text("Quantitat: ${e.quantitat ?: 0.0}")
                 Text("Receptor: ${e.receptor_titular_id ?: "terra:${e.terra_desti_id ?: "-"}"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                AuditInfoBlock(
+                    updatedAt = e.updated_at,
+                    updatedByLabel = actorLabel,
+                    fallbackUserId = e.updated_by
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { editing = true }) { Text("Editar") }
                     TextButton(onClick = onDelete) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }

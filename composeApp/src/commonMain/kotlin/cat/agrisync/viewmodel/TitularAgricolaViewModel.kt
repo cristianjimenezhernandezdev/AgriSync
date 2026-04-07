@@ -15,13 +15,15 @@ data class TitularAgricolaUiState(
     val titular: TitularDto? = null,
     val terres: List<TerraDto> = emptyList(),
     val aplicacions: List<AplicacioFertilitzantDto> = emptyList(),
+    val actorLabels: Map<String, String> = emptyMap(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val saveMessage: String? = null
 )
 
 internal class TitularAgricolaViewModel(
-    private val repository: AgricolaRepository
+    private val repository: AgricolaRepository,
+    private val auditRepository: AuditRepository
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _uiState = MutableStateFlow(TitularAgricolaUiState())
@@ -36,8 +38,15 @@ internal class TitularAgricolaViewModel(
                 val titular = repository.getTitular(titularId)
                 val terres = repository.listTerres(titularId)
                 val aplicacions = repository.listAplicacionsByTitular(titularId)
+                val actorLabels = resolveActorLabels(titular, terres, aplicacions)
                 _uiState.update {
-                    it.copy(isLoading = false, titular = titular, terres = terres, aplicacions = aplicacions)
+                    it.copy(
+                        isLoading = false,
+                        titular = titular,
+                        terres = terres,
+                        aplicacions = aplicacions,
+                        actorLabels = actorLabels
+                    )
                 }
             } catch (ex: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = mapHttpError(ex.message)) }
@@ -59,7 +68,8 @@ internal class TitularAgricolaViewModel(
                         nom_rao = nom.trim()
                     )
                 )
-                _uiState.update { it.copy(titular = updated, saveMessage = "Titular guardat") }
+                val actorLabels = updateActorLabels(_uiState.value.actorLabels, updated.updated_by)
+                _uiState.update { it.copy(titular = updated, actorLabels = actorLabels, saveMessage = "Titular guardat") }
             } catch (ex: Exception) {
                 _uiState.update { it.copy(saveMessage = "Error: ${ex.message}") }
             }
@@ -80,9 +90,11 @@ internal class TitularAgricolaViewModel(
         scope.launch {
             try {
                 val updated = repository.updateTerra(terraId, TerraUpdateRequest(superficie = superficie))
+                val actorLabels = updateActorLabels(_uiState.value.actorLabels, updated.updated_by)
                 _uiState.update { st ->
                     st.copy(
                         terres = st.terres.map { if (it.id == terraId) updated else it },
+                        actorLabels = actorLabels,
                         saveMessage = "Terra guardada"
                     )
                 }
@@ -145,9 +157,11 @@ internal class TitularAgricolaViewModel(
                         superficie = superficie
                     )
                 )
+                val actorLabels = updateActorLabels(_uiState.value.actorLabels, created.updated_by)
                 _uiState.update { st ->
                     st.copy(
                         terres = listOf(created) + st.terres,
+                        actorLabels = actorLabels,
                         saveMessage = "Terra creada correctament"
                     )
                 }
@@ -196,9 +210,11 @@ internal class TitularAgricolaViewModel(
                     id,
                     AplicacioUpdateRequest(data = cleanData, kg_n = kgN, uf = uf)
                 )
+                val actorLabels = updateActorLabels(_uiState.value.actorLabels, updated.updated_by)
                 _uiState.update { st ->
                     st.copy(
                         aplicacions = st.aplicacions.map { if (it.id == id) updated else it },
+                        actorLabels = actorLabels,
                         saveMessage = "Aplicacio guardada"
                     )
                 }
@@ -238,9 +254,11 @@ internal class TitularAgricolaViewModel(
                     kgN = kgN,
                     uf = uf
                 )
+                val actorLabels = updateActorLabels(_uiState.value.actorLabels, created.updated_by)
                 _uiState.update { st ->
                     st.copy(
                         aplicacions = listOf(created) + st.aplicacions,
+                        actorLabels = actorLabels,
                         saveMessage = "Aplicacio creada correctament"
                     )
                 }
@@ -273,6 +291,30 @@ internal class TitularAgricolaViewModel(
 
     fun clear() {
         scope.cancel()
+    }
+
+    private suspend fun resolveActorLabels(
+        titular: TitularDto?,
+        terres: List<TerraDto>,
+        aplicacions: List<AplicacioFertilitzantDto>
+    ): Map<String, String> {
+        return auditRepository.resolveActorLabels(
+            buildList {
+                add(titular?.updated_by)
+                terres.forEach { add(it.updated_by) }
+                aplicacions.forEach { add(it.updated_by) }
+            }
+        )
+    }
+
+    private suspend fun updateActorLabels(
+        current: Map<String, String>,
+        userId: String?
+    ): Map<String, String> {
+        val cleanUserId = userId?.takeIf { it.isNotBlank() } ?: return current
+        if (current.containsKey(cleanUserId)) return current
+        val label = auditRepository.resolveActorLabel(cleanUserId) ?: return current
+        return current + (cleanUserId to label)
     }
 }
 
