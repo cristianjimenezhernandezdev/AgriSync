@@ -3,6 +3,7 @@ package cat.agrisync.data
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -21,7 +22,10 @@ internal class TecnicRepository(
 ) {
     /** Llista tots els tècnics (admin veu tots, manager veu oficina) */
     internal suspend fun listAll(): List<TecnicDto> {
-        return restClient.get("tecnic", "?select=id,oficina_id,user_id,nom,email,rol,actiu&order=nom")
+        return restClient.get(
+            "tecnic",
+            "?select=id,oficina_id,user_id,nom,email,rol,actiu,created_at,created_by,updated_at,updated_by&order=nom"
+        )
     }
 
     /** Llista oficines */
@@ -121,6 +125,27 @@ internal class TecnicRepository(
             throw ApiException(response.status.value, "Error eliminant usuari Auth: $msg")
         }
     }
+
+    /** Resol el nom del tecnic que correspon a un auth.uid() guardat a updated_by/created_by. */
+    internal suspend fun resolveActorLabel(userId: String?): String? {
+        val cleanUserId = userId?.trim().orEmpty()
+        if (cleanUserId.isBlank() || config.serviceRoleKey.isBlank()) return null
+
+        val response = httpClient.get {
+            url("${config.url}/rest/v1/tecnic?select=user_id,nom,email&user_id=eq.$cleanUserId&limit=1")
+            contentType(ContentType.Application.Json)
+            headers.append("apikey", config.serviceRoleKey)
+            headers.append(HttpHeaders.Authorization, "Bearer ${config.serviceRoleKey}")
+        }
+
+        if (!response.status.isSuccess()) {
+            return null
+        }
+
+        val result: List<TecnicActorLookupDto> = response.body()
+        val actor = result.firstOrNull() ?: return null
+        return actor.email?.takeIf { it.isNotBlank() }?.let { "${actor.nom} ($it)" } ?: actor.nom
+    }
 }
 
 @Serializable
@@ -168,5 +193,12 @@ data class TecnicTitularWithTitular(
 @Serializable
 private data class UpdatePasswordRequest(
     val password: String
+)
+
+@Serializable
+private data class TecnicActorLookupDto(
+    val user_id: String? = null,
+    val nom: String,
+    val email: String? = null
 )
 

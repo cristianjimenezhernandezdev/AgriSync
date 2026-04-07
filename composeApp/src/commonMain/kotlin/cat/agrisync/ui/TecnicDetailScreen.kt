@@ -86,6 +86,12 @@ internal fun TecnicDetailScreen(
                                     Text("ID: ${t.id}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text("User ID: ${t.user_id ?: "Sense login"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text("Actiu: ${if (t.actiu) "Si" else "No"}", style = MaterialTheme.typography.bodySmall)
+                                    Text("Ultima actualitzacio: ${formatTimestamp(t.updated_at)}", style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        "Ultim editor: ${formatActorLabel(ui.updatedByLabel, t.updated_by)}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                     if (t.user_id == null) {
                                         Text(
                                             "Aquest tecnic no te compte Auth i no pot entrar a l'aplicacio fins que se li crei un login.",
@@ -158,11 +164,14 @@ internal fun TecnicDetailScreen(
                                 Text("Afegir assignacio", style = MaterialTheme.typography.titleSmall)
 
                                 // Selector titular
-                                Text("Titular:", style = MaterialTheme.typography.labelMedium)
-                                TitularDropdown(
-                                    titulars = ui.allTitulars,
-                                    selectedId = ui.newTitularId,
-                                    onSelect = viewModel::onNewTitular
+                                SearchableSelectionField(
+                                    items = ui.allTitulars,
+                                    selectedItem = ui.allTitulars.find { it.id == ui.newTitularId },
+                                    onSelect = { titular -> viewModel.onNewTitular(titular?.id ?: "") },
+                                    itemLabel = { "${it.nom_rao} (${it.nif ?: "-"})" },
+                                    itemSearchText = { "${it.nom_rao} ${it.nif ?: ""}" },
+                                    label = "Titular",
+                                    placeholder = "Cerca per nom o NIF"
                                 )
 
                                 // Selector scope
@@ -215,35 +224,6 @@ internal fun TecnicDetailScreen(
                     OutlinedButton(onClick = { pendingDeleteAssignacioId = null }) { Text("Cancel·lar") }
                 }
             )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TitularDropdown(
-    titulars: List<TitularDto>,
-    selectedId: String,
-    onSelect: (String) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val selected = titulars.find { it.id == selectedId }
-
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = selected?.let { "${it.nom_rao} (${it.nif ?: "-"})" } ?: "Selecciona titular",
-            onValueChange = {},
-            readOnly = true,
-            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) }
-        )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            titulars.forEach { t ->
-                DropdownMenuItem(
-                    text = { Text("${t.nom_rao} (${t.nif ?: "-"})") },
-                    onClick = { onSelect(t.id); expanded = false }
-                )
-            }
         }
     }
 }

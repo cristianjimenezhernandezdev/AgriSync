@@ -15,8 +15,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ProfileUiState(
+    val currentTecnic: TecnicDto,
     val nom: String = "",
     val email: String = "",
+    val updatedByLabel: String? = null,
     val isEditing: Boolean = false,
     val isSaving: Boolean = false,
     // Password
@@ -37,20 +39,39 @@ internal class ProfileViewModel(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _uiState = MutableStateFlow(
         ProfileUiState(
+            currentTecnic = tecnic,
             nom = tecnic.nom,
             email = tecnic.email ?: ""
         )
     )
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
+    init {
+        refreshAuditActor(tecnic.updated_by)
+    }
+
     // ── Edició de dades ──
 
     fun startEditing() {
-        _uiState.update { it.copy(isEditing = true, nom = tecnic.nom, email = tecnic.email ?: "") }
+        val currentTecnic = _uiState.value.currentTecnic
+        _uiState.update {
+            it.copy(
+                isEditing = true,
+                nom = currentTecnic.nom,
+                email = currentTecnic.email ?: ""
+            )
+        }
     }
 
     fun cancelEditing() {
-        _uiState.update { it.copy(isEditing = false, nom = tecnic.nom, email = tecnic.email ?: "") }
+        val currentTecnic = _uiState.value.currentTecnic
+        _uiState.update {
+            it.copy(
+                isEditing = false,
+                nom = currentTecnic.nom,
+                email = currentTecnic.email ?: ""
+            )
+        }
     }
 
     fun onNomChange(value: String) { _uiState.update { it.copy(nom = value) } }
@@ -69,10 +90,21 @@ internal class ProfileViewModel(
                     nom = state.nom.trim(),
                     email = state.email.trim().ifBlank { null }
                 )
-                tecnicRepository.updateTecnic(tecnic.id, body)
+                val updated = tecnicRepository.updateTecnic(state.currentTecnic.id, body)
                 // Recarregar les dades al AuthService perquè es reflecteixin a tota l'app
                 authService.reloadTecnic()
-                _uiState.update { it.copy(isSaving = false, isEditing = false, message = "Perfil actualitzat correctament") }
+                val actorLabel = tecnicRepository.resolveActorLabel(updated.updated_by)
+                _uiState.update {
+                    it.copy(
+                        currentTecnic = updated,
+                        nom = updated.nom,
+                        email = updated.email ?: "",
+                        updatedByLabel = actorLabel,
+                        isSaving = false,
+                        isEditing = false,
+                        message = "Perfil actualitzat correctament"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isSaving = false, message = "Error: ${e.message}") }
             }
@@ -128,5 +160,13 @@ internal class ProfileViewModel(
     fun clearMessage() { _uiState.update { it.copy(message = null) } }
 
     fun clear() { scope.cancel() }
+
+    private fun refreshAuditActor(userId: String?) {
+        if (userId.isNullOrBlank()) return
+        scope.launch {
+            val actorLabel = runCatching { tecnicRepository.resolveActorLabel(userId) }.getOrNull()
+            _uiState.update { it.copy(updatedByLabel = actorLabel) }
+        }
+    }
 }
 

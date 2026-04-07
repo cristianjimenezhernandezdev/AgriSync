@@ -56,7 +56,11 @@ data class TecnicDto(
     val nom: String,
     val email: String? = null,
     val rol: String? = null,
-    val actiu: Boolean = true
+    val actiu: Boolean = true,
+    val created_at: String? = null,
+    val created_by: String? = null,
+    val updated_at: String? = null,
+    val updated_by: String? = null
 )
 
 sealed interface AuthState {

@@ -19,6 +19,7 @@ internal fun ProfileScreen(
     onBack: () -> Unit
 ) {
     val ui by viewModel.uiState.collectAsState()
+    val currentTecnic = ui.currentTecnic
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(ui.message) {
@@ -71,9 +72,13 @@ internal fun ProfileScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                         // Camps no editables
-                        ProfileRow("Rol", tecnic.rol ?: "tecnic")
-                        ProfileRow("Oficina", oficina?.nom ?: tecnic.oficina_id)
-                        ProfileRow("Actiu", if (tecnic.actiu) "Si" else "No")
+                        ProfileRow("Rol", currentTecnic.rol ?: "tecnic")
+                        ProfileRow("Oficina", oficina?.nom ?: currentTecnic.oficina_id)
+                        ProfileRow("Actiu", if (currentTecnic.actiu) "Si" else "No")
+                        AuditSection(
+                            updatedAt = currentTecnic.updated_at,
+                            updatedBy = formatActorLabel(ui.updatedByLabel, currentTecnic.updated_by)
+                        )
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
@@ -90,12 +95,16 @@ internal fun ProfileScreen(
                         }
                     } else {
                         // Mode visualització
-                        ProfileRow("Nom", tecnic.nom)
-                        ProfileRow("Email", tecnic.email ?: "\u2014")
-                        ProfileRow("Rol", tecnic.rol ?: "tecnic")
-                        ProfileRow("Oficina", oficina?.nom ?: tecnic.oficina_id)
-                        ProfileRow("Actiu", if (tecnic.actiu) "Si" else "No")
-                        ProfileRow("User ID", tecnic.user_id ?: "\u2014")
+                        ProfileRow("Nom", currentTecnic.nom)
+                        ProfileRow("Email", currentTecnic.email ?: "\u2014")
+                        ProfileRow("Rol", currentTecnic.rol ?: "tecnic")
+                        ProfileRow("Oficina", oficina?.nom ?: currentTecnic.oficina_id)
+                        ProfileRow("Actiu", if (currentTecnic.actiu) "Si" else "No")
+                        ProfileRow("User ID", currentTecnic.user_id ?: "\u2014")
+                        AuditSection(
+                            updatedAt = currentTecnic.updated_at,
+                            updatedBy = formatActorLabel(ui.updatedByLabel, currentTecnic.updated_by)
+                        )
 
                         Spacer(Modifier.height(8.dp))
 
@@ -125,6 +134,14 @@ internal fun ProfileScreen(
             )
         }
     }
+}
+
+@Composable
+private fun AuditSection(updatedAt: String?, updatedBy: String) {
+    HorizontalDivider(Modifier.padding(vertical = 4.dp))
+    Text("Auditoria", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+    ProfileRow("Ultima actualitzacio", formatTimestamp(updatedAt))
+    ProfileRow("Ultim editor", updatedBy)
 }
 
 @Composable

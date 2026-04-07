@@ -176,8 +176,3 @@ private fun TitularCard(
         }
     }
 }
-
-private fun formatTimestamp(ts: String?): String {
-    if (ts.isNullOrBlank()) return "-"
-    return ts.replace("T", " ").take(16)
-}

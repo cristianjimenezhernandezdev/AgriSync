@@ -56,11 +56,17 @@ internal fun TerraManagementScreen(
                     modifier = Modifier.weight(1f)
                 )
                 // Filtre per titular
-                TitularFilterDropdown(
-                    titulars = ui.titulars,
-                    selectedId = ui.filterTitularId,
-                    onSelect = viewModel::onFilterTitular,
-                    modifier = Modifier.width(250.dp)
+                SearchableSelectionField(
+                    items = ui.titulars,
+                    selectedItem = ui.titulars.find { it.id == ui.filterTitularId },
+                    onSelect = { titular -> viewModel.onFilterTitular(titular?.id) },
+                    itemLabel = { "${it.nom_rao} (${it.nif ?: "-"})" },
+                    itemSearchText = { "${it.nom_rao} ${it.nif ?: ""}" },
+                    label = "Filtrar per titular",
+                    placeholder = "Tots els titulars",
+                    allowClearSelection = true,
+                    clearSelectionLabel = "Tots els titulars",
+                    modifier = Modifier.width(280.dp)
                 )
             }
 
@@ -141,36 +147,6 @@ internal fun TerraManagementScreen(
 }
 
 @Composable
-private fun TitularFilterDropdown(
-    titulars: List<TitularDto>,
-    selectedId: String?,
-    onSelect: (String?) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedName = if (selectedId == null) "Tots els titulars"
-    else titulars.find { it.id == selectedId }?.nom_rao ?: "Seleccionar..."
-
-    Box(modifier) {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(selectedName, maxLines = 1)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = { Text("Tots els titulars") },
-                onClick = { onSelect(null); expanded = false }
-            )
-            titulars.forEach { t ->
-                DropdownMenuItem(
-                    text = { Text("${t.nom_rao} (${t.nif ?: "-"})") },
-                    onClick = { onSelect(t.id); expanded = false }
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun TerraManagementCard(
     terra: TerraFullDto,
     titulars: List<TitularDto>,
@@ -196,10 +172,16 @@ private fun TerraManagementCard(
                     style = MaterialTheme.typography.bodyMedium
                 )
                 // Selector titular
-                TitularSelectorDropdown(
-                    titulars = titulars,
-                    selectedId = editTitularId,
-                    onSelect = onEditTitularId
+                SearchableSelectionField(
+                    items = titulars,
+                    selectedItem = titulars.find { it.id == editTitularId },
+                    onSelect = { titular -> onEditTitularId(titular?.id ?: "") },
+                    itemLabel = { "${it.nom_rao} (${it.nif ?: "-"})" },
+                    itemSearchText = { "${it.nom_rao} ${it.nif ?: ""}" },
+                    label = "Titular",
+                    placeholder = "Cerca per nom o NIF",
+                    allowClearSelection = true,
+                    clearSelectionLabel = "Sense titular"
                 )
                 OutlinedTextField(
                     value = editSuperficie,
@@ -269,38 +251,6 @@ private fun TerraManagementCard(
 }
 
 @Composable
-private fun TitularSelectorDropdown(
-    titulars: List<TitularDto>,
-    selectedId: String,
-    onSelect: (String) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedName = if (selectedId.isBlank()) "Sense titular"
-    else titulars.find { it.id == selectedId }?.nom_rao ?: "Seleccionar..."
-
-    Column {
-        Text("Titular:", style = MaterialTheme.typography.labelMedium)
-        Box {
-            OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-                Text(selectedName, maxLines = 1)
-            }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                DropdownMenuItem(
-                    text = { Text("Sense titular") },
-                    onClick = { onSelect(""); expanded = false }
-                )
-                titulars.forEach { t ->
-                    DropdownMenuItem(
-                        text = { Text("${t.nom_rao} (${t.nif ?: "-"})") },
-                        onClick = { onSelect(t.id); expanded = false }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun CreateTerraDialog(
     titulars: List<TitularDto>,
     titularId: String,
@@ -325,10 +275,16 @@ private fun CreateTerraDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // Selector titular
-                TitularSelectorDropdown(
-                    titulars = titulars,
-                    selectedId = titularId,
-                    onSelect = onTitularIdChange
+                SearchableSelectionField(
+                    items = titulars,
+                    selectedItem = titulars.find { it.id == titularId },
+                    onSelect = { titular -> onTitularIdChange(titular?.id ?: "") },
+                    itemLabel = { "${it.nom_rao} (${it.nif ?: "-"})" },
+                    itemSearchText = { "${it.nom_rao} ${it.nif ?: ""}" },
+                    label = "Titular",
+                    placeholder = "Cerca per nom o NIF",
+                    allowClearSelection = true,
+                    clearSelectionLabel = "Sense titular"
                 )
 
                 Text("Dades SIGPAC", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)

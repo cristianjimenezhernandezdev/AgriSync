@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 
 data class TecnicDetailUiState(
     val tecnic: TecnicDto? = null,
+    val updatedByLabel: String? = null,
     val oficines: List<OficinaDto> = emptyList(),
     val assignacions: List<TecnicTitularWithTitular> = emptyList(),
     val allTitulars: List<TitularDto> = emptyList(),
@@ -51,10 +52,12 @@ internal class TecnicDetailViewModel(
                 val oficines = repository.listOficines()
                 val assignacions = repository.listAssignacions(id)
                 val titulars = repository.listAllTitulars()
+                val updatedByLabel = repository.resolveActorLabel(tecnic.updated_by)
 
                 _uiState.update {
                     it.copy(
                         isLoading = false, tecnic = tecnic, oficines = oficines,
+                        updatedByLabel = updatedByLabel,
                         assignacions = assignacions, allTitulars = titulars,
                         editNom = tecnic.nom, editEmail = tecnic.email ?: "",
                         editRol = tecnic.rol ?: "tecnic", editOficinaId = tecnic.oficina_id,
@@ -105,7 +108,14 @@ internal class TecnicDetailViewModel(
                     nom = st.editNom.trim(), email = st.editEmail.trim(),
                     rol = st.editRol, oficina_id = st.editOficinaId
                 ))
-                _uiState.update { it.copy(tecnic = updated, message = "Tecnic guardat") }
+                val updatedByLabel = repository.resolveActorLabel(updated.updated_by)
+                _uiState.update {
+                    it.copy(
+                        tecnic = updated,
+                        updatedByLabel = updatedByLabel,
+                        message = "Tecnic guardat"
+                    )
+                }
             } catch (ex: Exception) {
                 _uiState.update { it.copy(message = "Error: ${ex.message}") }
             }

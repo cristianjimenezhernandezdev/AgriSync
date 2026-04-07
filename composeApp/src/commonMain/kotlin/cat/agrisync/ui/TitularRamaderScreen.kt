@@ -575,7 +575,6 @@ private fun ConfirmDeleteDialog(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GranjaDropdown(
     granges: List<GranjaDto>,
@@ -583,99 +582,51 @@ private fun GranjaDropdown(
     onSelect: (String) -> Unit,
     label: String
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val selected = granges.find { it.id == selectedId }
-
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = selected?.let { it.nom ?: it.marca_oficial } ?: "Selecciona una granja",
-            onValueChange = {},
-            readOnly = true,
-            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            granges.forEach { granja ->
-                androidx.compose.material3.DropdownMenuItem(
-                    text = { Text("${granja.nom ?: granja.marca_oficial} (${granja.marca_oficial})") },
-                    onClick = {
-                        onSelect(granja.id)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
+    SearchableSelectionField(
+        items = granges,
+        selectedItem = granges.find { it.id == selectedId },
+        onSelect = { granja -> onSelect(granja?.id ?: "") },
+        itemLabel = { "${it.nom ?: it.marca_oficial} (${it.marca_oficial})" },
+        itemSearchText = { "${it.nom ?: ""} ${it.marca_oficial}" },
+        label = label,
+        placeholder = "Cerca una granja"
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BestiarDropdown(
     bestiars: List<BestiarDto>,
     selectedId: String,
     onSelect: (String) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val selected = bestiars.find { it.id == selectedId }
-
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = selected?.let { "${it.codi} - ${it.descripcio ?: ""}".trim() } ?: "Selecciona bestiar",
-            onValueChange = {},
-            readOnly = true,
-            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-            label = { Text("Bestiar") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            bestiars.forEach { bestiar ->
-                androidx.compose.material3.DropdownMenuItem(
-                    text = { Text("${bestiar.codi} - ${bestiar.descripcio ?: ""}".trim()) },
-                    onClick = {
-                        onSelect(bestiar.id)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
+    SearchableSelectionField(
+        items = bestiars,
+        selectedItem = bestiars.find { it.id == selectedId },
+        onSelect = { bestiar -> onSelect(bestiar?.id ?: "") },
+        itemLabel = { "${it.codi} - ${it.descripcio ?: ""}".trim() },
+        itemSearchText = { "${it.codi} ${it.descripcio ?: ""}" },
+        label = "Bestiar",
+        placeholder = "Cerca per codi o descripcio"
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FaseDropdown(
     fases: List<FaseProductivaDto>,
     selectedId: String,
     onSelect: (String) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val selected = fases.find { it.id == selectedId }
-
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = selected?.let { "${it.codi} - ${it.descripcio ?: ""}".trim() } ?: "Selecciona fase",
-            onValueChange = {},
-            readOnly = true,
-            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-            label = { Text("Fase productiva") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            fases.forEach { fase ->
-                androidx.compose.material3.DropdownMenuItem(
-                    text = { Text("${fase.codi} - ${fase.descripcio ?: ""}".trim()) },
-                    onClick = {
-                        onSelect(fase.id)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
+    SearchableSelectionField(
+        items = fases,
+        selectedItem = fases.find { it.id == selectedId },
+        onSelect = { fase -> onSelect(fase?.id ?: "") },
+        itemLabel = { "${it.codi} - ${it.descripcio ?: ""}".trim() },
+        itemSearchText = { "${it.codi} ${it.descripcio ?: ""}" },
+        label = "Fase productiva",
+        placeholder = "Cerca una fase"
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TerraDropdown(
     terres: List<TerraDto>,
@@ -683,30 +634,15 @@ private fun TerraDropdown(
     onSelect: (String) -> Unit,
     label: String
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val selected = terres.find { it.id == selectedId }
-
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = selected?.codi_sigpac_complet ?: "Selecciona una terra",
-            onValueChange = {},
-            readOnly = true,
-            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            terres.forEach { terra ->
-                androidx.compose.material3.DropdownMenuItem(
-                    text = { Text(terra.codi_sigpac_complet ?: terra.id) },
-                    onClick = {
-                        onSelect(terra.id)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
+    SearchableSelectionField(
+        items = terres,
+        selectedItem = terres.find { it.id == selectedId },
+        onSelect = { terra -> onSelect(terra?.id ?: "") },
+        itemLabel = { it.codi_sigpac_complet ?: it.id },
+        itemSearchText = { it.codi_sigpac_complet ?: it.id },
+        label = label,
+        placeholder = "Cerca per codi SIGPAC"
+    )
 }
 
 @Composable

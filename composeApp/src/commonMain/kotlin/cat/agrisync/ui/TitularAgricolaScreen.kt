@@ -415,37 +415,21 @@ private fun ConfirmDeleteDialog(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TerraDropdown(
     terres: List<TerraDto>,
     selectedId: String,
     onSelect: (String) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val selected = terres.find { it.id == selectedId }
-
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = selected?.codi_sigpac_complet ?: "Selecciona una terra",
-            onValueChange = {},
-            readOnly = true,
-            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-            label = { Text("Terra") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            terres.forEach { terra ->
-                androidx.compose.material3.DropdownMenuItem(
-                    text = { Text(terra.codi_sigpac_complet ?: terra.id) },
-                    onClick = {
-                        onSelect(terra.id)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
+    SearchableSelectionField(
+        items = terres,
+        selectedItem = terres.find { it.id == selectedId },
+        onSelect = { terra -> onSelect(terra?.id ?: "") },
+        itemLabel = { it.codi_sigpac_complet ?: it.id },
+        itemSearchText = { it.codi_sigpac_complet ?: it.id },
+        label = "Terra",
+        placeholder = "Cerca per codi SIGPAC"
+    )
 }
 
 @Composable
