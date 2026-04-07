@@ -132,6 +132,10 @@ Scripts SQL útils que es mantenen al projecte:
 - `seed_complet.sql`: seed ràpid amb pocs usuaris per validar el MVP
 - `seed_final_demo.sql`: seed ampliat amb diverses oficines, tècnics i titulars compartits entre oficines
 
+Per als usuaris de demo d'Auth, és més segur crear-los des de `Authentication > Users` de Supabase o via Admin API amb `service_role`.
+La inserció manual directa a `auth.users` i `auth.identities` pot quedar incompatible amb canvis interns de Supabase Auth i acabar donant errors com `Database error querying schema` en fer login.
+Si passa, recrea els usuaris demo i torna a executar `seed_final_demo.sql` o `fix_user_ids.sql` per resincronitzar `public.tecnic.user_id`.
+
 ## Configuracio de l'app
 
 L'aplicació pot llegir la configuració de dues maneres:

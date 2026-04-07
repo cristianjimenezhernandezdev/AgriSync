@@ -60,7 +60,7 @@ class AuthService(private val api: SupabaseAuthApi) {
         val session = authResponse.toSession()
         println("[AUTH] Cridant getMyTecnic...")
 
-        val tecnic = api.getMyTecnic(session.accessToken)
+        val tecnic = api.getMyTecnic(session.accessToken, loginEmail = cleanEmail)
         println("[AUTH] Tecnic rebut: ${tecnic?.nom ?: "NULL"}")
 
         if (tecnic == null) {

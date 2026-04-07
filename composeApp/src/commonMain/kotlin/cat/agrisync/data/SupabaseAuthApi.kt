@@ -3,6 +3,7 @@ package cat.agrisync.data
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
@@ -70,7 +71,7 @@ class SupabaseAuthApi(
         return parseAuthResponse(response)
     }
 
-    suspend fun getMyTecnic(accessToken: String): TecnicDto? {
+    suspend fun getMyTecnic(accessToken: String, loginEmail: String? = null): TecnicDto? {
         // Intent 1: RPC get_my_tecnic (SECURITY DEFINER)
         try {
             val response = httpClient.post {
@@ -96,7 +97,6 @@ class SupabaseAuthApi(
         }
 
         // Intent 2: consulta directa amb el mateix token de l'usuari.
-        // La policy de public.tecnic permet que cada usuari llegeixi el seu propi registre.
         val userId = extractUserIdFromToken(accessToken)
         if (userId != null) {
             println("[AUTH-API] Fallback: buscant tecnic per user_id=$userId amb token usuari")
@@ -119,6 +119,57 @@ class SupabaseAuthApi(
             }
         }
 
+        // Intent 3: Buscar per EMAIL amb service_role_key (bypass RLS).
+        // Si el user_id no coincideix, l'autocorregim.
+        val email = loginEmail ?: extractEmailFromToken(accessToken)
+        if (email != null && config.serviceRoleKey.isNotBlank()) {
+            println("[AUTH-API] Fallback email: buscant tecnic per email=$email amb service_role_key")
+            try {
+                val response = httpClient.get {
+                    url("${config.url}/rest/v1/tecnic?email=eq.$email&limit=1")
+                    contentType(ContentType.Application.Json)
+                    headers.append("apikey", config.anonKey)
+                    headers.append(HttpHeaders.Authorization, "Bearer ${config.serviceRoleKey}")
+                }
+                if (response.status.isSuccess()) {
+                    val list: List<TecnicDto> = response.body()
+                    if (list.isNotEmpty()) {
+                        val tecnic = list.first()
+                        println("[AUTH-API] Fallback email OK: ${tecnic.nom} (user_id actual=${tecnic.user_id})")
+
+                        // Auto-fix: si el user_id no coincideix, actualitzar-lo
+                        if (userId != null && tecnic.user_id != userId) {
+                            println("[AUTH-API] Auto-fix: actualitzant user_id de ${tecnic.user_id} a $userId")
+                            try {
+                                val patchResp = httpClient.patch {
+                                    url("${config.url}/rest/v1/tecnic?id=eq.${tecnic.id}")
+                                    contentType(ContentType.Application.Json)
+                                    headers.append("apikey", config.anonKey)
+                                    headers.append(HttpHeaders.Authorization, "Bearer ${config.serviceRoleKey}")
+                                    headers.append("Prefer", "return=representation")
+                                    setBody("""{"user_id":"$userId"}""")
+                                }
+                                if (patchResp.status.isSuccess()) {
+                                    val updated: List<TecnicDto> = patchResp.body()
+                                    if (updated.isNotEmpty()) {
+                                        println("[AUTH-API] Auto-fix OK! user_id actualitzat.")
+                                        return updated.first()
+                                    }
+                                } else {
+                                    println("[AUTH-API] Auto-fix PATCH failed: ${patchResp.status} - ${patchResp.bodyAsText()}")
+                                }
+                            } catch (patchEx: Exception) {
+                                println("[AUTH-API] Auto-fix exception: ${patchEx.message}")
+                            }
+                        }
+                        return tecnic
+                    }
+                }
+            } catch (ex: Exception) {
+                println("[AUTH-API] Fallback email exception: ${ex.message}")
+            }
+        }
+
         return null
     }
 
@@ -129,12 +180,27 @@ class SupabaseAuthApi(
             val parts = token.split(".")
             if (parts.size < 2) return null
             val payload = parts[1]
-            // Afegir padding si cal
             val padded = payload + "=".repeat((4 - payload.length % 4) % 4)
             val decoded = kotlin.io.encoding.Base64.UrlSafe.decode(padded.encodeToByteArray())
             val json = decoded.decodeToString()
-            // Buscar "sub":"<uuid>"
             val regex = """"sub"\s*:\s*"([^"]+)"""".toRegex()
+            regex.find(json)?.groupValues?.get(1)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Extreu l'email del JWT sense verificar signatura */
+    @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
+    private fun extractEmailFromToken(token: String): String? {
+        return try {
+            val parts = token.split(".")
+            if (parts.size < 2) return null
+            val payload = parts[1]
+            val padded = payload + "=".repeat((4 - payload.length % 4) % 4)
+            val decoded = kotlin.io.encoding.Base64.UrlSafe.decode(padded.encodeToByteArray())
+            val json = decoded.decodeToString()
+            val regex = """"email"\s*:\s*"([^"]+)"""".toRegex()
             regex.find(json)?.groupValues?.get(1)
         } catch (_: Exception) {
             null

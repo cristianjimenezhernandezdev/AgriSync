@@ -52,11 +52,7 @@ internal class LoginViewModel(
             } catch (ex: ApiException) {
                 println("[LOGIN] ApiException: ${ex.statusCode} — ${ex.message}")
                 authService.signOut()
-                val msg = when (ex.statusCode) {
-                    400 -> "Credencials incorrectes"
-                    401, 403 -> "Sense permis"
-                    else -> ex.message?.ifBlank { null } ?: "Error (HTTP ${ex.statusCode})"
-                }
+                val msg = ex.toUserLoginMessage()
                 _uiState.update { it.copy(isLoading = false, error = msg) }
             } catch (ex: IllegalArgumentException) {
                 println("[LOGIN] IllegalArgumentException: ${ex.message}")
@@ -73,5 +69,17 @@ internal class LoginViewModel(
 
     fun clear() {
         scope.cancel()
+    }
+
+    private fun ApiException.toUserLoginMessage(): String {
+        val rawMessage = message.orEmpty()
+        return when {
+            statusCode == 400 -> "Credencials incorrectes"
+            statusCode == 401 || statusCode == 403 -> "Sense permis"
+            rawMessage.contains("Database error querying schema", ignoreCase = true) ||
+                rawMessage.contains("Database error finding users", ignoreCase = true) ->
+                "Error intern de Supabase Auth. Recrea els usuaris a Authentication i torna a executar el seed."
+            else -> message?.ifBlank { null } ?: "Error (HTTP $statusCode)"
+        }
     }
 }
