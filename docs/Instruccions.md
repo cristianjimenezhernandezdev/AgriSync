@@ -1,56 +1,89 @@
-# Instruccions d'ús d'AgriSync
+# Instruccions d'installacio, reconstruccio i us d'AgriSync
 
-## 1. Què és AgriSync
+## 1. Objectiu d'aquest document
 
-AgriSync és una aplicació d'escriptori per gestionar dades bàsiques de la Declaració Anual de Nitrogen (DAN) en entorns agrícoles i ramaders. El sistema treballa sobre titulars, terres, granges, bestiar, aplicacions de fertilitzants i entregues de dejeccions.
+Aquest document esta pensat per a dues situacions:
 
-Aquest document és un manual pràctic per a l'usuari.
+- muntar AgriSync des de zero en un projecte nou de Supabase
+- provar l'aplicacio amb una seed solida que cobreixi totes les funcionalitats actuals del MVP
 
-## 2. Requisits previs
+La configuracio recomanada per a una demo completa es:
 
-Per poder fer servir l'aplicació necessites:
+- esquema: `SQLAgriSync.sql`
+- grants de suport: `fix_permisos.sql` si cal
+- seed principal: `seed_final_demo.sql`
+- neteja d'usuaris Auth de proves: `reset_auth_seed_users.sql`
+- resincronitzacio excepcional d'usuaris: `fix_user_ids.sql`
 
-- tenir l'app en execució
-- tenir un usuari vàlid a Supabase Auth
-- tenir un registre de tècnic vinculat a aquest usuari
-- estar actiu dins del sistema
-- tenir configurada la connexió amb Supabase
+## 2. Que necessites abans de començar
 
-La connexió es pot configurar de dues maneres:
+Per reconstruir i provar el projecte necessites:
 
-- amb variables d'entorn
-- o amb un fitxer `agrisync.properties`
+- un projecte de Supabase buit o que puguis resetejar
+- acces a `Authentication > Users` i al `SQL Editor` de Supabase
+- JDK 21
+- el repositori d'AgriSync descarregat
+- connexio a internet per executar Gradle i l'app
 
-## 3. Configuració per a l'entrega o l'executable
+## 3. Paquet SQL del projecte
 
-Si l'aplicació s'entrega en `.exe`, la manera recomanada és posar al mateix directori:
+Els fitxers SQL del repositori tenen aquest paper:
 
-- `AgriSync.exe`
-- `agrisync.properties`
+- `SQLAgriSync.sql`
+  Recrea l'esquema public complet d'AgriSync. Fa neteja de vistes, funcions, taules, triggers, enums, grants i policies abans de tornar-ho a crear.
+- `fix_permisos.sql`
+  Reaplica `grant` i `execute` de suport si algun permis ha quedat desalineat.
+- `seed_complet.sql`
+  Seed curta per smoke test rapid del MVP.
+- `seed_final_demo.sql`
+  Seed recomanada per defensa i proves completes. Inclou diverses oficines, rols, titulars compartits, campanyes 2024 i 2025, terres, aplicacions, granges, censos i entregues.
+- `reset_auth_seed_users.sql`
+  Esborra els usuaris Auth coneguts dels seeds, amb identitats, sessions i tokens relacionats.
+- `fix_user_ids.sql`
+  Torna a quadrar `public.tecnic.user_id` amb `auth.users.id` a partir de l'email.
+- `create_auth_users.sql`
+  Script legacy. No es recomana com a primera opcio.
 
-El fitxer `agrisync.properties` ha de contenir:
+## 4. Quina seed has de fer servir
 
-```properties
-SUPABASE_URL=https://el-teu-projecte.supabase.co
-SUPABASE_ANON_KEY=enganxa_aqui_la_anon_key
-SUPABASE_SERVICE_ROLE_KEY=enganxa_aqui_la_service_role_key
-```
+Per provar tota l'aplicacio, fes servir `seed_final_demo.sql`.
 
-L'aplicació també accepta aquestes mateixes dades com a variables d'entorn si s'executa en desenvolupament.
+Es la seed recomanada perque cobreix:
 
-Si falta la configuració, l'app mostrarà una pantalla indicant quines dades falten.
+- `admin`
+- `oficina_manager`
+- tecnics amb `scope agricola`
+- tecnics amb `scope ramader`
+- tecnics amb `scope comu`
+- usuaris de `lectura`
+- titulars visibles des de mes d'una oficina
+- campanyes 2024 i 2025
+- modul agricola
+- modul ramader
+- pantalla `Preparar DAN`
 
-## 4. Usuaris de prova
+`seed_complet.sql` nomes es recomana si vols una prova rapida amb menys dades.
 
-Si has carregat el `seed_complet.sql`, els usuaris de prova previstos són aquests:
+## 5. Ordre recomanat per reconstruir-ho tot des de zero
 
-- `admin.test@agrisync.com` / `admin1234`
-- `manager.test@agrisync.com` / `manager1234`
-- `agricola.test@agrisync.com` / `agricola1234`
-- `ramader.test@agrisync.com` / `ramader1234`
-- `lectura.test@agrisync.com` / `lectura1234`
+### 5.1. Pas 1. Neteja d'usuaris Auth de prova
 
-Si has carregat `seed_final_demo.sql`, tindràs una demo molt més rica, amb titulars compartits entre tècnics de diverses oficines. Usuaris recomanats:
+Si vols partir realment de zero, executa primer:
+
+- `reset_auth_seed_users.sql`
+
+Aquest script:
+
+- elimina sessions i refresh tokens dels usuaris de prova si existeixen
+- elimina identitats
+- elimina usuaris de `auth.users` corresponents als seeds basic i demo
+- fa les comparacions de `user_id` en format text per ser compatible amb variants internes de l'esquema Auth de Supabase
+
+No toca la configuracio interna global de Supabase ni altres usuaris que no estiguin a la llista del projecte.
+
+### 5.2. Pas 2. Crea els usuaris a Supabase Authentication
+
+Des de `Authentication > Users > Add user`, crea aquests usuaris si faras servir la seed principal:
 
 - `admin.demo@agrisync.com` / `admin1234`
 - `manager.lleida.demo@agrisync.com` / `lleida1234`
@@ -63,476 +96,285 @@ Si has carregat `seed_final_demo.sql`, tindràs una demo molt més rica, amb tit
 - `anna.ram.demo@agrisync.com` / `anna1234`
 - `lectura.demo@agrisync.com` / `lectura1234`
 
-## 5. Inici de sessió
-
-Quan s'obre el programa apareix la pantalla de login.
-
-Has d'introduir:
-
-- email
-- password
-
-La pantalla et guia amb textos d'ajuda perquè sàpigues què s'espera a cada camp.
-
-Si tot va bé:
-
-- l'app valida les credencials a Supabase Auth
-- recupera el teu perfil tècnic
-- carrega la pantalla principal
-
-## 6. Errors habituals al login
-
-### 6.1. Credencials incorrectes
-
-Vol dir que l'email o la contrasenya no coincideixen.
-
-### 6.2. No s'ha trobat perfil tècnic
-
-Vol dir que l'usuari existeix a Auth però no està vinculat correctament a `public.tecnic`.
-
-### 6.3. Tècnic inactiu
-
-Vol dir que el teu registre funcional existeix però està desactivat.
-
-### 6.4. Configuració incompleta
-
-Si l'app mostra un missatge de configuració incompleta, falten dades de connexió de Supabase. Revisa el fitxer `agrisync.properties` o les variables d'entorn.
-
-## 7. Pantalla principal
-
-En entrar, s'obre la pantalla de `Titulars`.
-
-Allà veuràs:
-
-- la llista de titulars accessibles segons els teus permisos
-- una cerca per nom o NIF
-- un resum de resultats visibles i pàgines
-- accés a `Preparar DAN`
-- accés al mòdul agrícola si tens permís agrícola
-- accés al mòdul ramader si tens permís ramader
-- accés al teu perfil
-- opcions de gestió si el teu rol ho permet
-
-## 8. Barra superior
-
-A la part superior tens la navegació principal.
-
-Opcions habituals:
-
-- `Titulars`
-- `Perfil`
-- `Logout`
-
-Opcions visibles només si tens permisos:
-
-- `Gestio Titulars`
-- `Terres`
-- `Tecnics`
-- `Oficines`
-
-## 9. Pantalla de titulars
-
-La pantalla principal serveix per localitzar el titular amb qui vols treballar.
-
-Què hi pots fer:
-
-- buscar per nom o NIF
-- canviar de pàgina si hi ha molts resultats
-- obrir `Preparar DAN`
-- obrir el mòdul agrícola
-- obrir el mòdul ramader
-
-Recorda:
-
-- no tots els usuaris veuen els mateixos titulars
-- la visibilitat depèn del rol i de les assignacions a `tecnic_titular`
-- si no surt cap resultat, la pantalla t'indicarà si és per filtre o per manca de titulars accessibles
-
-## 10. Pantalla `Preparar DAN`
-
-Aquesta és la finestra pensada per ajudar-te quan ja tens les dades entrades i vols preparar la presentació a l'aplicatiu extern de la DAN.
-
-### 10.1. Què hi trobaràs
-
-La pantalla et mostra:
-
-- dades bàsiques del titular
-- campanyes detectades
-- totals calculats
-- bloc agrícola
-- bloc ramader
-- bloc final de comprovacions manuals
-
-### 10.2. Càlculs que hi veuràs
-
-El sistema calcula i mostra directament:
-
-- total d'hectàrees
-- total de `kg N`
-- total d'`UF`
-- `kg N/ha`
-- `kg N/UF`
-- total de granges
-- total de cens
-- total entregat
-
-### 10.3. Com fer-la servir bé
-
-Flux recomanat:
-
-1. obre el titular des de `Preparar DAN`
-2. revisa primer el resum del titular i les campanyes detectades
-3. comprova les terres i aplicacions agrícoles
-4. comprova les granges, censos i entregues ramaderes
-5. llegeix l'últim bloc de camps manuals
-6. usa aquesta informació per traslladar-la a l'aplicatiu extern
-
-### 10.4. Què no automatitza encara
-
-La pantalla no genera el document oficial ni envia la declaració.
-
-Serveix per:
-
-- concentrar dades
-- calcular valors derivats útils
-- evitar haver de navegar per diverses pantalles abans de presentar
-
-Encara s'han de revisar manualment camps finals com:
-
-- S/R
-- ús SIGPAC
-- cultiu
-- ZV
-- tipus de fertilitzant
-- `kg N/m3`
-- origen literal
-- municipi literal
-- estat de lliurament
-- persona que presenta
-- balanç final
-- estoc final
-
-## 11. Mòdul agrícola
-
-Aquest mòdul mostra la informació agrícola del titular seleccionat.
-
-Hi trobaràs normalment:
-
-- dades bàsiques del titular
-- terres vinculades
-- aplicacions de fertilitzants
-
-Cada secció incorpora una explicació curta sobre què representa i què hi pots fer.
-
-### 11.1. Què s'hi pot fer ara
-
-Segons els permisos:
-
-- editar NIF i nom del titular
-- crear terres noves
-- editar superfície d'una terra
-- eliminar terres
-- crear aplicacions de fertilitzants
-- editar data, `kg N` i `UF`
-- eliminar aplicacions
-
-### 11.2. Crear una terra
-
-Prem `+ Nova Terra` i informa:
-
-- codi municipal de 5 dígits
-- polígon
-- parcel·la
-- recinte
-- superfície
-
-### 11.3. Crear una aplicació
-
-Prem `+ Nova Aplicacio` i informa:
-
-- terra sobre la qual es registra
-- data amb format `YYYY-MM-DD`
-- `kg N`
-- `UF`
-
-Si el titular encara no tenia cap DAN, el sistema en crea una automàticament per poder guardar la nova aplicació.
-
-### 11.4. Validacions importants
-
-- el nom del titular no pot quedar buit
-- superfície, `kg N` i `UF` han de ser nombres vàlids
-- els valors numèrics no poden ser negatius
-- la data ha de tenir format `YYYY-MM-DD`
-- abans d'eliminar una terra o una aplicació, l'app demana confirmació
-- si una secció és buida, la pantalla t'indicarà quin és el següent pas recomanat
-
-## 12. Mòdul ramader
-
-Aquest mòdul mostra la informació ramadera del titular seleccionat.
-
-Hi trobaràs:
-
-- dades del titular
-- granges
-- cens de bestiar per granja
-- entregues de dejeccions
-
-Cada secció incorpora una explicació curta sobre què representa i què hi pots fer.
-
-### 12.1. Què s'hi pot fer ara
-
-Segons els permisos:
-
-- editar NIF i nom del titular
-- crear granges
-- editar granja
-- eliminar granges
-- crear registres de granja-bestiar
-- editar cens
-- eliminar registres de bestiar
-- crear entregues de dejeccions
-- editar data i quantitat d'una entrega
-- eliminar entregues
-
-### 12.2. Crear una granja
-
-Prem `+ Nova Granja` i informa:
-
-- nom, si el vols guardar
-- marca oficial, que és obligatòria
-
-### 12.3. Crear un registre de granja-bestiar
-
-Prem `+ Nou Registre` i informa:
-
-- granja
-- tipus de bestiar
-- fase productiva
-- cens
-
-### 12.4. Crear una entrega
-
-Prem `+ Nova Entrega` i informa:
-
-- granja d'origen
-- data amb format `YYYY-MM-DD`
-- quantitat
-- tipus de receptor
-
-El receptor pot ser:
-
-- el mateix titular
-- una terra del titular
-
-Si el titular encara no tenia cap DAN, el sistema en crea una automàticament per poder guardar la nova entrega.
-
-### 12.5. Validacions importants
-
-- la marca oficial és obligatòria
-- cens i quantitat han de ser valors numèrics vàlids
-- la data ha de tenir format `YYYY-MM-DD`
-- els valors numèrics no poden ser negatius
-- abans d'eliminar una granja, un registre de bestiar o una entrega, l'app demana confirmació
-- si una secció és buida, la pantalla t'indicarà quin és el següent pas recomanat
-
-## 13. Perfil
-
-La pantalla `Perfil` permet veure les teves dades:
-
-- nom
-- email
-- rol
-- oficina
-
-També pots, si tens permís:
-
-- editar nom i email
-- canviar el password
-
-## 14. Gestió de titulars
-
-Aquesta pantalla permet administrar titulars.
-
-### 14.1. Crear titular
-
-Cal informar:
-
-- nom
-- NIF, si es coneix
-
-El nom és obligatori.
-
-### 14.2. Editar titular
-
-Es poden modificar:
-
-- nom
-- NIF
-
-### 14.3. Eliminar titular
-
-Es pot eliminar des de la mateixa pantalla, però si té dades relacionades la base de dades pot impedir l'operació o provocar eliminacions en cascada segons la relació.
-
-## 15. Gestió de terres
-
-La pantalla `Terres` permet administrar el catàleg de terres.
-
-### 15.1. Crear una terra
-
-Cal introduir:
-
-- titular associat, si n'hi ha
-- codi municipal de 5 dígits
-- polígon
-- parcel·la
-- recinte
-- superfície
-
-### 15.2. Validacions
-
-- `mun_codi` ha de tenir exactament 5 dígits
-- polígon, parcel·la i recinte han de ser enters
-- superfície ha de ser numèrica
-
-### 15.3. Editar una terra
-
-Es pot modificar:
-
-- titular associat
-- superfície
-
-El codi SIGPAC complet es genera automàticament.
-
-## 16. Gestió de tècnics
-
-La pantalla `Tecnics` serveix per administrar usuaris operatius.
-
-### 16.1. Crear tècnic
-
-Cal indicar:
-
-- nom
-- email
-- password
-- oficina
-- rol
-
-El sistema farà dues operacions:
-
-1. crear l'usuari a Supabase Auth
-2. crear el registre funcional a `public.tecnic`
-
-### 16.2. Activar o desactivar
-
-Un tècnic inactiu no pot operar normalment dins l'app.
-
-### 16.3. Canviar password
-
-Des d'aquesta pantalla també es pot fer reset de password d'un tècnic.
-
-### 16.4. Eliminar tècnic
-
-Ara es pot eliminar directament des de la pantalla de gestió.
-
-Funcionament:
-
-1. prems `Eliminar`
-2. l'app mostra un diàleg de confirmació
-3. si el tècnic té login, l'app intenta eliminar tant el registre funcional com l'usuari d'Auth
-4. si no té login, només s'elimina el registre funcional
+Si nomes vols la seed curta:
+
+- `admin.test@agrisync.com` / `admin1234`
+- `manager.test@agrisync.com` / `manager1234`
+- `agricola.test@agrisync.com` / `agricola1234`
+- `ramader.test@agrisync.com` / `ramader1234`
+- `lectura.test@agrisync.com` / `lectura1234`
 
 Important:
 
-- l'acció és destructiva
-- les assignacions del tècnic a titulars també desapareixen
+- la via recomanada es el Dashboard de Supabase
+- `create_auth_users.sql` queda nomes com a recurs legacy en entorns controlats
 
-## 17. Detall de tècnic i assignacions
+### 5.3. Pas 3. Reconstrueix l'esquema public
 
-En el detall d'un tècnic es poden veure o gestionar les assignacions de titulars.
+Executa al `SQL Editor`:
 
-Cada assignació té:
+- `SQLAgriSync.sql`
 
-- el titular
-- l'scope
-- si està activa o no
+Aquest script ja fa la neteja de l'esquema public abans de recrear-lo. En concret:
 
-Scopes possibles:
+- elimina la vista antiga `v_titular_access`
+- elimina funcions helper i d'auditoria
+- elimina taules del MVP
+- elimina enums propis
+- recrea taules, triggers, indexes, grants i policies RLS
 
-- `comu`
-- `agricola`
-- `ramader`
-- `lectura`
+No cal esborrar manualment:
 
-### 17.1. Casos especials que veuràs a la pantalla
+- taules
+- triggers
+- funcions
+- policies
+- enums
 
-- `Sense login`: vol dir que el tècnic no té `user_id` i no pot entrar a l'aplicació
-- `Cap titular assignat`: si el tècnic té rol normal, probablement no veurà titulars a la home fins que tingui alguna assignació activa
+perque aquest fitxer ja ho fa.
 
-### 17.2. Eliminar assignacions
+### 5.4. Pas 4. Reaplica permisos si cal
 
-Quan elimines una assignació, l'app demana confirmació abans de fer l'acció.
+Normalment no fa falta immediatament despres del pas anterior, pero si detectes algun problema de grants, executa:
 
-## 18. Gestió d'oficines
+- `fix_permisos.sql`
 
-La pantalla `Oficines` permet:
+### 5.5. Pas 5. Carrega la seed funcional
 
-- crear oficines
-- editar el nom d'una oficina
-- eliminar oficines si no hi ha dependències que ho impedeixin
+Per a una demo completa, executa:
 
-## 19. Errors habituals dins l'app
+- `seed_final_demo.sql`
 
-### 19.1. `401` o `403`
+La seed valida que els usuaris d'Auth existeixin abans de continuar.
 
-Vol dir que no tens permís per veure o modificar aquella dada.
+### 5.6. Pas 6. Si els `user_id` no quadren, arregla'ls
 
-### 19.2. Error de validació
+Si has recreat usuaris i algun tecnic no pot entrar o surt desalineat, executa:
 
-Pot passar si:
+- `fix_user_ids.sql`
 
-- falta un camp obligatori
-- un camp numèric no és vàlid
-- una contrasenya és massa curta
-- el codi municipal no compleix el format
-- una data no té format correcte
-- no has seleccionat una dada obligatòria en un formulari nou
+Aquest script:
 
-### 19.3. Error en esborrar un tècnic
+- compara `public.tecnic.email` amb `auth.users.email`
+- actualitza `public.tecnic.user_id` amb l'id real d'Auth
 
-Pot passar si:
+## 6. Configuracio local de l'aplicacio
 
-- no tens permisos suficients
-- hi ha un problema amb Supabase Auth
-- s'ha pogut eliminar el tècnic funcional però no l'usuari d'Auth
+L'aplicacio necessita tres valors:
 
-### 19.4. Error en eliminar una granja
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
-Pot passar si aquella granja està sent referenciada per entregues o per altres dades que la BDD no permet esborrar en aquell moment.
+La manera recomanada es crear un fitxer `agrisync.properties` a l'arrel del projecte o al costat de l'executable.
 
-## 20. Bones pràctiques d'ús
+Plantilla:
 
-- entra sempre amb el teu usuari real o de prova vàlid
-- comprova si estàs al mòdul agrícola o ramader abans d'editar
-- usa `Preparar DAN` abans d'entrar a l'aplicatiu extern
-- no repeteixis operacions si t'ha aparegut un error de permisos
-- revisa les dades abans de desar
-- si no veus un titular que esperes veure, revisa assignacions i permisos
-- llegeix els diàlegs de confirmació abans d'eliminar dades
-- fixa't en els textos de suport de la pantalla, perquè acostumen a indicar quin és el següent pas útil
-- a la pantalla DAN, llegeix sempre el bloc final de comprovacions manuals abans de donar una declaració per bona
+```properties
+SUPABASE_URL=https://el-teu-projecte.supabase.co
+SUPABASE_ANON_KEY=enganxa_aqui_la_anon_key
+SUPABASE_SERVICE_ROLE_KEY=enganxa_aqui_la_service_role_key
+```
 
-## 21. Resum ràpid de treball
+Pots partir de `agrisync.properties.example`.
 
-Flux recomanat d'ús:
+## 7. Arrencada en desenvolupament
 
-1. assegura't que `agrisync.properties` o les variables d'entorn estan configurades
-2. inicia sessió
-3. comprova el perfil
-4. entra a `Titulars`
-5. busca el titular
-6. revisa o completa dades al mòdul agrícola o ramader si cal
-7. obre `Preparar DAN`
-8. comprova els totals i les dades per trasllat
-9. usa el bloc de comprovacions manuals com a checklist final
-10. si ets administrador, usa `Tecnics` per donar altes, canviar passwords, assignar titulars o fer baixes
+Amb el fitxer de propietats preparat, executa:
 
+```powershell
+./gradlew :composeApp:run
+```
+
+Si prefereixes variables d'entorn:
+
+```powershell
+$env:SUPABASE_URL="https://<PROJECT>.supabase.co"
+$env:SUPABASE_ANON_KEY="<ANON_KEY>"
+$env:SUPABASE_SERVICE_ROLE_KEY="<SERVICE_ROLE_KEY>"
+./gradlew :composeApp:run
+```
+
+Si vols una comprovacio rapida abans d'obrir la UI, pots compilar primer:
+
+```powershell
+./gradlew :composeApp:compileKotlinJvm
+```
+
+## 8. Flux de prova funcional recomanat
+
+### 8.1. Login i rols
+
+Comprova aquests casos amb `seed_final_demo.sql`:
+
+- `admin.demo@agrisync.com`
+  Ha de veure i gestionar tota l'estructura.
+- `manager.lleida.demo@agrisync.com`
+  Ha de gestionar tecnics del seu ambit i titulars del seu entorn funcional.
+- `manager.girona.demo@agrisync.com`
+  Mateix criteri per Girona.
+- `sergi.agri.demo@agrisync.com`
+  Cas clar de tecnic agricola.
+- `marta.ram.demo@agrisync.com`
+  Cas clar de tecnic ramader.
+- `laia.comu.demo@agrisync.com`
+  Cas de tecnic amb visio comuna.
+- `lectura.demo@agrisync.com`
+  Cas de lectura sense escriptura.
+
+### 8.2. Campanyes
+
+La iteracio funcional de campanyes ja esta incorporada. Prova aquest comportament:
+
+1. entra a un titular
+2. obre `Modul Agricola`, `Modul Ramader` o `Preparar DAN`
+3. canvia entre campanyes 2024 i 2025
+4. comprova que les dades visibles canvien
+5. crea una aplicacio o una entrega i verifica que queda associada a la campanya activa
+
+Funcionament actual:
+
+- cada pantalla te selector de campanya
+- la campanya activa governa els totals visibles
+- si no existeix una `dan_declaracio` per l'any seleccionat, es crea en el primer insert
+
+### 8.3. Modul agricola
+
+Proves recomanades:
+
+- editar el nom o NIF del titular si el teu rol ho permet
+- crear una terra
+- editar superficie, zona (`ZV` o `ZNV`), municipi literal, us SIGPAC i cultiu
+- crear una aplicacio a la campanya activa
+- informar tipus fertilitzant, procedencia, `volum m3` i `kg N/m3`
+- comprovar `kg N/ha` i marge de nitrogen
+- eliminar una terra o aplicacio
+
+### 8.4. Modul ramader
+
+Proves recomanades:
+
+- crear una granja
+- afegir bestiar i fase productiva
+- crear una entrega a titular
+- crear una entrega a terra
+- canviar de campanya i verificar el filtratge
+- eliminar granja, registre o entrega
+
+Limit actual a tenir en compte:
+
+- la UI d'entregues resol titular receptor actual o terra del mateix titular
+- els receptors externs arbitraris continuen fora del MVP actual
+
+### 8.5. Preparar DAN
+
+Proves recomanades:
+
+- obrir `Preparar DAN` des de la llista de titulars
+- canviar de campanya
+- verificar totals de `ha`, `kg N`, `UF`, cens i entregues
+- revisar terres, aplicacions, granges, censos i entregues en una sola pantalla
+- provar `Copiar resum` i enganxar el text en un editor per validar la sortida estructurada
+- provar `Copiar checklist` i verificar que hi apareixen els buits detectats automaticament
+
+## 9. Sequencia curta si vols un hard reset net
+
+Ordre minim recomanat:
+
+1. `reset_auth_seed_users.sql`
+2. crear usuaris Auth al Dashboard
+3. `SQLAgriSync.sql`
+4. `seed_final_demo.sql`
+5. `fix_user_ids.sql` nomes si cal
+6. preparar `agrisync.properties`
+7. `./gradlew :composeApp:run`
+
+## 9.1. Posta a punt abans d'una defensa o entrega
+
+Checklist recomanada:
+
+1. executar `SQLAgriSync.sql`
+2. carregar `seed_final_demo.sql`
+3. executar `fix_user_ids.sql` si algun usuari no entra
+4. comprovar que `agrisync.properties` apunta al projecte correcte
+5. executar `./gradlew :composeApp:compileKotlinJvm`
+6. validar login amb `admin.demo@agrisync.com`
+7. validar login amb un tecnic agricola i un tecnic ramader
+8. comprovar canvi de campanya a `Modul Agricola`, `Modul Ramader` i `Preparar DAN`
+9. provar alta i baixa minima de terra, aplicacio, granja i entrega
+10. provar `Copiar resum` i `Copiar checklist` a `Preparar DAN`
+
+## 10. Errors habituals i com resoldre'ls
+
+### 10.1. Falten usuaris a Authentication
+
+Si la seed falla amb un missatge de tipus:
+
+- `Falten usuaris a Authentication`
+
+vol dir que no has creat tots els usuaris previs a `Authentication > Users`.
+
+### 10.2. Login correcte pero sense perfil tecnic
+
+Vol dir que l'usuari existeix a Auth pero `public.tecnic.user_id` no quadra o no existeix el registre funcional.
+
+Solucio recomanada:
+
+- executar `fix_user_ids.sql`
+
+### 10.3. Error `401` o `403`
+
+Normalment vol dir:
+
+- sessio caducada
+- o permisos insuficients segons rol, oficina o `scope`
+
+### 10.4. El gestor d'oficina no veu un titular que esperava
+
+Comportament actual correcte:
+
+- `oficina_manager` no veu tot el sistema
+- nomes veu titulars creats per ell o ja vinculats a tecnics actius de la seva oficina
+
+### 10.5. La campanya no apareix encara
+
+Si encara no hi ha `dan_declaracio` per un any concret:
+
+- el selector mostra igualment l'any actual
+- la DAN es crea quan es fa el primer insert agricola o ramader sobre aquella campanya
+
+## 11. Que queda fora d'aquest muntatge de zero
+
+Aquest paquet et deixa l'app completament operativa per al MVP actual, pero no fa aquestes coses:
+
+- no genera el PDF oficial de la DAN
+- no exporta encara directament a fitxer o PDF, tot i que si permet copiar el resum i la checklist
+- no crea usuaris Auth arbitraris externs a les llistes de prova
+- no importa dades des d'Excel
+- no calcula encara nitrogen generat a partir del cens ramader
+- no relaciona una entrega concreta amb una aplicacio concreta
+
+## 12. Resum final
+
+Si vols la configuracio mes fiable per provar tota l'aplicacio, la recepta correcta es aquesta:
+
+- netejar Auth amb `reset_auth_seed_users.sql`
+- crear els usuaris demo al Dashboard
+- reconstruir la BDD amb `SQLAgriSync.sql`
+- carregar `seed_final_demo.sql`
+- arreglar `user_id` amb `fix_user_ids.sql` si cal
+- configurar `agrisync.properties`
+- executar `./gradlew :composeApp:run`
+
+Amb aquest flux tindras una base prou rica per provar:
+
+- permisos
+- oficines
+- titulars compartits
+- campanyes
+- modul agricola
+- modul ramader
+- `Preparar DAN`
+- copia rapida del resum DAN i de la checklist final
+
+Si el que busques es una posta a punt final abans de presentar el projecte, la seccio clau es la `9.1`.

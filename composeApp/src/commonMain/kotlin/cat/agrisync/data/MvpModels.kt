@@ -18,7 +18,12 @@ data class TerraDto(
     val id: String,
     val titular_id: String? = null,
     val codi_sigpac_complet: String? = null,
+    val municipi_literal: String? = null,
+    val us_sigpac: String? = null,
+    val cultiu: String? = null,
     val superficie: Double? = null,
+    val zona: String = "ZNV",
+    val limit_kg_n_ha: Double? = null,
     val updated_at: String? = null,
     val updated_by: String? = null
 )
@@ -33,7 +38,12 @@ data class DanRefDto(
 @Serializable
 data class AplicacioFertilitzantDto(
     val id: String,
+    val terra_id: String? = null,
     val data: String? = null,
+    val tipus_fertilitzant: String? = null,
+    val procedencia: String? = null,
+    val volum_m3: Double? = null,
+    val kg_n_m3: Double? = null,
     val kg_n: Double? = null,
     val uf: Double? = null,
     val tecnic_id: String? = null,
@@ -92,7 +102,11 @@ data class EntregaDejeccioDto(
 
 @Serializable
 data class TerraUpdateRequest(
-    val superficie: Double? = null
+    val municipi_literal: String? = null,
+    val us_sigpac: String? = null,
+    val cultiu: String? = null,
+    val superficie: Double? = null,
+    val zona: String? = null
 )
 
 @Serializable
@@ -107,6 +121,10 @@ data class AplicacioCreateRequest(
     val dan_id: String,
     val terra_id: String,
     val data: String,
+    val tipus_fertilitzant: String? = null,
+    val procedencia: String? = null,
+    val volum_m3: Double? = null,
+    val kg_n_m3: Double? = null,
     val kg_n: Double,
     val uf: Double
 )
@@ -114,6 +132,10 @@ data class AplicacioCreateRequest(
 @Serializable
 data class AplicacioUpdateRequest(
     val data: String? = null,
+    val tipus_fertilitzant: String? = null,
+    val procedencia: String? = null,
+    val volum_m3: Double? = null,
+    val kg_n_m3: Double? = null,
     val kg_n: Double? = null,
     val uf: Double? = null
 )

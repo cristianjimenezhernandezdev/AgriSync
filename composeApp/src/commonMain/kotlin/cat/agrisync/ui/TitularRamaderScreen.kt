@@ -21,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -95,6 +96,14 @@ internal fun TitularRamaderScreen(
                                 viewModel.updateTitular(nif, nom)
                             }
                         }
+                    }
+
+                    item {
+                        CampaignSelectorCard(
+                            selectedCampanya = ui.selectedCampanya,
+                            availableCampanyes = ui.availableCampanyes,
+                            onSelect = viewModel::onSelectCampanya
+                        )
                     }
 
                     item {
@@ -212,6 +221,7 @@ internal fun TitularRamaderScreen(
                 titular = ui.titular,
                 granges = ui.granges,
                 terres = ui.terres,
+                selectedCampanya = ui.selectedCampanya,
                 onConfirm = { granjaId, data, quantitat, terraDestiId, receptorTitularId ->
                     if (viewModel.createEntrega(granjaId, data, quantitat, terraDestiId, receptorTitularId)) {
                         showCreateEntregaDialog = false
@@ -258,6 +268,36 @@ internal fun TitularRamaderScreen(
                 },
                 onDismiss = { pendingDeleteEntregaId = null }
             )
+        }
+    }
+}
+
+@Composable
+private fun CampaignSelectorCard(
+    selectedCampanya: Int,
+    availableCampanyes: List<Int>,
+    onSelect: (Int) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Campanya de treball", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "Les entregues es mostren i es creen dins la campanya seleccionada.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                availableCampanyes.forEach { campanya ->
+                    FilterChip(
+                        selected = campanya == selectedCampanya,
+                        onClick = { onSelect(campanya) },
+                        label = { Text(campanya.toString()) }
+                    )
+                }
+            }
         }
     }
 }
@@ -519,6 +559,7 @@ private fun CreateEntregaDialog(
     titular: TitularDto?,
     granges: List<GranjaDto>,
     terres: List<TerraDto>,
+    selectedCampanya: Int,
     onConfirm: (String, String, String, String?, String?) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -544,6 +585,11 @@ private fun CreateEntregaDialog(
                         "Registra la sortida de dejeccions indicant origen, data, quantitat i receptor.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Campanya activa: $selectedCampanya",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
                     )
                     GranjaDropdown(granges = granges, selectedId = selectedGranjaId, onSelect = { selectedGranjaId = it }, label = "Granja d'origen")
                     OutlinedTextField(value = data, onValueChange = { data = it }, label = { Text("Data (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())

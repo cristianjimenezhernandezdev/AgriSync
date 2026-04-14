@@ -30,12 +30,20 @@ data class TerraManagementUiState(
     val newPoligon: String = "",
     val newParcela: String = "",
     val newRecinte: String = "",
+    val newMunicipiLiteral: String = "",
+    val newUsSigpac: String = "",
+    val newCultiu: String = "",
     val newSuperficie: String = "",
+    val newZona: String = "ZNV",
     val isCreating: Boolean = false,
     // Editar
     val editingTerra: TerraFullDto? = null,
     val editTitularId: String = "",
+    val editMunicipiLiteral: String = "",
+    val editUsSigpac: String = "",
+    val editCultiu: String = "",
     val editSuperficie: String = "",
+    val editZona: String = "ZNV",
     val isEditing: Boolean = false,
     // Paginació
     val currentPage: Int = 0,
@@ -109,7 +117,8 @@ internal class TerraManagementViewModel(
             it.copy(
                 showCreateDialog = true,
                 newTitularId = "", newMunCodi = "", newPoligon = "",
-                newParcela = "", newRecinte = "", newSuperficie = ""
+                newParcela = "", newRecinte = "", newMunicipiLiteral = "",
+                newUsSigpac = "", newCultiu = "", newSuperficie = "", newZona = "ZNV"
             )
         }
     }
@@ -121,7 +130,11 @@ internal class TerraManagementViewModel(
     fun onNewPoligon(v: String) { _uiState.update { it.copy(newPoligon = v) } }
     fun onNewParcela(v: String) { _uiState.update { it.copy(newParcela = v) } }
     fun onNewRecinte(v: String) { _uiState.update { it.copy(newRecinte = v) } }
+    fun onNewMunicipiLiteral(v: String) { _uiState.update { it.copy(newMunicipiLiteral = v) } }
+    fun onNewUsSigpac(v: String) { _uiState.update { it.copy(newUsSigpac = v) } }
+    fun onNewCultiu(v: String) { _uiState.update { it.copy(newCultiu = v) } }
     fun onNewSuperficie(v: String) { _uiState.update { it.copy(newSuperficie = v) } }
+    fun onNewZona(v: String) { _uiState.update { it.copy(newZona = v) } }
 
     fun createTerra() {
         val s = _uiState.value
@@ -138,6 +151,10 @@ internal class TerraManagementViewModel(
             _uiState.update { it.copy(message = "El codi municipal ha de ser 5 digits (ex: 17071)") }
             return
         }
+        if (s.newZona != "ZV" && s.newZona != "ZNV") {
+            _uiState.update { it.copy(message = "La zona ha de ser ZV o ZNV") }
+            return
+        }
 
         scope.launch {
             _uiState.update { it.copy(isCreating = true) }
@@ -148,7 +165,11 @@ internal class TerraManagementViewModel(
                     poligon = poligon,
                     parcela = parcela,
                     recinte = recinte,
-                    superficie = superficie
+                    municipi_literal = s.newMunicipiLiteral.ifBlank { null },
+                    us_sigpac = s.newUsSigpac.ifBlank { null },
+                    cultiu = s.newCultiu.ifBlank { null },
+                    superficie = superficie,
+                    zona = s.newZona
                 )
                 repository.createTerra(body)
                 _uiState.update { it.copy(isCreating = false, showCreateDialog = false, message = "Terra creada correctament") }
@@ -165,7 +186,11 @@ internal class TerraManagementViewModel(
             it.copy(
                 editingTerra = terra,
                 editTitularId = terra.titular_id ?: "",
-                editSuperficie = (terra.superficie ?: 0.0).toString()
+                editMunicipiLiteral = terra.municipi_literal ?: "",
+                editUsSigpac = terra.us_sigpac ?: "",
+                editCultiu = terra.cultiu ?: "",
+                editSuperficie = (terra.superficie ?: 0.0).toString(),
+                editZona = terra.zona
             )
         }
     }
@@ -173,7 +198,11 @@ internal class TerraManagementViewModel(
     fun cancelEdit() { _uiState.update { it.copy(editingTerra = null) } }
 
     fun onEditTitularId(v: String) { _uiState.update { it.copy(editTitularId = v) } }
+    fun onEditMunicipiLiteral(v: String) { _uiState.update { it.copy(editMunicipiLiteral = v) } }
+    fun onEditUsSigpac(v: String) { _uiState.update { it.copy(editUsSigpac = v) } }
+    fun onEditCultiu(v: String) { _uiState.update { it.copy(editCultiu = v) } }
     fun onEditSuperficie(v: String) { _uiState.update { it.copy(editSuperficie = v) } }
+    fun onEditZona(v: String) { _uiState.update { it.copy(editZona = v) } }
 
     fun saveEdit() {
         val s = _uiState.value
@@ -183,12 +212,20 @@ internal class TerraManagementViewModel(
             _uiState.update { it.copy(message = "Superficie ha de ser un nombre") }
             return
         }
+        if (s.editZona != "ZV" && s.editZona != "ZNV") {
+            _uiState.update { it.copy(message = "La zona ha de ser ZV o ZNV") }
+            return
+        }
         scope.launch {
             _uiState.update { it.copy(isEditing = true) }
             try {
                 val body = TerraUpdateFullRequest(
                     titular_id = s.editTitularId.ifBlank { null },
-                    superficie = superficie
+                    municipi_literal = s.editMunicipiLiteral.ifBlank { null },
+                    us_sigpac = s.editUsSigpac.ifBlank { null },
+                    cultiu = s.editCultiu.ifBlank { null },
+                    superficie = superficie,
+                    zona = s.editZona
                 )
                 repository.updateTerra(terra.id, body)
                 _uiState.update { it.copy(isEditing = false, editingTerra = null, message = "Terra actualitzada") }

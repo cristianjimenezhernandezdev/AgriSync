@@ -93,12 +93,20 @@ internal fun TerraManagementScreen(
                                 titulars = ui.titulars,
                                 isEditingThis = ui.editingTerra?.id == terra.id,
                                 editTitularId = ui.editTitularId,
+                                editMunicipiLiteral = ui.editMunicipiLiteral,
+                                editUsSigpac = ui.editUsSigpac,
+                                editCultiu = ui.editCultiu,
                                 editSuperficie = ui.editSuperficie,
+                                editZona = ui.editZona,
                                 isEditing = ui.isEditing,
                                 onStartEdit = { viewModel.startEdit(terra) },
                                 onCancelEdit = viewModel::cancelEdit,
                                 onEditTitularId = viewModel::onEditTitularId,
+                                onEditMunicipiLiteral = viewModel::onEditMunicipiLiteral,
+                                onEditUsSigpac = viewModel::onEditUsSigpac,
+                                onEditCultiu = viewModel::onEditCultiu,
                                 onEditSuperficie = viewModel::onEditSuperficie,
+                                onEditZona = viewModel::onEditZona,
                                 onSave = viewModel::saveEdit,
                                 onDelete = { viewModel.deleteTerra(terra.id) }
                             )
@@ -131,14 +139,22 @@ internal fun TerraManagementScreen(
                 poligon = ui.newPoligon,
                 parcela = ui.newParcela,
                 recinte = ui.newRecinte,
+                municipiLiteral = ui.newMunicipiLiteral,
+                usSigpac = ui.newUsSigpac,
+                cultiu = ui.newCultiu,
                 superficie = ui.newSuperficie,
+                zona = ui.newZona,
                 isCreating = ui.isCreating,
                 onTitularIdChange = viewModel::onNewTitularId,
                 onMunCodiChange = viewModel::onNewMunCodi,
                 onPoligonChange = viewModel::onNewPoligon,
                 onParcelaChange = viewModel::onNewParcela,
                 onRecinteChange = viewModel::onNewRecinte,
+                onMunicipiLiteralChange = viewModel::onNewMunicipiLiteral,
+                onUsSigpacChange = viewModel::onNewUsSigpac,
+                onCultiuChange = viewModel::onNewCultiu,
                 onSuperficieChange = viewModel::onNewSuperficie,
+                onZonaChange = viewModel::onNewZona,
                 onConfirm = viewModel::createTerra,
                 onDismiss = viewModel::hideCreateDialog
             )
@@ -152,12 +168,20 @@ private fun TerraManagementCard(
     titulars: List<TitularDto>,
     isEditingThis: Boolean,
     editTitularId: String,
+    editMunicipiLiteral: String,
+    editUsSigpac: String,
+    editCultiu: String,
     editSuperficie: String,
+    editZona: String,
     isEditing: Boolean,
     onStartEdit: () -> Unit,
     onCancelEdit: () -> Unit,
     onEditTitularId: (String) -> Unit,
+    onEditMunicipiLiteral: (String) -> Unit,
+    onEditUsSigpac: (String) -> Unit,
+    onEditCultiu: (String) -> Unit,
     onEditSuperficie: (String) -> Unit,
+    onEditZona: (String) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -184,12 +208,34 @@ private fun TerraManagementCard(
                     clearSelectionLabel = "Sense titular"
                 )
                 OutlinedTextField(
+                    value = editMunicipiLiteral,
+                    onValueChange = onEditMunicipiLiteral,
+                    label = { Text("Municipi literal") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = editUsSigpac,
+                    onValueChange = onEditUsSigpac,
+                    label = { Text("Us SIGPAC") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = editCultiu,
+                    onValueChange = onEditCultiu,
+                    label = { Text("Cultiu") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
                     value = editSuperficie,
                     onValueChange = onEditSuperficie,
                     label = { Text("Superficie (ha)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                ZonaSelector(zona = editZona, onZonaChange = onEditZona)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = onSave, enabled = !isEditing) { Text("Guardar") }
                     OutlinedButton(onClick = onCancelEdit, enabled = !isEditing) { Text("Cancel·lar") }
@@ -211,6 +257,16 @@ private fun TerraManagementCard(
                         Text(
                             "Superficie: ${terra.superficie ?: 0.0} ha",
                             style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "Zona: ${terra.zona} · Limit: ${formatLimit(terra.limit_kg_n_ha ?: if (terra.zona == "ZV") 170.0 else 190.0)} kg N/ha/any",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "Municipi: ${terra.municipi_literal ?: "-"} · Us SIGPAC: ${terra.us_sigpac ?: "-"} · Cultiu: ${terra.cultiu ?: "-"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         val titularNom = terra.titular?.nom_rao ?: "Sense titular"
                         val titularNif = terra.titular?.nif ?: ""
@@ -258,14 +314,22 @@ private fun CreateTerraDialog(
     poligon: String,
     parcela: String,
     recinte: String,
+    municipiLiteral: String,
+    usSigpac: String,
+    cultiu: String,
     superficie: String,
+    zona: String,
     isCreating: Boolean,
     onTitularIdChange: (String) -> Unit,
     onMunCodiChange: (String) -> Unit,
     onPoligonChange: (String) -> Unit,
     onParcelaChange: (String) -> Unit,
     onRecinteChange: (String) -> Unit,
+    onMunicipiLiteralChange: (String) -> Unit,
+    onUsSigpacChange: (String) -> Unit,
+    onCultiuChange: (String) -> Unit,
     onSuperficieChange: (String) -> Unit,
+    onZonaChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -319,12 +383,34 @@ private fun CreateTerraDialog(
                     )
                 }
                 OutlinedTextField(
+                    value = municipiLiteral,
+                    onValueChange = onMunicipiLiteralChange,
+                    label = { Text("Municipi literal") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = usSigpac,
+                    onValueChange = onUsSigpacChange,
+                    label = { Text("Us SIGPAC") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = cultiu,
+                    onValueChange = onCultiuChange,
+                    label = { Text("Cultiu") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
                     value = superficie,
                     onValueChange = onSuperficieChange,
                     label = { Text("Superficie (ha)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                ZonaSelector(zona = zona, onZonaChange = onZonaChange)
 
                 if (isCreating) {
                     LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -338,5 +424,32 @@ private fun CreateTerraDialog(
             OutlinedButton(onClick = onDismiss, enabled = !isCreating) { Text("Cancel·lar") }
         }
     )
+}
+
+@Composable
+private fun ZonaSelector(
+    zona: String,
+    onZonaChange: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Zona nitrogen", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = zona == "ZNV",
+                onClick = { onZonaChange("ZNV") },
+                label = { Text("ZNV · 190") }
+            )
+            FilterChip(
+                selected = zona == "ZV",
+                onClick = { onZonaChange("ZV") },
+                label = { Text("ZV · 170") }
+            )
+        }
+    }
+}
+
+private fun formatLimit(value: Double): String {
+    val rounded = kotlin.math.round(value * 100) / 100
+    return rounded.toString().replace('.', ',')
 }
 

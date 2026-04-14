@@ -15,6 +15,8 @@ data class TitularAgricolaUiState(
     val titular: TitularDto? = null,
     val terres: List<TerraDto> = emptyList(),
     val aplicacions: List<AplicacioFertilitzantDto> = emptyList(),
+    val availableCampanyes: List<Int> = emptyList(),
+    val selectedCampanya: Int = 0,
     val actorLabels: Map<String, String> = emptyMap(),
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -30,14 +32,16 @@ internal class TitularAgricolaViewModel(
     val uiState: StateFlow<TitularAgricolaUiState> = _uiState.asStateFlow()
     private var currentTitularId: String = ""
 
-    fun load(titularId: String) {
+    fun load(titularId: String, preferredCampanya: Int? = null) {
         currentTitularId = titularId
         scope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, saveMessage = null) }
             try {
                 val titular = repository.getTitular(titularId)
                 val terres = repository.listTerres(titularId)
-                val aplicacions = repository.listAplicacionsByTitular(titularId)
+                val existingCampanyes = repository.listCampanyesByTitular(titularId)
+                val selectedCampanya = resolveSelectedCampanya(existingCampanyes, preferredCampanya)
+                val aplicacions = repository.listAplicacionsByTitular(titularId, selectedCampanya)
                 val actorLabels = resolveActorLabels(titular, terres, aplicacions)
                 _uiState.update {
                     it.copy(
@@ -45,6 +49,8 @@ internal class TitularAgricolaViewModel(
                         titular = titular,
                         terres = terres,
                         aplicacions = aplicacions,
+                        availableCampanyes = normalizedCampanyes(existingCampanyes),
+                        selectedCampanya = selectedCampanya,
                         actorLabels = actorLabels
                     )
                 }
@@ -52,6 +58,11 @@ internal class TitularAgricolaViewModel(
                 _uiState.update { it.copy(isLoading = false, error = mapHttpError(ex.message)) }
             }
         }
+    }
+
+    fun onSelectCampanya(campanya: Int) {
+        if (currentTitularId.isBlank()) return
+        load(currentTitularId, campanya)
     }
 
     fun updateTitular(nif: String, nom: String): Boolean {
@@ -77,7 +88,14 @@ internal class TitularAgricolaViewModel(
         return true
     }
 
-    fun updateTerra(terraId: String, superficieText: String): Boolean {
+    fun updateTerra(
+        terraId: String,
+        superficieText: String,
+        zona: String,
+        municipiLiteral: String,
+        usSigpac: String,
+        cultiu: String
+    ): Boolean {
         val superficie = superficieText.toDoubleOrNull()
         if (superficie == null) {
             _uiState.update { it.copy(saveMessage = "La superficie ha de ser un nombre valid") }
@@ -87,9 +105,22 @@ internal class TitularAgricolaViewModel(
             _uiState.update { it.copy(saveMessage = "La superficie no pot ser negativa") }
             return false
         }
+        if (zona != "ZV" && zona != "ZNV") {
+            _uiState.update { it.copy(saveMessage = "La zona ha de ser ZV o ZNV") }
+            return false
+        }
         scope.launch {
             try {
-                val updated = repository.updateTerra(terraId, TerraUpdateRequest(superficie = superficie))
+                val updated = repository.updateTerra(
+                    terraId,
+                    TerraUpdateRequest(
+                        municipi_literal = municipiLiteral.trim().ifBlank { null },
+                        us_sigpac = usSigpac.trim().ifBlank { null },
+                        cultiu = cultiu.trim().ifBlank { null },
+                        superficie = superficie,
+                        zona = zona
+                    )
+                )
                 val actorLabels = updateActorLabels(_uiState.value.actorLabels, updated.updated_by)
                 _uiState.update { st ->
                     st.copy(
@@ -110,7 +141,11 @@ internal class TitularAgricolaViewModel(
         poligonText: String,
         parcelaText: String,
         recinteText: String,
-        superficieText: String
+        superficieText: String,
+        zona: String,
+        municipiLiteral: String,
+        usSigpac: String,
+        cultiu: String
     ): Boolean {
         val cleanMunCodi = munCodi.trim()
         val poligon = poligonText.toIntOrNull()
@@ -143,6 +178,10 @@ internal class TitularAgricolaViewModel(
                 _uiState.update { it.copy(saveMessage = "La superficie no pot ser negativa") }
                 return false
             }
+            zona != "ZV" && zona != "ZNV" -> {
+                _uiState.update { it.copy(saveMessage = "La zona ha de ser ZV o ZNV") }
+                return false
+            }
         }
 
         scope.launch {
@@ -154,7 +193,11 @@ internal class TitularAgricolaViewModel(
                         poligon = poligon,
                         parcela = parcela,
                         recinte = recinte,
-                        superficie = superficie
+                        municipi_literal = municipiLiteral.trim().ifBlank { null },
+                        us_sigpac = usSigpac.trim().ifBlank { null },
+                        cultiu = cultiu.trim().ifBlank { null },
+                        superficie = superficie,
+                        zona = zona
                     )
                 )
                 val actorLabels = updateActorLabels(_uiState.value.actorLabels, created.updated_by)
@@ -188,10 +231,21 @@ internal class TitularAgricolaViewModel(
         }
     }
 
-    fun updateAplicacio(id: String, data: String, kgNText: String, ufText: String): Boolean {
+    fun updateAplicacio(
+        id: String,
+        data: String,
+        kgNText: String,
+        ufText: String,
+        tipusFertilitzant: String,
+        procedencia: String,
+        volumText: String,
+        kgNM3Text: String
+    ): Boolean {
         val cleanData = data.trim()
         val kgN = kgNText.toDoubleOrNull()
         val uf = ufText.toDoubleOrNull()
+        val volum = volumText.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
+        val kgNM3 = kgNM3Text.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
         if (!isValidIsoDate(cleanData)) {
             _uiState.update { it.copy(saveMessage = "La data ha de tenir format YYYY-MM-DD") }
             return false
@@ -200,15 +254,35 @@ internal class TitularAgricolaViewModel(
             _uiState.update { it.copy(saveMessage = "Kg N i UF han de ser nombres valids") }
             return false
         }
+        if (volumText.isNotBlank() && volum == null) {
+            _uiState.update { it.copy(saveMessage = "El volum m3 ha de ser un nombre valid") }
+            return false
+        }
+        if (kgNM3Text.isNotBlank() && kgNM3 == null) {
+            _uiState.update { it.copy(saveMessage = "El kg N/m3 ha de ser un nombre valid") }
+            return false
+        }
         if (kgN < 0 || uf < 0) {
             _uiState.update { it.copy(saveMessage = "Kg N i UF no poden ser negatius") }
+            return false
+        }
+        if ((volum ?: 0.0) < 0 || (kgNM3 ?: 0.0) < 0) {
+            _uiState.update { it.copy(saveMessage = "Volum m3 i kg N/m3 no poden ser negatius") }
             return false
         }
         scope.launch {
             try {
                 val updated = repository.updateAplicacio(
                     id,
-                    AplicacioUpdateRequest(data = cleanData, kg_n = kgN, uf = uf)
+                    AplicacioUpdateRequest(
+                        data = cleanData,
+                        tipus_fertilitzant = tipusFertilitzant.trim().ifBlank { null },
+                        procedencia = procedencia.trim().ifBlank { null },
+                        volum_m3 = volum,
+                        kg_n_m3 = kgNM3,
+                        kg_n = kgN,
+                        uf = uf
+                    )
                 )
                 val actorLabels = updateActorLabels(_uiState.value.actorLabels, updated.updated_by)
                 _uiState.update { st ->
@@ -225,10 +299,21 @@ internal class TitularAgricolaViewModel(
         return true
     }
 
-    fun createAplicacio(terraId: String, data: String, kgNText: String, ufText: String): Boolean {
+    fun createAplicacio(
+        terraId: String,
+        data: String,
+        kgNText: String,
+        ufText: String,
+        tipusFertilitzant: String,
+        procedencia: String,
+        volumText: String,
+        kgNM3Text: String
+    ): Boolean {
         val cleanData = data.trim()
         val kgN = kgNText.toDoubleOrNull()
         val uf = ufText.toDoubleOrNull()
+        val volum = volumText.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
+        val kgNM3 = kgNM3Text.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
         if (terraId.isBlank()) {
             _uiState.update { it.copy(saveMessage = "Has de seleccionar una terra") }
             return false
@@ -241,16 +326,33 @@ internal class TitularAgricolaViewModel(
             _uiState.update { it.copy(saveMessage = "Kg N i UF han de ser nombres valids") }
             return false
         }
+        if (volumText.isNotBlank() && volum == null) {
+            _uiState.update { it.copy(saveMessage = "El volum m3 ha de ser un nombre valid") }
+            return false
+        }
+        if (kgNM3Text.isNotBlank() && kgNM3 == null) {
+            _uiState.update { it.copy(saveMessage = "El kg N/m3 ha de ser un nombre valid") }
+            return false
+        }
         if (kgN < 0 || uf < 0) {
             _uiState.update { it.copy(saveMessage = "Kg N i UF no poden ser negatius") }
+            return false
+        }
+        if ((volum ?: 0.0) < 0 || (kgNM3 ?: 0.0) < 0) {
+            _uiState.update { it.copy(saveMessage = "Volum m3 i kg N/m3 no poden ser negatius") }
             return false
         }
         scope.launch {
             try {
                 val created = repository.createAplicacio(
                     titularId = currentTitularId,
+                    campanya = _uiState.value.selectedCampanya,
                     terraId = terraId,
                     data = cleanData,
+                    tipusFertilitzant = tipusFertilitzant.trim().ifBlank { null },
+                    procedencia = procedencia.trim().ifBlank { null },
+                    volumM3 = volum,
+                    kgNM3 = kgNM3,
                     kgN = kgN,
                     uf = uf
                 )

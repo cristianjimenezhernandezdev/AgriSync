@@ -1,59 +1,51 @@
-# Permisos i Seguretat a AgriSync
+# Permisos i seguretat a AgriSync
 
-## 1. Objectiu del sistema de permisos
+## 1. Objectiu
 
-El sistema de permisos d'AgriSync està pensat perquè el control d'accés real no depengui només de la interfície, sinó de la base de dades. Això vol dir que encara que un usuari conegui l'endpoint REST, la base de dades continua decidint què pot veure i què pot modificar.
+El model de permisos d'AgriSync vol garantir que el control real d'acces no depengui de la UI, sino de la base de dades.
 
-Objectius del model:
+La idea base es:
 
-- cada usuari només veu la informació que li correspon
-- només poden modificar dades els usuaris amb permís real
-- els permisos es poden justificar de manera clara a nivell funcional i tècnic
+- Auth identifica l'usuari
+- `public.tecnic` defineix el perfil funcional
+- `tecnic_titular` concreta sobre quins titulars pot treballar
+- l'RLS decideix finalment que es pot llegir o modificar
 
-## 2. Estructura general dels permisos
+## 2. Peces del sistema
 
-El sistema es basa en tres capes:
+El model es basa en quatre peces:
 
-- autenticació amb Supabase Auth
-- model funcional de tècnics, rols i assignacions a la BDD
-- polítiques RLS sobre les taules
+- Supabase Auth
+- taula `public.tecnic`
+- taula `public.tecnic_titular`
+- policies RLS del `SQLAgriSync.sql`
 
-Flux resumit:
-
-1. l'usuari fa login amb Auth
-2. el sistema identifica `auth.uid()`
-3. es recupera el registre de `public.tecnic`
-4. a partir d'aquí es determinen rol, oficina i assignacions
-5. les policies RLS decideixen l'accés final
-
-## 3. Peces principals
+## 3. Que fa cada capa
 
 ### 3.1. Supabase Auth
-
-Serveix per autenticar l'usuari.
 
 Responsabilitats:
 
 - validar credencials
-- generar el token JWT
-- identificar l'usuari autenticat
+- generar la sessio
+- exposar `auth.uid()`
 
-### 3.2. Taula `tecnic`
+### 3.2. `public.tecnic`
 
-És el pont entre l'usuari d'Auth i el model funcional.
+Es el pont entre l'usuari autenticat i el model funcional.
 
-Camps que afecten permisos:
+Camps clau:
 
 - `user_id`
 - `oficina_id`
 - `rol`
 - `actiu`
 
-Sense un registre vàlid en aquesta taula, l'usuari no pot treballar dins del sistema.
+Sense un tecnic valid i actiu, l'usuari no pot operar normalment a l'app.
 
-### 3.3. Taula `tecnic_titular`
+### 3.3. `public.tecnic_titular`
 
-Defineix a quins titulars pot accedir cada tècnic i amb quin àmbit funcional.
+Defineix la relacio d'un tecnic amb cada titular.
 
 Camps clau:
 
@@ -64,7 +56,7 @@ Camps clau:
 
 ## 4. Rols globals
 
-Els rols globals són:
+Els rols globals del sistema son:
 
 - `admin`
 - `oficina_manager`
@@ -73,156 +65,151 @@ Els rols globals són:
 
 ### 4.1. `admin`
 
-Té accés global al sistema.
-
-En general pot:
-
-- veure totes les oficines
-- gestionar tècnics
-- gestionar titulars
-- accedir a dades agrícoles i ramaderes
-- administrar catàlegs
+Pot gestionar tota l'estructura i totes les dades del MVP.
 
 ### 4.2. `oficina_manager`
 
-És un rol intermedi de gestió.
+Es un gestor d'ambit intermedi.
 
-En general pot:
-
-- veure oficines
-- gestionar tècnics del seu àmbit
-- gestionar titulars
-- operar sobre dades del MVP
+No te visio global de tots els titulars. El seu ambit queda limitat pels helpers de BDD.
 
 ### 4.3. `tecnic`
 
-És el rol operatiu habitual.
-
-En general:
-
-- només veu titulars assignats
-- només pot modificar allò que li permet el seu `scope`
+Es el perfil operatiu habitual. Depen de les seves assignacions i scopes.
 
 ### 4.4. `lectura`
 
-És un rol previst al model.
-
-En el SQL actual:
-
-- existeix com a rol vàlid
-- no rep permisos d'escriptura específics
+Es un rol global de consulta. No rep permisos d'escriptura especifics.
 
 ## 5. Scopes per titular
 
-Els scopes són:
+Els scopes disponibles son:
 
 - `comu`
 - `agricola`
 - `ramader`
 - `lectura`
 
-### 5.1. `comu`
+Interpretacio funcional:
 
-Permet treballar tant la part agrícola com la ramadera del titular.
+- `comu`
+  Pot operar tant la part agricola com la ramadera del titular.
+- `agricola`
+  Pot operar la part agricola.
+- `ramader`
+  Pot operar la part ramadera.
+- `lectura`
+  Dona lectura, no escriptura.
 
-### 5.2. `agricola`
+## 6. Per que hi ha rol i scope alhora
 
-Permet treballar la part agrícola.
+Son dos nivells diferents:
 
-### 5.3. `ramader`
-
-Permet treballar la part ramadera.
-
-### 5.4. `lectura`
-
-Representa accés sense escriptura. Les funcions `can_write_agricola` i `can_write_ramader` no el consideren suficient per editar.
-
-## 6. Per què hi ha rol i scope alhora
-
-Són dos nivells diferents:
-
-- el rol defineix la posició global dins del sistema
-- l'scope defineix què pot fer aquell tècnic sobre un titular concret
+- el rol defineix la posicio global a l'aplicacio
+- l'scope defineix el tipus de feina per un titular concret
 
 Exemple:
 
-- un `admin` no necessita assignacions per veure-ho tot
-- un `tecnic` normal sí que necessita assignacions a `tecnic_titular`
-- un mateix tècnic pot tenir `agricola` en un titular i `ramader` en un altre
+- un `admin` no necessita assignacions per veure dades
+- un `tecnic` normal si
+- un mateix tecnic pot tenir `agricola` en un titular i `ramader` en un altre
 
-## 7. Funcions helper de permisos
+## 7. Helpers de seguretat definits al SQL
 
-El SQL defineix funcions helper per simplificar les policies.
+El `SQLAgriSync.sql` defineix aquestes funcions helper:
 
-### 7.1. `get_my_tecnic()`
+- `get_my_tecnic()`
+- `current_oficina_id()`
+- `is_admin()`
+- `is_oficina_manager()`
+- `same_oficina(uuid)`
+- `can_self_update_tecnic(...)`
+- `can_manage_office_titular(uuid)`
+- `can_read_titular(uuid)`
+- `can_write_scope(uuid, scope_titular)`
+- `can_write_agricola(uuid)`
+- `can_write_ramader(uuid)`
 
-Recupera el tècnic associat a `auth.uid()`.
+## 8. Significat real dels helpers importants
 
-### 7.2. `current_oficina_id()`
+### 8.1. `current_oficina_id()`
 
-Retorna l'oficina del tècnic autenticat.
+Retorna l'oficina del tecnic autenticat i actiu.
 
-### 7.3. `is_admin()`
+### 8.2. `same_oficina(p_tecnic_id)`
 
-Comprova si l'usuari és admin.
+Comprova si el tecnic indicat pertany a la mateixa oficina que l'usuari autenticat.
 
-### 7.4. `is_oficina_manager()`
+### 8.3. `can_manage_office_titular(p_titular_id)`
 
-Comprova si l'usuari és gestor d'oficina.
+Es la funcio clau per acotar `oficina_manager`.
 
-### 7.5. `same_oficina(p_tecnic_id uuid)`
+Permet gestionar un titular si es compleix una d'aquestes condicions:
 
-Comprova si un tècnic és de la mateixa oficina que l'usuari actual.
+- el titular va ser creat per l'usuari actual
+- o hi ha almenys un tecnic actiu de la mateixa oficina assignat a aquell titular
 
-### 7.6. `can_read_titular(p_titular_id uuid)`
+Per tant, `oficina_manager` no veu tot el sistema.
 
-Permet llegir un titular si:
+### 8.4. `can_read_titular(p_titular_id)`
 
-- l'usuari és `admin`
-- l'usuari és `oficina_manager`
-- o té una assignació activa sobre aquell titular
+Permet lectura si:
 
-### 7.7. `can_write_scope(p_titular_id uuid, p_scope scope_titular)`
+- l'usuari es `admin`
+- o es `oficina_manager` i el titular entra dins del seu ambit de gestio
+- o te una assignacio activa a `tecnic_titular`
 
-Permet escriure si:
+### 8.5. `can_write_scope(...)`
 
-- l'usuari és `admin`
-- l'usuari és `oficina_manager`
-- té `scope = comu`
-- o té exactament l'scope requerit
+Permet escriptura si:
 
-### 7.8. `can_write_agricola(...)`
+- l'usuari es `admin`
+- o es `oficina_manager` i el titular entra dins del seu ambit
+- o te `scope = comu`
+- o te exactament el scope demanat
 
-Especialització per a la part agrícola.
+### 8.6. `can_self_update_tecnic(...)`
 
-### 7.9. `can_write_ramader(...)`
+Aquesta funcio protegeix l'autoedicio del perfil.
 
-Especialització per a la part ramadera.
+Permet que un usuari actualitzi el seu propi registre funcional nomes si mante iguals els camps sensibles:
 
-## 8. Què és RLS
+- `user_id`
+- `oficina_id`
+- `rol`
+- `actiu`
 
-RLS vol dir `Row Level Security`.
+Aixo evita escalades de privilegi per autoedicio directa sobre la taula `tecnic`.
 
-És el mecanisme de PostgreSQL que permet definir permisos per fila, no només per taula. Això fa possible que dos usuaris consultin la mateixa taula però no vegin els mateixos registres.
+## 9. Grants i RLS
 
-## 9. Diferència entre GRANT i RLS
+La logica de seguretat combina dues coses:
 
-### 9.1. GRANT
+- `GRANT`
+- `RLS`
 
-El `GRANT` permet intentar una operació sobre una taula.
+Interpretacio correcta:
 
-### 9.2. RLS
+- el `GRANT` obre la possibilitat tecnica d'intentar `select`, `insert`, `update` o `delete`
+- la policy RLS decideix si aquella fila concreta es pot tocar
 
-La `policy` decideix si aquella operació concreta està realment permesa.
+El projecte dona `grant` de DML a `authenticated` sobre les taules del MVP, pero el filtre real el fa l'RLS.
 
-Per tant:
+## 10. Que fa `fix_permisos.sql`
 
-- el `GRANT` obre la porta general
-- la `policy RLS` decideix si pots passar
+`fix_permisos.sql` no canvia el model funcional.
 
-## 10. Taules amb RLS al MVP actual
+El que fa es:
 
-El SQL actual activa RLS a:
+- reaplicar `grant` sobre les taules
+- reaplicar `execute` sobre les funcions helper
+- assegurar que `service_role` mante acces administratiu
+
+Es un script de manteniment, no un script de modelatge.
+
+## 11. Taules protegides per RLS
+
+L'RLS esta actiu a:
 
 - `oficina`
 - `tecnic`
@@ -237,185 +224,163 @@ El SQL actual activa RLS a:
 - `granja_bestiar`
 - `entrega_dejeccions`
 
-## 11. Policies per taula
+## 12. Resum de permisos per taula
 
-### 11.1. `oficina`
+### 12.1. `oficina`
 
-- `select`: `admin`, `oficina_manager`
-- `insert`, `update`, `delete`: només `admin`
+- `select`
+  `admin` i `oficina_manager`
+- `insert`, `update`, `delete`
+  nomes `admin`
 
-### 11.2. `tecnic`
+### 12.2. `tecnic`
 
-- `select`: `admin`, `oficina_manager` de la mateixa oficina, o el mateix usuari sobre el seu registre
-- `insert`: `admin` o `oficina_manager` dins la seva oficina
-- `update`: `admin`, `oficina_manager` dins la seva oficina, o el mateix usuari sobre el seu registre
-- `delete`: `admin` o `oficina_manager` dins la seva oficina
+- `select`
+  `admin`, `oficina_manager` de la mateixa oficina o el mateix usuari sobre el seu registre
+- `insert`
+  `admin` o `oficina_manager` dins la seva oficina
+- `update`
+  `admin`, `oficina_manager` de la mateixa oficina o el mateix usuari de forma limitada per `can_self_update_tecnic(...)`
+- `delete`
+  `admin` o `oficina_manager` de la mateixa oficina
 
-### 11.3. `titular`
+### 12.3. `titular`
 
-- `select`: qui compleixi `can_read_titular(...)`
-- `insert`: `admin` o `oficina_manager`
-- `update`: `admin`, `oficina_manager` o tècnic amb `scope = comu`
-- `delete`: `admin` o `oficina_manager`
+- `select`
+  qui compleixi `can_read_titular(...)`
+- `insert`
+  `admin` o `oficina_manager`
+- `update`
+  qui compleixi `can_write_scope(..., 'comu')`
+- `delete`
+  `admin` o `oficina_manager` dins del seu ambit
 
-### 11.4. `tecnic_titular`
+### 12.4. `tecnic_titular`
 
-- `select`: `admin`, `oficina_manager` o el mateix tècnic sobre les seves assignacions
-- `insert`, `update`, `delete`: `admin` o `oficina_manager`
+- `select`
+  `admin`, `oficina_manager` sobre tecnics de la seva oficina o el mateix tecnic
+- `insert`, `update`, `delete`
+  `admin` o `oficina_manager` si el tecnic es de la seva oficina i el titular entra en el seu ambit
 
-### 11.5. `dan_declaracio`
+### 12.5. `dan_declaracio`
 
-- `select`: si l'usuari pot llegir el titular relacionat
-- `insert`, `update`: `admin`, `oficina_manager` o qui tingui permís agrícola o ramader sobre el titular
-- `delete`: `admin` o `oficina_manager`
+- `select`
+  qui pot llegir el titular relacionat
+- `insert`, `update`
+  qui pot escriure part agricola o ramadera del titular
+- `delete`
+  `admin` o `oficina_manager` dins del seu ambit
 
-### 11.6. `terra`
+### 12.6. `terra`
 
-- `select`: `admin`, `oficina_manager` o qui pugui llegir el titular de la terra
-- `insert`, `update`, `delete`: `admin`, `oficina_manager` o qui tingui `can_write_agricola(...)`
+- `select`
+  `admin`, alguns casos puntuals de terres sense titular creades pel mateix gestor, o qui pugui llegir el titular
+- `insert`, `update`, `delete`
+  `admin`, `oficina_manager` dins del seu ambit o qui tingui permis agricola sobre el titular
 
-### 11.7. `aplicacions_fertilitzants`
+### 12.7. `aplicacions_fertilitzants`
 
-- `select`: `admin`, `oficina_manager` o qui pugui llegir el titular de la DAN
-- `insert`, `update`, `delete`: `admin`, `oficina_manager` o qui tingui permís agrícola sobre el titular de la DAN
+- `select`
+  qui pot llegir el titular de la DAN relacionada
+- `insert`, `update`, `delete`
+  qui pot escriure part agricola del titular relacionat
 
-### 11.8. `granja`
+### 12.8. `granja`
 
-- `select`: qui pugui llegir el titular propietari
-- `insert`, `update`, `delete`: `admin`, `oficina_manager` o qui tingui permís ramader sobre el titular
+- `select`
+  qui pot llegir el titular propietari
+- `insert`, `update`, `delete`
+  qui pot escriure part ramadera del titular
 
-### 11.9. `bestiar`
+### 12.9. `bestiar`
 
-- `select`: qualsevol usuari autenticat
-- `insert`, `update`, `delete`: només `admin`
+- `select`
+  qualsevol usuari autenticat
+- `insert`, `update`, `delete`
+  nomes `admin`
 
-### 11.10. `fase_productiva`
+### 12.10. `fase_productiva`
 
-- `select`: qualsevol usuari autenticat
-- `insert`, `update`, `delete`: només `admin`
+- `select`
+  qualsevol usuari autenticat
+- `insert`, `update`, `delete`
+  nomes `admin`
 
-### 11.11. `granja_bestiar`
+### 12.11. `granja_bestiar`
 
-- `select`: `admin`, `oficina_manager` o qui pugui llegir el titular de la granja
-- `insert`, `update`, `delete`: `admin`, `oficina_manager` o qui tingui permís ramader sobre el titular de la granja
+- `select`
+  qui pot llegir el titular de la granja
+- `insert`, `update`, `delete`
+  qui pot escriure part ramadera del titular de la granja
 
-### 11.12. `entrega_dejeccions`
+### 12.12. `entrega_dejeccions`
 
-- `select`: `admin`, `oficina_manager` o qui pugui llegir el titular de la DAN
-- `insert`, `update`, `delete`: `admin`, `oficina_manager` o qui tingui permís ramader sobre el titular de la DAN
+- `select`
+  qui pot llegir el titular de la DAN relacionada
+- `insert`, `update`, `delete`
+  qui pot escriure part ramadera del titular de la DAN
 
-## 12. Herència funcional dels permisos
+## 13. Herencia funcional dels permisos
 
-Moltes taules no defineixen permisos completament independents, sinó que hereten lògica d'una entitat superior.
+Moltes taules hereten el control d'acces d'una entitat superior.
 
 Exemples:
 
 - `terra` hereta del `titular`
-- `aplicacions_fertilitzants` hereta del `titular` a través de `dan_declaracio`
+- `aplicacions_fertilitzants` hereta de `dan_declaracio` i, a traves d'aquesta, del `titular`
 - `granja` hereta del `titular`
-- `granja_bestiar` hereta del `titular` a través de `granja`
-- `entrega_dejeccions` hereta del `titular` a través de `dan_declaracio`
+- `granja_bestiar` hereta de `granja`
+- `entrega_dejeccions` hereta de `dan_declaracio`
 
-## 13. Exemples pràctics
+## 14. Relacio amb `service_role`
 
-### Cas 1. `admin`
+L'aplicacio encara fa servir `service_role` per algunes operacions administratives i de suport a Auth, com:
 
-- veu tot
-- pot gestionar estructura i dades
+- crear usuaris
+- canviar passwords
+- eliminar usuaris Auth
+- resoldre noms d'actor a auditories
 
-### Cas 2. `oficina_manager`
+També hi ha un matís al login:
 
-- gestiona tècnics del seu àmbit
-- pot operar sobre dades del MVP
+- el cami normal de login no depen de `service_role`
+- primer es prova `get_my_tecnic()` i la consulta directa amb el token de l'usuari
+- nomes si hi ha un desalineament de `user_id` es mante un fallback tecnic per email amb `service_role` per intentar autocorregir-lo
 
-### Cas 3. Tècnic amb `scope = agricola`
+Pero el model funcional explicat en aquest document descriu el cami normal de treball dels usuaris autenticats via `authenticated` i RLS.
 
-- pot veure el titular
-- pot editar terres i aplicacions
-- no pot editar la part ramadera
+## 15. Usuaris recomanats per provar permisos
 
-### Cas 4. Tècnic amb `scope = ramader`
+Amb `seed_final_demo.sql` pots validar aquests casos:
 
-- pot veure el titular
-- pot editar granges, cens i entregues
-- no pot editar la part agrícola
+- `admin.demo@agrisync.com`
+  Acces global.
+- `manager.lleida.demo@agrisync.com`
+  Gestio d'ambit Lleida.
+- `manager.girona.demo@agrisync.com`
+  Gestio d'ambit Girona.
+- `sergi.agri.demo@agrisync.com`
+  Tecnic agricola.
+- `marta.ram.demo@agrisync.com`
+  Tecnic ramader.
+- `laia.comu.demo@agrisync.com`
+  Tecnica amb visio comuna.
+- `lectura.demo@agrisync.com`
+  Lectura sense escriptura.
 
-### Cas 5. Tècnic amb `scope = comu`
+## 16. Resum final
 
-- pot operar tant a agrícola com a ramader
-- pot editar dades bàsiques del titular
+El sistema de permisos d'AgriSync es basa en:
 
-### Cas 6. Tècnic amb `scope = lectura`
+- autenticacio real amb Supabase Auth
+- perfil funcional a `public.tecnic`
+- assignacions a `tecnic_titular`
+- funcions helper de permisos
+- RLS per fila
 
-- pot quedar limitat a lectura
-- no obté permisos d'escriptura a través de `can_write_*`
+La part mes important del model actual es que:
 
-## 14. Relació amb els usuaris de prova
-
-El projecte manté dos seeds útils per provar permisos.
-
-Seed bàsic:
-
-- `seed_complet.sql`
-- orientat a validar el MVP ràpidament amb pocs perfils
-
-Usuaris del seed bàsic:
-
-- `admin.test@agrisync.com` / `admin1234`
-- `manager.test@agrisync.com` / `manager1234`
-- `agricola.test@agrisync.com` / `agricola1234`
-- `ramader.test@agrisync.com` / `ramader1234`
-- `lectura.test@agrisync.com` / `lectura1234`
-
-Seed ampliat:
-
-- `seed_final_demo.sql`
-- orientat a provar titulars compartits entre tècnics i oficines diferents
-
-Usuaris del seed ampliat:
-
-- `admin.demo@agrisync.com` / `admin1234`
-- `manager.lleida.demo@agrisync.com` / `lleida1234`
-- `manager.girona.demo@agrisync.com` / `girona1234`
-- `sergi.agri.demo@agrisync.com` / `sergi1234`
-- `marta.ram.demo@agrisync.com` / `marta1234`
-- `laia.comu.demo@agrisync.com` / `laia1234`
-- `nil.shared.demo@agrisync.com` / `nil1234`
-- `joan.agri.demo@agrisync.com` / `joan1234`
-- `anna.ram.demo@agrisync.com` / `anna1234`
-- `lectura.demo@agrisync.com` / `lectura1234`
-
-Això et permet validar el comportament del sistema de permisos amb casos reals i també comprovar l'accés compartit a un mateix titular des de diverses oficines.
-
-## 15. Valor del model
-
-Aquest model és defensable perquè:
-
-- la seguretat no depèn de la UI
-- separa autenticació i autorització
-- combina rol global i permís específic per titular
-- encaixa amb el domini real del projecte
-
-## 16. Millores futures
-
-Possibles millores:
-
-- donar més comportament específic al rol `lectura`
-- restringir encara més l'abast d'`oficina_manager` si cal
-- afegir proves automàtiques de permisos per rol i taula
-
-## 17. Resum final
-
-El sistema de permisos d'AgriSync es basa en Supabase Auth per identificar l'usuari i en PostgreSQL amb RLS per decidir què pot veure i modificar.
-
-La combinació de:
-
-- `user_id`
-- `rol`
-- `oficina`
-- `tecnic_titular`
-- `scope`
-- `policies`
-
-permet un control d'accés robust i adequat per a un MVP acadèmic amb dades sensibles.
-
+- `admin` veu tot
+- `oficina_manager` ja no es global
+- el tecnic normal depen de titular i `scope`
+- l'autoedicio de perfil ha quedat acotada per no permetre canvis de privilegi

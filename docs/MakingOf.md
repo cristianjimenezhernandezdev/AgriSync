@@ -2,36 +2,33 @@
 
 ## 1. Objectiu del projecte
 
-AgriSync és una aplicació d'escriptori orientada a centralitzar la informació necessària per gestionar la Declaració Anual de Nitrogen (DAN) en explotacions agrícoles i ramaderes. El punt de partida del projecte és un problema real: moltes d'aquestes dades es treballen amb fulls de càlcul, documents separats i procediments manuals, cosa que provoca duplicitats, incoherències i poca traçabilitat.
+AgriSync neix per resoldre un problema molt concret: la preparacio de la DAN acostuma a repartir-se entre fulls de calcul, dades disperses i comprovacions manuals. El projecte planteja un MVP d'escriptori que centralitza la informacio, permet treball multiusuari i deixa el control real d'acces a la base de dades.
 
-L'objectiu del projecte és construir un MVP funcional que demostri:
+Els objectius que s'han perseguit han estat aquests:
 
-- centralització de dades en una única base de dades
-- autenticació real d'usuaris
-- control d'accés per rols i permisos reals
-- separació entre mòdul agrícola i mòdul ramader
-- arquitectura prou neta per poder créixer en el futur
-- suport pràctic al procés real de preparació de la DAN
+- centralitzar dades en una sola base de dades
+- tenir autenticacio real
+- separar permisos per rol, oficina i titular
+- diferenciar modul agricola i modul ramader
+- donar una base suficient per preparar una DAN
 
-## 2. Idea funcional del programa
+## 2. Decisio de producte
 
-El concepte central del sistema és el `titular`. Un titular és la persona o entitat sobre la qual es gestionen dades agrícoles, ramaderes o de tots dos àmbits.
+El centre funcional del sistema es el `titular`.
 
-A partir del titular, l'aplicació es divideix en tres blocs operatius:
+Al voltant del titular hi ha tres espais de treball:
 
-- home de titulars i navegació
-- bloc agrícola
-- bloc ramader
+- modul agricola
+- modul ramader
+- pantalla `Preparar DAN`
 
-A partir de la iteració 5 també hi ha una pantalla específica de preparació DAN, pensada no per editar dades noves, sinó per concentrar i resumir la informació que després s'ha de traslladar a l'aplicatiu extern oficial.
+La decisio clau del MVP ha estat no intentar automatitzar tot el document oficial, sino:
 
-Quan un usuari entra al sistema:
-
-1. s'autentica amb email i password
-2. el sistema recupera el seu perfil tècnic
-3. es determina el seu rol i els titulars assignats
-4. es mostren només les dades que pot consultar o editar
-5. des de cada titular pot obrir el resum de preparació DAN i veure les dades ja estructurades per transcripció manual
+- recollir dades base coherents
+- calcular alguns valors derivats
+- ajudar el tecnic a treballar per campanya
+- presentar la informacio d'una forma util per al trasllat final
+- permetre copiar un resum estructurat i una checklist final sense dependre encara d'un PDF
 
 ## 3. Tecnologies escollides
 
@@ -46,154 +43,57 @@ Quan un usuari entra al sistema:
 - Supabase
 - PostgreSQL
 - Supabase Auth
-- REST API automàtica de Supabase
-- Row Level Security (RLS)
+- REST API de Supabase
+- Row Level Security
 
-La tria de Supabase permet resoldre amb una sola plataforma tres necessitats molt importants del projecte:
-
-- autenticació
-- base de dades relacional
-- API de dades
-
-Això redueix complexitat tècnica i fa possible enfocar l'esforç a model de dades, permisos i casos d'ús reals.
+La combinacio ha permes concentrar l'esforc en model de dades, permisos i casos d'us reals, en lloc de muntar backend i autenticacio des de zero.
 
 ## 4. Arquitectura general
 
-L'aplicació segueix una arquitectura client-servidor.
-
 ### 4.1. Client desktop
 
-La part client està dins de `composeApp` i s'encarrega de:
+La part client viu a `composeApp` i s'encarrega de:
 
-- mostrar pantalles
-- gestionar formularis
-- validar entrada bàsica
-- llançar consultes i actualitzacions
-- mostrar errors, càrregues i resultats
-- confirmar accions destructives abans d'executar-les
-- orientar l'usuari amb textos d'ajuda, placeholders i estats buits més clars
-- resumir la informació de cada titular per facilitar la preparació externa de la DAN
+- pantalles i navegacio
+- formularis i validacions basiques
+- consultes REST a Supabase
+- missatges d'error i confirmacions
+- resum funcional de dades per titular i campanya
 
 ### 4.2. Capa de dades
 
-Entre la UI i Supabase hi ha una capa pròpia formada per:
+Entre la UI i Supabase hi ha una capa de repositoris i serveis:
 
 - `AuthService`
 - `SupabaseAuthApi`
 - `RestClient`
-- `AccessRepository`
 - `AgricolaRepository`
 - `RamaderRepository`
 - `DanPreparationRepository`
 - `TecnicRepository`
 - `OficinaRepository`
 - `TitularManagementRepository`
+- `AccessRepository`
 
-La incorporació de `DanPreparationRepository` a la iteració 5 és rellevant perquè encapsula consultes de lectura orientades a resum i no a CRUD. És a dir, la seva funció principal és agrupar dades de `titular`, `terra`, `aplicacions_fertilitzants`, `granja`, `granja_bestiar` i `entrega_dejeccions` per mostrar-les d'una manera més útil funcionalment.
+La separacio ha ajudat a mantenir la logica de negoci fora de les pantalles.
 
 ### 4.3. Base de dades
 
-La base de dades es defineix a `SQLAgriSync.sql` i inclou:
+La base de dades queda concentrada a `SQLAgriSync.sql`.
 
-- taules principals del MVP
-- relacions entre entitats
-- enums de rols i scopes
-- triggers d'auditoria
-- funcions helper de permisos
-- RLS i policies per operació
+Aquest script:
 
-La iteració 5 no ha requerit refer la BDD. L'esquema actual ja contenia les dades mínimes necessàries per construir el resum DAN.
+- elimina objectes previs del projecte
+- recrea taules, indexes i triggers
+- defineix funcions helper
+- activa RLS
+- recrea totes les policies del MVP
 
-## 5. Estructura real del codi
+La decisio de tenir un fitxer principal reconstructiu fa que el projecte sigui repetible des de zero.
 
-La part principal del projecte està en:
+## 5. Model funcional actual
 
-- `composeApp/src/commonMain/kotlin/cat/agrisync`
-- `composeApp/src/jvmMain/kotlin/cat/agrisync`
-- `SQLAgriSync.sql`
-- `fix_permisos.sql`
-- `seed_complet.sql`
-- `seed_final_demo.sql`
-- `agrisync.properties.example`
-- `docs/`
-
-Distribució principal:
-
-- `App.kt`: entrada principal i navegació
-- `data/`: models, auth, REST i repositoris
-- `viewmodel/`: lògica d'estat de pantalles
-- `ui/`: pantalles Compose
-- `ui/navigation/Screen.kt`: mapa de pantalles
-
-A la iteració 5 s'han afegit específicament:
-
-- `data/DanPreparationRepository.kt`
-- `viewmodel/DanPreparationViewModel.kt`
-- `ui/DanPreparationScreen.kt`
-
-## 6. Ajust del codi a l'esquema actual
-
-L'aplicació actual està alineada amb l'esquema SQL simplificat del MVP.
-
-Això significa que:
-
-- la home de titulars consulta directament `titular` i `tecnic_titular`
-- ja no depèn de la vista `v_titular_access`
-- el codi actiu no depèn de `cessio_terra` ni `emmagatzematge`
-- el model funcional actiu es concentra en oficines, tècnics, titulars, terres, DAN, aplicacions, granges, bestiar, fases i entregues
-- la nova pantalla DAN reaprofita exactament aquest model i hi afegeix càlculs derivats a nivell d'aplicació
-
-## 7. Flux principal del programa
-
-### 7.1. Arrencada
-
-Quan l'app arrenca:
-
-1. intenta carregar la configuració de Supabase des de propietats JVM o variables d'entorn
-2. si no hi són, en la versió JVM prova de llegir un fitxer `agrisync.properties`
-3. busca aquest fitxer al directori d'execució o al costat del `.exe` o `.jar`
-4. si continua faltant alguna dada obligatòria, mostra una pantalla de configuració incompleta i no continua
-5. construeix els serveis a `AppServices`
-6. intenta recuperar una sessió guardada localment
-7. si la troba, refresca el token
-8. carrega el perfil tècnic de l'usuari autenticat
-9. entra a l'aplicació si tot és correcte
-
-Les claus obligatòries actuals són:
-
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-
-Aquest canvi és important perquè resol un problema pràctic d'entrega: els professors o usuaris de demo poden executar l'aplicació amb un `.exe` i un fitxer de configuració al costat, sense haver de definir variables d'entorn manualment.
-
-### 7.2. Login
-
-El login es fa amb Supabase Auth.
-
-Flux:
-
-1. l'usuari introdueix email i password
-2. `LoginViewModel` valida que els camps no siguin buits
-3. `AuthService` crida `SupabaseAuthApi.signInWithPassword`
-4. Supabase retorna els tokens
-5. l'app recupera el tècnic associat amb `get_my_tecnic()`
-6. si el tècnic existeix i està actiu, es guarda la sessió localment
-
-La pantalla de login també té millor jerarquia visual i més textos d'ajuda des de la iteració 4.
-
-### 7.3. Recuperació del perfil tècnic
-
-Un usuari autenticat no n'hi ha prou. També ha d'existir a `public.tecnic`.
-
-Això és clau perquè:
-
-- el login real es fa contra Auth
-- els permisos reals es calculen des de la BDD funcional
-
-## 8. Model funcional de dades
-
-El model del MVP queda reduït a les entitats realment necessàries:
+El model del MVP es basa en aquestes entitats:
 
 - `oficina`
 - `tecnic`
@@ -208,355 +108,169 @@ El model del MVP queda reduït a les entitats realment necessàries:
 - `granja_bestiar`
 - `entrega_dejeccions`
 
-## 9. Dades d'entrada del sistema
+L'esquema ha anat retallant elements antics o no usats per quedar-se amb la part que realment fa servir l'app.
 
-L'aplicació treballa amb tres grans tipus d'entrada.
+## 6. Dos ajustos funcionals importants del projecte
 
-### 9.1. Configuració
+### 6.1. Permisos per oficina mes coherents
 
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
+Una de les revisions importants del projecte ha estat evitar que `oficina_manager` actuï com si fos gairebe global.
 
-Aquestes dades es poden injectar de dues maneres:
+Ara el model fa servir `can_manage_office_titular(...)` i limita el gestor a:
 
-- variables d'entorn o propietats JVM
-- fitxer `agrisync.properties`
+- titulars creats per ell
+- o titulars que ja tenen tecnics actius de la seva oficina assignats
 
-### 9.2. Entrada d'usuari
+Aixo acosta molt mes l'app al comportament esperat per oficines.
 
-- email i password per fer login
-- dades de titular
-- dades de tècnic
-- dades d'oficina
-- dades de terres
-- dades agrícoles
-- dades ramaderes
-- accions d'administració com alta, baixa, canvi de password i assignacions
+### 6.2. Treball real per campanya
 
-### 9.3. Catàlegs i estructura
+La segona millora funcional forta ha estat convertir la campanya en un element real del flux.
 
-- rols globals
-- scopes
-- catàleg de bestiar
-- catàleg de fase productiva
+Actualment:
 
-## 10. Tractament de dades
+- `TitularAgricolaViewModel` carrega aplicacions per campanya
+- `TitularRamaderViewModel` carrega entregues per campanya
+- `DanPreparationViewModel` resumeix per campanya
+- les altes noves creen o reutilitzen la `dan_declaracio` correcta
 
-### 10.1. Validació
+La UI no entra des d'una pantalla exclusiva de campanyes, pero el comportament funcional ja esta centrat en la campanya activa.
 
-La capa de ViewModel valida abans d'enviar a la base de dades.
+## 7. Flux d'arrencada
 
-Exemples:
+Quan l'app arrenca:
 
-- email i password no poden ser buits
-- password mínim de 6 caràcters
-- nom obligatori a titular i oficina
-- `mun_codi` de 5 dígits
-- camps numèrics per superfície, cens i quantitats
-- format de data `YYYY-MM-DD` als editors inline que ho requereixen
-- comprovació que els camps de selecció obligatoris estiguin informats abans de crear registres nous
+1. intenta llegir `SUPABASE_URL`, `SUPABASE_ANON_KEY` i `SUPABASE_SERVICE_ROLE_KEY`
+2. si no hi son, la versio JVM prova `agrisync.properties`
+3. construeix els serveis d'app
+4. recupera sessio local si existeix
+5. refresca token
+6. carrega el tecnic autenticat
+7. obre la navegacio interna
 
-### 10.2. Transformació
+Aquest suport dual a variables d'entorn i fitxer de propietats es va mantenir per fer l'entrega academica mes practicable.
 
-El sistema també transforma dades:
+## 8. Flux funcional dels moduls
 
-- normalitza NIF per a cerques
-- converteix text a enters o decimals quan la validació és correcta
-- genera `codi_sigpac_complet` a la BDD
-- converteix JSON de Supabase a DTOs Kotlin
-- guarda la sessió en format serialitzable
-- resol automàticament l'any actual de campanya mitjançant `PlatformDateTime`
+### 8.1. Titulars
 
-### 10.3. Filtratge i càrrega
+La pantalla principal mostra titulars accessibles segons RLS i assignacions.
 
-Cada pantalla:
+Des d'aqui es pot:
 
-- posa estat de càrrega
-- demana dades al repositori
-- rep models Kotlin
-- actualitza UI
+- cercar
+- entrar al modul agricola
+- entrar al modul ramader
+- obrir `Preparar DAN`
 
-### 10.4. Edició i administració
-
-Quan l'usuari edita o administra:
-
-1. la UI recull el canvi o l'acció
-2. el ViewModel valida
-3. si la validació falla, el formulari queda obert i es mostra un missatge d'error
-4. si l'acció és destructiva, la UI demana confirmació
-5. el Repository envia la petició REST o la crida a Admin API
-6. la base de dades aplica RLS quan toca
-7. Supabase retorna el resultat
-8. la pantalla es refresca
-
-### 10.5. Gestió automàtica de DAN
-
-Per crear una aplicació agrícola o una entrega ramadera, la BDD exigeix un `dan_id`.
-
-El repositori segueix aquesta regla:
-
-1. busca si el titular ja té alguna `dan_declaracio`
-2. si en troba, fa servir la més recent
-3. si no en troba cap, crea automàticament una DAN per a la campanya actual
-
-### 10.6. Poliment d'UX
-
-La iteració 4 ha afegit:
-
-- formularis amb més context i més guia
-- capçaleres de secció que expliquen què representa cada bloc
-- estats buits que orienten sobre el següent pas
-- missatges d'error i ajuda més coherents entre pantalles
-
-### 10.7. Preparació DAN a partir de dades reals
-
-La iteració 5 és la que connecta millor el projecte amb el procés real de treball.
-
-La nova pantalla de preparació DAN s'ha dissenyat revisant dos PDFs reals deixats a `docs/`:
-
-- `docs/DANAgricolaExemple.pdf`
-- `docs/DANRamaderaExemple.pdf`
-
-A partir d'aquests documents s'ha detectat quina informació és especialment rellevant per a un tècnic quan ja està a punt de presentar la declaració:
-
-- identificació del titular
-- identificació de terres i recintes
-- campanya
-- aplicacions amb data, `kg N`, `UF`, `kg N/ha` i `kg N/UF`
-- marques oficials de granges
-- censos per bestiar i fase
-- entregues de dejeccions
-- totals que ajudin a comprovar coherència abans de traslladar dades
-
-La decisió funcional ha estat important: en lloc d'intentar generar ja un PDF oficial, el MVP ofereix una finestra de suport a la transcripció manual, que és més realista per al nivell del projecte i molt útil en una defensa acadèmica perquè explica clarament què es guarda, què es calcula i què encara s'ha de revisar fora de l'app.
-
-### 10.8. Càlculs derivats visibles
-
-La nova pantalla DAN no només llista dades, sinó que calcula:
-
-- total d'hectàrees del titular
-- total de `kg N`
-- total d'`UF`
-- `kg N/ha`
-- `kg N/UF`
-- total de granges
-- total de cens
-- total de quantitat entregada
-- campanyes detectades
-
-Aquests càlculs es fan a `DanPreparationViewModel` i no necessiten noves columnes a la BDD.
-
-### 10.9. Preparació per a l'entrega
-
-La millora posterior a la iteració 4 resol específicament la forma d'entregar el projecte en `.exe`.
-
-La decisió ha estat:
-
-- mantenir suport a variables d'entorn per desenvolupament
-- afegir suport a `agrisync.properties` per a execució empaquetada
-- proporcionar una plantilla `agrisync.properties.example`
-
-A nivell acadèmic això és molt útil perquè fa possible una entrega executable senzilla sense haver de tocar configuració del sistema operatiu del professor.
-
-## 11. Tractament per mòduls
-
-### 11.1. Home de titulars
-
-Mostra els titulars accessibles segons rol i assignacions.
-
-També incorpora:
-
-- cerca més guiada
-- resum visual dels resultats
-- millor estat buit i millor estat d'error
-- accés directe a `Preparar DAN` per cada titular visible
-
-### 11.2. Mòdul agrícola
-
-Carrega i permet gestionar:
-
-- titular
-- terres
-- aplicacions de fertilitzants
-
-### 11.3. Mòdul ramader
-
-Carrega i permet gestionar:
-
-- titular
-- granges
-- cens de bestiar
-- entregues de dejeccions
-- catàlegs de bestiar i fase productiva
-- terres del titular per oferir destí d'entrega
-
-### 11.4. Pantalla de preparació DAN
-
-Aquesta nova finestra té un paper diferent dels altres mòduls.
-
-No està pensada per editar massivament, sinó per presentar la informació de forma útil per omplir l'aplicatiu extern de la declaració.
-
-Conté:
-
-- resum del titular
-- mètriques calculades
-- bloc agrícola amb terres i aplicacions
-- bloc ramader amb granges, censos i entregues
-- bloc final de camps a revisar manualment
-
-Aquest últim bloc és especialment defensable perquè deixa clar el límit del MVP: l'app ajuda molt a preparar la DAN, però encara no modela tots els camps finals dels documents oficials.
-
-### 11.5. Gestió de titulars
-
-Permet crear, editar, cercar i eliminar titulars.
-
-### 11.6. Gestió de terres
-
-Permet alta, edició i eliminació de terres.
-
-### 11.7. Gestió de tècnics
+### 8.2. Modul agricola
 
 Permet:
 
-- crear usuaris d'Auth
-- crear el registre funcional a `public.tecnic`
-- activar o desactivar tècnics
-- canviar dades bàsiques
-- reset de password
-- eliminar tècnics des de la mateixa app
-- intentar eliminar també el seu usuari d'Auth si tenia login associat
-- gestionar assignacions de titulars
+- editar dades basiques del titular
+- gestionar terres
+- gestionar aplicacions fertilitzants
+- treballar sobre la campanya activa
 
-### 11.8. Gestió d'oficines
+Tambe mostra zona nitrogen, limit `kg N/ha` i calculs per campanya.
 
-CRUD simple d'oficines.
+### 8.3. Modul ramader
 
-## 12. Seguretat i permisos
+Permet:
 
-La seguretat real es resol a la BDD.
+- gestionar granges
+- gestionar cens per bestiar i fase
+- gestionar entregues de dejeccions
+- treballar sobre la campanya activa
 
-Punts clau:
+### 8.4. Preparar DAN
 
-- login real amb Supabase Auth
-- perfil funcional a `public.tecnic`
-- rols globals
-- scopes per titular
+`Preparar DAN` no substitueix el document oficial. El que fa es:
+
+- unificar la lectura de dades
+- resumir terres, aplicacions, granges, censos i entregues
+- recalcular totals per campanya
+- deixar visibles camps que encara requereixen revisio manual
+- generar una checklist automatica de completitud
+- permetre copiar al porta-retalls un resum estructurat o nomes la checklist
+
+## 9. Estrategia de dades de prova
+
+Per fer demostracions i proves s'han mantingut dos seeds:
+
+- `seed_complet.sql`
+- `seed_final_demo.sql`
+
+La seed important per a defensa i proves completes es `seed_final_demo.sql`, perque incorpora:
+
+- diversos rols
+- diverses oficines
+- titulars compartits
+- historics 2024 i 2025
+- dades suficients per als tres grans espais de treball
+
+Per reconstruccio des de zero s'ha afegit tambe `reset_auth_seed_users.sql`, que permet netejar els usuaris Auth dels seeds sense tocar la resta del projecte de Supabase.
+
+## 10. Seguretat i permisos
+
+La seguretat del sistema no depen de la UI.
+
+Es basa en:
+
+- `auth.uid()` de Supabase Auth
+- la taula funcional `public.tecnic`
+- scopes a `tecnic_titular`
 - funcions helper de permisos
-- policies RLS per operació
+- policies RLS per taula
 
-La base de dades continua sent la que decideix què pot veure o modificar cada usuari.
+Els `grant` permeten intentar l'operacio, pero la decisio final la pren l'RLS.
 
-Matís important de defensa:
+Un ajust important recent ha estat reforcar la policy de `tecnic` per evitar que l'autoedicio del perfil pogues modificar camps sensibles com rol, oficina o estat.
 
-- fer servir `agrisync.properties` és una solució pràctica d'entrega per al context acadèmic
-- no és la solució ideal de seguretat per a una distribució real a tercers, especialment mentre hi hagi operacions administratives que depenen de `service_role`
+## 11. Paquet SQL i reconstruccio
 
-## 13. Sortides del sistema
+El paquet SQL actual queda aixi:
 
-### 13.1. Sortida visual
+- `SQLAgriSync.sql`
+- `fix_permisos.sql`
+- `reset_auth_seed_users.sql`
+- `seed_complet.sql`
+- `seed_final_demo.sql`
+- `fix_user_ids.sql`
 
-- formularis
-- llistes paginades
-- dades de titulars
-- dades agrícoles
-- dades ramaderes
-- resum DAN per titular
-- mètriques derivades visibles
-- missatges d'èxit i error
-- diàlegs de confirmació en accions destructives
-- avisos contextuals i estats buits més útils
+La combinacio d'aquests fitxers permet:
 
-### 13.2. Sortida persistent
+- netejar usuaris Auth de prova
+- recrear l'esquema public
+- reaplicar grants si cal
+- carregar dades de demo
+- resincronitzar `user_id` si els usuaris s'han recreat
 
-- registres nous i actualitzacions a Supabase
-- eliminacions administratives de tècnics i assignacions
-- altes i baixes de registres dins dels mòduls agrícola i ramader
+## 12. Limitacions actuals del MVP
 
-### 13.3. Sortida de control
+Tot i la millora del flux per campanya, el projecte encara no arriba a una DAN completa de nivell productiu.
 
-- timestamps
-- `created_by` i `updated_by`
-- activació o desactivació de tècnics
-- sessió local guardada
+Falta principalment:
 
-## 14. Relació amb el full de càlcul original i amb les DAN reals
+- model normatiu agricola mes ric
+- calcul de nitrogen generat a partir del cens
+- estat inicial i final de fossa
+- traçabilitat directa entre entrega concreta i aplicacio concreta
+- exportacio a fitxer o PDF i automatitzacio del document oficial
 
-El full Excel de partida i el model de dades no són una còpia 1:1. El projecte guarda les dades base i deixa com a derivats alguns valors.
+## 13. Resultat final del projecte
 
-Correspondències importants:
+El valor d'AgriSync no es nomes visual.
 
-- `Marca Oficial` -> `granja.marca_oficial`
-- `Agricultor` -> `titular.nom_rao`
-- `NIF Agr.` -> `titular.nif`
-- `ha` -> `terra.superficie` o suma de terres
-- `UF` -> `aplicacions_fertilitzants.uf`
-- `kg N` -> `aplicacions_fertilitzants.kg_n`
-- `kg N/ha` -> càlcul derivat a la pantalla de preparació DAN
-- `kg N/UF` -> càlcul derivat a la pantalla de preparació DAN
+El projecte aporta:
 
-La revisió dels PDFs reals també ha servit per separar dues coses:
+- autenticacio real
+- persistencia real
+- permisos reals a nivell de BDD
+- treball multiusuari
+- modul agricola i ramader coherents
+- una reconstruccio repetible des de zero
+- una seed rica per demostracio
+- una sortida final rapida des de `Preparar DAN` per enganxar el resum fora de l'app
 
-- dades que el sistema ja pot guardar i resumir bé
-- camps finals de document oficial que encara s'han d'omplir o comprovar manualment
-
-## 15. Seed i proves
-
-Per poder provar l'aplicació amb dades reals del MVP, el projecte inclou dos seeds útils:
-
-- `seed_complet.sql`: versió ràpida i bàsica per validar el MVP amb pocs usuaris
-- `seed_final_demo.sql`: versió ampliada amb diverses oficines, tècnics, titulars compartits entre oficines i DAN més completes
-
-Usuaris de prova previstos al seed:
-
-- `admin.test@agrisync.com` / `admin1234`
-- `manager.test@agrisync.com` / `manager1234`
-- `agricola.test@agrisync.com` / `agricola1234`
-- `ramader.test@agrisync.com` / `ramader1234`
-- `lectura.test@agrisync.com` / `lectura1234`
-
-Usuaris de prova del seed ampliat:
-
-- `admin.demo@agrisync.com` / `admin1234`
-- `manager.lleida.demo@agrisync.com` / `lleida1234`
-- `manager.girona.demo@agrisync.com` / `girona1234`
-- `sergi.agri.demo@agrisync.com` / `sergi1234`
-- `marta.ram.demo@agrisync.com` / `marta1234`
-- `laia.comu.demo@agrisync.com` / `laia1234`
-- `nil.shared.demo@agrisync.com` / `nil1234`
-- `joan.agri.demo@agrisync.com` / `joan1234`
-- `anna.ram.demo@agrisync.com` / `anna1234`
-- `lectura.demo@agrisync.com` / `lectura1234`
-
-## 16. Limitacions actuals del MVP
-
-- no hi ha importador automàtic des d'Excel
-- no hi ha generació del PDF oficial final
-- alguns camps finals de les DAN reals encara no estan modelats
-- la `service_role` continua sent necessària per a funcions administratives avançades
-- `agrisync.properties` resol bé l'entrega acadèmica, però no seria la millor estratègia per a un producte final distribuït a gran escala
-- la pantalla de preparació DAN ajuda a transcriure, però no substitueix encara l'aplicatiu extern ni automatitza la presentació
-
-## 17. Estat actual verificat
-
-Amb l'esquema SQL simplificat i els ajustos realitzats:
-
-- l'aplicació compila correctament
-- el login amb usuaris de prova ja s'ha pogut validar
-- el codi i la documentació han quedat alineats amb la BDD real
-- la configuració sensible ja no queda embeguda dins del codi
-- les validacions del detall agrícola i ramader són més estrictes
-- la gestió de tècnics és més completa
-- els mòduls agrícola i ramader ja permeten altes i baixes dels principals registres de treball
-- l'experiència d'usuari al login i a les pantalles principals és més clara i més guiada
-- l'app ja està preparada per ser entregada amb `.exe` + `agrisync.properties`
-- la iteració 5 ha afegit una finestra específica de preparació DAN basada en PDFs reals de declaracions ja presentades
-- el paquet SQL del projecte ha quedat reduït a quatre scripts coherents: esquema, fix de permisos, seed bàsic i seed final ampliat
-- la iteració 5 s'ha pogut resoldre sense refer la BDD
-
-## 18. Resum final
-
-AgriSync és un MVP funcional de gestió agrària centrat en la DAN. Combina autenticació, model relacional, permisos reals, client desktop i una estructura neta per capes.
-
-Des del punt de vista de defensa del projecte, el valor principal és que no és només una maqueta visual: és una aplicació amb autenticació real, persistència real i control d'accés real sobre dades de negoci. A més, ara també està preparada per a una entrega acadèmica molt més pràctica gràcies al suport de configuració per fitxer i incorpora una finestra específica que connecta clarament les dades del sistema amb el procés real de preparació de la DAN.
-
+Despres de tancar les millores d'ambit per oficina i de treball per campanya, la base del MVP ja aguanta be. El que queda pendent es sobretot profunditat funcional, no pas corregir un nucli trencat.

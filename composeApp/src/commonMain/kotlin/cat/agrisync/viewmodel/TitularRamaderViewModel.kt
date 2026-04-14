@@ -17,6 +17,8 @@ data class TitularRamaderUiState(
     val granjaBestiar: List<GranjaBestiarDto> = emptyList(),
     val entregues: List<EntregaDejeccioDto> = emptyList(),
     val terres: List<TerraDto> = emptyList(),
+    val availableCampanyes: List<Int> = emptyList(),
+    val selectedCampanya: Int = 0,
     val bestiars: List<BestiarDto> = emptyList(),
     val fasesProductives: List<FaseProductivaDto> = emptyList(),
     val actorLabels: Map<String, String> = emptyMap(),
@@ -34,7 +36,7 @@ internal class TitularRamaderViewModel(
     val uiState: StateFlow<TitularRamaderUiState> = _uiState.asStateFlow()
     private var currentTitularId: String = ""
 
-    fun load(titularId: String) {
+    fun load(titularId: String, preferredCampanya: Int? = null) {
         currentTitularId = titularId
         scope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, saveMessage = null) }
@@ -42,7 +44,9 @@ internal class TitularRamaderViewModel(
                 val titular = repository.getTitular(titularId)
                 val granges = repository.listGranges(titularId)
                 val gb = repository.listGranjaBestiar(titularId)
-                val entregues = repository.listEntreguesByTitular(titularId)
+                val existingCampanyes = repository.listCampanyesByTitular(titularId)
+                val selectedCampanya = resolveSelectedCampanya(existingCampanyes, preferredCampanya)
+                val entregues = repository.listEntreguesByTitular(titularId, selectedCampanya)
                 val terres = repository.listTerres(titularId)
                 val bestiars = repository.listBestiarCatalog()
                 val fases = repository.listFaseProductivaCatalog()
@@ -55,6 +59,8 @@ internal class TitularRamaderViewModel(
                         granjaBestiar = gb,
                         entregues = entregues,
                         terres = terres,
+                        availableCampanyes = normalizedCampanyes(existingCampanyes),
+                        selectedCampanya = selectedCampanya,
                         bestiars = bestiars,
                         fasesProductives = fases,
                         actorLabels = actorLabels
@@ -162,6 +168,11 @@ internal class TitularRamaderViewModel(
                 _uiState.update { it.copy(saveMessage = "Error: ${ex.message}") }
             }
         }
+    }
+
+    fun onSelectCampanya(campanya: Int) {
+        if (currentTitularId.isBlank()) return
+        load(currentTitularId, campanya)
     }
 
     fun updateGranjaBestiar(id: String, censText: String): Boolean {
@@ -322,6 +333,7 @@ internal class TitularRamaderViewModel(
             try {
                 val created = repository.createEntrega(
                     titularId = currentTitularId,
+                    campanya = _uiState.value.selectedCampanya,
                     granjaOrigenId = granjaOrigenId,
                     data = cleanData,
                     quantitat = quantitat,

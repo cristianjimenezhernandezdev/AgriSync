@@ -14,14 +14,23 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import cat.agrisync.data.DanPreparationAplicacioDto
 import cat.agrisync.data.DanPreparationEntregaDto
@@ -30,6 +39,7 @@ import cat.agrisync.data.GranjaBestiarDto
 import cat.agrisync.data.GranjaDto
 import cat.agrisync.viewmodel.DanPreparationViewModel
 import cat.agrisync.viewmodel.DanPreparationUiState
+import kotlinx.coroutines.launch
 import kotlin.math.pow
 import kotlin.math.round
 
@@ -39,120 +49,163 @@ internal fun DanPreparationScreen(
     onBack: () -> Unit
 ) {
     val ui by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
+    val clipboardManager = LocalClipboardManager.current
 
-    when {
-        ui.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        ui.error != null -> DanPreparationErrorBlock(ui.error ?: "Error carregant el resum DAN", onBack)
-        else -> {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(onClick = onBack) { Text("< Tornar") }
-                        Text("Preparar DAN", style = MaterialTheme.typography.titleLarge)
-                    }
-                }
-
-                item {
-                    InfoCard(
-                        title = "Pantalla de preparacio",
-                        body = "Aquest resum agrupa les dades que ja tens entrades a AgriSync i les presenta d'una manera mes facil de traslladar a l'aplicatiu extern de la DAN."
-                    )
-                }
-
-                item {
-                    TitularSummaryCard(ui)
-                }
-
-                item {
-                    SummaryMetrics(ui)
-                }
-
-                item {
-                    SectionTitle(
-                        title = "Dades agricoles per trasllat",
-                        description = "Parcel·les i aplicacions fertilitzants que s'assemblen als camps vistos als PDFs reals de DAN."
-                    )
-                }
-
-                if (ui.terres.isEmpty() && ui.aplicacions.isEmpty()) {
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        when {
+            ui.isLoading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            ui.error != null -> DanPreparationErrorBlock(ui.error ?: "Error carregant el resum DAN", onBack)
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     item {
-                        EmptyPreparationCard(
-                            title = "Sense dades agricoles",
-                            body = "Aquest titular no te terres ni aplicacions fertilitzants registrades ara mateix."
-                        )
-                    }
-                } else {
-                    if (ui.terres.isNotEmpty()) {
-                        item { SubsectionTitle("Terres / recintes") }
-                        items(ui.terres, key = { it.id }) { terra ->
-                            TerraPreparationCard(terra)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(onClick = onBack) { Text("< Tornar") }
+                            Text("Preparar DAN", style = MaterialTheme.typography.titleLarge)
                         }
                     }
 
-                    if (ui.aplicacions.isNotEmpty()) {
-                        item { SubsectionTitle("Aplicacions fertilitzants") }
-                        items(ui.aplicacions, key = { it.id }) { aplicacio ->
-                            AplicacioPreparationCard(
-                                ui = ui,
-                                aplicacio = aplicacio
+                    item {
+                        InfoCard(
+                            title = "Pantalla de preparacio",
+                            body = "Aquest resum agrupa les dades que ja tens entrades a AgriSync i les presenta d'una manera mes facil de traslladar a l'aplicatiu extern de la DAN."
+                        )
+                    }
+
+                    item {
+                        TitularSummaryCard(ui)
+                    }
+
+                    item {
+                        PreparationActionsCard(
+                            onCopySummary = {
+                                clipboardManager.setText(AnnotatedString(ui.buildClipboardSummary()))
+                                snackbarScope.launch {
+                                    snackbarHostState.showSnackbar("Resum DAN copiat al porta-retalls")
+                                }
+                            },
+                            onCopyChecklist = {
+                                clipboardManager.setText(AnnotatedString(ui.buildClipboardChecklist()))
+                                snackbarScope.launch {
+                                    snackbarHostState.showSnackbar("Checklist DAN copiada al porta-retalls")
+                                }
+                            }
+                        )
+                    }
+
+                    item {
+                        CampaignSelectorCard(
+                            selectedCampanya = ui.selectedCampanya,
+                            availableCampanyes = ui.availableCampanyes,
+                            onSelect = { campanya ->
+                                ui.titular?.id?.let { viewModel.onSelectCampanya(it, campanya) }
+                            }
+                        )
+                    }
+
+                    item {
+                        SummaryMetrics(ui)
+                    }
+
+                    item {
+                        AutomaticChecklistCard(ui)
+                    }
+
+                    item {
+                        SectionTitle(
+                            title = "Dades agricoles per trasllat",
+                            description = "Parcel·les i aplicacions fertilitzants que s'assemblen als camps vistos als PDFs reals de DAN."
+                        )
+                    }
+
+                    if (ui.terres.isEmpty() && ui.aplicacions.isEmpty()) {
+                        item {
+                            EmptyPreparationCard(
+                                title = "Sense dades agricoles",
+                                body = "Aquest titular no te terres ni aplicacions fertilitzants registrades ara mateix."
+                            )
+                        }
+                    } else {
+                        if (ui.terres.isNotEmpty()) {
+                            item { SubsectionTitle("Terres / recintes") }
+                            items(ui.terres, key = { it.id }) { terra ->
+                                TerraPreparationCard(
+                                    terra = terra,
+                                    appliedKgN = ui.totalKgNByTerra(terra.id),
+                                    kgNPerHa = ui.kgNPerHaByTerra(terra.id)
+                                )
+                            }
+                        }
+
+                        if (ui.aplicacions.isNotEmpty()) {
+                            item { SubsectionTitle("Aplicacions fertilitzants") }
+                            items(ui.aplicacions, key = { it.id }) { aplicacio ->
+                                AplicacioPreparationCard(
+                                    ui = ui,
+                                    aplicacio = aplicacio
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        SectionTitle(
+                            title = "Dades ramaderes per trasllat",
+                            description = "Informacio de granges, censos i entregues que ajuda a completar la DAN ramadera o el resum de gestio."
+                        )
+                    }
+
+                    item {
+                        if (ui.granges.isEmpty() && ui.granjaBestiar.isEmpty() && ui.entregues.isEmpty()) {
+                            EmptyPreparationCard(
+                                title = "Sense dades ramaderes",
+                                body = "Aquest titular no te granges, censos ni entregues registrades ara mateix."
                             )
                         }
                     }
-                }
+                    if (ui.granges.isNotEmpty() || ui.granjaBestiar.isNotEmpty() || ui.entregues.isNotEmpty()) {
+                        if (ui.granges.isNotEmpty()) {
+                            item { SubsectionTitle("Granges") }
+                            items(ui.granges, key = { it.id }) { granja ->
+                                GranjaPreparationCard(granja)
+                            }
+                        }
 
-                item {
-                    SectionTitle(
-                        title = "Dades ramaderes per trasllat",
-                        description = "Informacio de granges, censos i entregues que ajuda a completar la DAN ramadera o el resum de gestio."
-                    )
-                }
+                        if (ui.granjaBestiar.isNotEmpty()) {
+                            item { SubsectionTitle("Cens per bestiar i fase") }
+                            items(ui.granjaBestiar, key = { it.id }) { registre ->
+                                GranjaBestiarPreparationCard(registre)
+                            }
+                        }
 
-                if (ui.granges.isEmpty() && ui.granjaBestiar.isEmpty() && ui.entregues.isEmpty()) {
+                        if (ui.entregues.isNotEmpty()) {
+                            item { SubsectionTitle("Entregues de dejeccions") }
+                            items(ui.entregues, key = { it.id }) { entrega ->
+                                EntregaPreparationCard(entrega)
+                            }
+                        }
+                    }
+
                     item {
-                        EmptyPreparationCard(
-                            title = "Sense dades ramaderes",
-                            body = "Aquest titular no te granges, censos ni entregues registrades ara mateix."
+                        SectionTitle(
+                            title = "Camps a revisar manualment",
+                            description = "Als PDFs reals hi ha camps finals que el MVP encara no calcula o no desa explicitament."
                         )
                     }
-                } else {
-                    if (ui.granges.isNotEmpty()) {
-                        item { SubsectionTitle("Granges") }
-                        items(ui.granges, key = { it.id }) { granja ->
-                            GranjaPreparationCard(granja)
-                        }
+
+                    item {
+                        ManualReviewCard()
                     }
-
-                    if (ui.granjaBestiar.isNotEmpty()) {
-                        item { SubsectionTitle("Cens per bestiar i fase") }
-                        items(ui.granjaBestiar, key = { it.id }) { registre ->
-                            GranjaBestiarPreparationCard(registre)
-                        }
-                    }
-
-                    if (ui.entregues.isNotEmpty()) {
-                        item { SubsectionTitle("Entregues de dejeccions") }
-                        items(ui.entregues, key = { it.id }) { entrega ->
-                            EntregaPreparationCard(entrega)
-                        }
-                    }
-                }
-
-                item {
-                    SectionTitle(
-                        title = "Camps a revisar manualment",
-                        description = "Als PDFs reals hi ha camps finals que el MVP encara no calcula o no desa explicitament."
-                    )
-                }
-
-                item {
-                    ManualReviewCard()
                 }
             }
         }
@@ -172,10 +225,10 @@ private fun TitularSummaryCard(ui: DanPreparationUiState) {
             Text(ui.titular?.nom_rao ?: "Titular", style = MaterialTheme.typography.titleMedium)
             Text("NIF: ${ui.titular?.nif ?: "-"}")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AssistChip(onClick = {}, label = { Text("${ui.campanyes.size} campanyes detectades") })
+                AssistChip(onClick = {}, label = { Text("${ui.availableCampanyes.size} campanyes detectades") })
                 AssistChip(
                     onClick = {},
-                    label = { Text(if (ui.campanyes.isEmpty()) "Sense campanya" else ui.campanyes.joinToString()) }
+                    label = { Text(if (ui.selectedCampanya == 0) "Sense campanya" else "Treballant ${ui.selectedCampanya}") }
                 )
             }
             Text(
@@ -183,6 +236,66 @@ private fun TitularSummaryCard(ui: DanPreparationUiState) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+private fun PreparationActionsCard(
+    onCopySummary: () -> Unit,
+    onCopyChecklist: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Sortida rapida", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(
+                "Pots copiar un resum estructurat o nomes la checklist final per enganxar-la a notes, correus o al flux extern de preparacio.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onCopySummary) { Text("Copiar resum") }
+                OutlinedButton(onClick = onCopyChecklist) { Text("Copiar checklist") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CampaignSelectorCard(
+    selectedCampanya: Int,
+    availableCampanyes: List<Int>,
+    onSelect: (Int) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Campanya de resum", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "Els totals de kg N, UF i entregues es calculen per la campanya seleccionada.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                availableCampanyes.forEach { campanya ->
+                    FilterChip(
+                        selected = campanya == selectedCampanya,
+                        onClick = { onSelect(campanya) },
+                        label = { Text(campanya.toString()) }
+                    )
+                }
+            }
         }
     }
 }
@@ -226,6 +339,24 @@ private fun SummaryMetrics(ui: DanPreparationUiState) {
             rightLabel = "Llistes revisio",
             rightValue = "1 bloc final"
         )
+    }
+}
+
+@Composable
+private fun AutomaticChecklistCard(ui: DanPreparationUiState) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text("Checklist automatica", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+            ui.automaticChecklistItems().forEach { item ->
+                Text("- $item", color = MaterialTheme.colorScheme.onTertiaryContainer)
+            }
+        }
     }
 }
 
@@ -287,7 +418,14 @@ private fun SubsectionTitle(title: String) {
 }
 
 @Composable
-private fun TerraPreparationCard(terra: DanPreparationTerraDto) {
+private fun TerraPreparationCard(
+    terra: DanPreparationTerraDto,
+    appliedKgN: Double,
+    kgNPerHa: Double?
+) {
+    val limitKgN = terra.limit_kg_n_ha ?: if (terra.zona == "ZV") 170.0 else 190.0
+    val totalAllowedKgN = terra.superficie?.let { it * limitKgN }
+    val remainingKgN = totalAllowedKgN?.minus(appliedKgN)
     Card(Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -295,10 +433,19 @@ private fun TerraPreparationCard(terra: DanPreparationTerraDto) {
         ) {
             Text("Recinte: ${terra.codi_sigpac_complet ?: terra.id}", style = MaterialTheme.typography.titleSmall)
             PreparationFieldRow("Municipi", terra.mun_codi ?: "-")
+            PreparationFieldRow("Municipi literal", terra.municipi_literal ?: "-")
             PreparationFieldRow("Poligon", terra.poligon?.toString() ?: "-")
             PreparationFieldRow("Parcela", terra.parcela?.toString() ?: "-")
             PreparationFieldRow("Recinte", terra.recinte?.toString() ?: "-")
+            PreparationFieldRow("Us SIGPAC", terra.us_sigpac ?: "-")
+            PreparationFieldRow("Cultiu", terra.cultiu ?: "-")
             PreparationFieldRow("ha", formatDecimal(terra.superficie))
+            PreparationFieldRow("Zona", terra.zona)
+            PreparationFieldRow("Limit kg N/ha", formatDecimal(limitKgN))
+            PreparationFieldRow("Kg N aplicats", formatDecimal(appliedKgN))
+            PreparationFieldRow("Kg N/ha campanya", formatDecimal(kgNPerHa))
+            PreparationFieldRow("Kg N totals permesos", formatDecimal(totalAllowedKgN))
+            PreparationFieldRow("Marge disponible", formatDecimal(remainingKgN))
         }
     }
 }
@@ -329,6 +476,10 @@ private fun AplicacioPreparationCard(
             PreparationFieldRow("Data", aplicacio.data ?: "-")
             PreparationFieldRow("Dia", dayFromDate(aplicacio.data))
             PreparationFieldRow("Mes", monthName(aplicacio.data))
+            PreparationFieldRow("Tipus fertilitzant", aplicacio.tipus_fertilitzant ?: "-")
+            PreparationFieldRow("Procedencia", aplicacio.procedencia ?: "-")
+            PreparationFieldRow("Volum m3", formatDecimal(aplicacio.volum_m3))
+            PreparationFieldRow("Kg N/m3", formatDecimal(aplicacio.kg_n_m3))
             PreparationFieldRow("UF", formatDecimal(aplicacio.uf))
             PreparationFieldRow("kg N", formatDecimal(aplicacio.kg_n))
             PreparationFieldRow("kg N/ha", formatDecimal(kgNPerHa))
@@ -403,7 +554,7 @@ private fun ManualReviewCard() {
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text("Comprovacions finals", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
-            Text("Agricola: revisar S/R, us SIGPAC, cultiu, ZV, tipus de fertilitzant, kg N/m3, origen i municipi literal.", color = MaterialTheme.colorScheme.onSecondaryContainer)
+            Text("Agricola: revisar S/R i qualsevol camp normatiu extern que encara no estigui modelat al sistema.", color = MaterialTheme.colorScheme.onSecondaryContainer)
             Text("Ramadera: revisar estat de lliurament, persona que presenta, nitrogen total a gestionar, balanc i estoc final.", color = MaterialTheme.colorScheme.onSecondaryContainer)
             Text("Si algun d'aquests camps es necessita de manera recurrent, ja tenim una base clara per una iteracio posterior mes orientada a la DAN final.", color = MaterialTheme.colorScheme.onSecondaryContainer)
         }

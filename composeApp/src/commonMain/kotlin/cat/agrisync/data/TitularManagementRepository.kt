@@ -29,7 +29,7 @@ internal class TitularManagementRepository(private val restClient: RestClient) {
 
     internal suspend fun listTerres(titularId: String? = null): List<TerraFullDto> {
         val filter = if (titularId != null) "&titular_id=eq.$titularId" else ""
-        val q = "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,superficie,created_at,updated_at,titular:titular_id(id,nom_rao,nif)&order=codi_sigpac_complet$filter"
+        val q = "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,created_at,updated_at,titular:titular_id(id,nom_rao,nif)&order=codi_sigpac_complet$filter"
         return restClient.get("terra", q)
     }
 
@@ -37,13 +37,13 @@ internal class TitularManagementRepository(private val restClient: RestClient) {
         val result: List<TerraFullDto> = restClient.post(
             "terra",
             body,
-            "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,superficie,created_at,updated_at,titular:titular_id(id,nom_rao,nif)"
+            "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,created_at,updated_at,titular:titular_id(id,nom_rao,nif)"
         )
         return result.first()
     }
 
     internal suspend fun updateTerra(terraId: String, body: TerraUpdateFullRequest): TerraFullDto {
-        val q = "?id=eq.$terraId&select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,superficie,created_at,updated_at,titular:titular_id(id,nom_rao,nif)"
+        val q = "?id=eq.$terraId&select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,created_at,updated_at,titular:titular_id(id,nom_rao,nif)"
         val result: List<TerraFullDto> = restClient.patch("terra", body, q)
         return result.first()
     }
@@ -64,7 +64,12 @@ data class TerraFullDto(
     val parcela: Int? = null,
     val recinte: Int? = null,
     val codi_sigpac_complet: String? = null,
+    val municipi_literal: String? = null,
+    val us_sigpac: String? = null,
+    val cultiu: String? = null,
     val superficie: Double? = null,
+    val zona: String = "ZNV",
+    val limit_kg_n_ha: Double? = null,
     val created_at: String? = null,
     val updated_at: String? = null,
     val titular: TitularRefDto? = null
@@ -84,12 +89,20 @@ data class TerraCreateRequest(
     val poligon: Int,
     val parcela: Int,
     val recinte: Int,
-    val superficie: Double
+    val municipi_literal: String? = null,
+    val us_sigpac: String? = null,
+    val cultiu: String? = null,
+    val superficie: Double,
+    val zona: String = "ZNV"
 )
 
 @Serializable
 data class TerraUpdateFullRequest(
     val titular_id: String? = null,
-    val superficie: Double? = null
+    val municipi_literal: String? = null,
+    val us_sigpac: String? = null,
+    val cultiu: String? = null,
+    val superficie: Double? = null,
+    val zona: String? = null
 )
 

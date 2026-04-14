@@ -35,7 +35,7 @@ internal class RamaderRepository(private val restClient: RestClient) {
     }
 
     internal suspend fun listTerres(titularId: String): List<TerraDto> {
-        val q = "?select=id,titular_id,codi_sigpac_complet,superficie,updated_at,updated_by&titular_id=eq.$titularId&order=updated_at.desc"
+        val q = "?select=id,titular_id,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,updated_at,updated_by&titular_id=eq.$titularId&order=updated_at.desc"
         return restClient.get("terra", q)
     }
 
@@ -71,24 +71,29 @@ internal class RamaderRepository(private val restClient: RestClient) {
         restClient.delete("granja_bestiar", "?id=eq.$id")
     }
 
-    internal suspend fun listEntreguesByTitular(titularId: String): List<EntregaDejeccioDto> {
-        val danIds = listDanIdsByTitular(titularId)
-        if (danIds.isEmpty()) return emptyList()
-
-        val ids = danIds.joinToString(separator = ",")
-        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)&dan_id=in.($ids)&order=data.desc"
+    internal suspend fun listEntreguesByTitular(titularId: String, campanya: Int): List<EntregaDejeccioDto> {
+        val dan = findDanByCampanya(titularId, campanya) ?: return emptyList()
+        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)&dan_id=eq.${dan.id}&order=data.desc"
         return restClient.get("entrega_dejeccions", q)
+    }
+
+    internal suspend fun listCampanyesByTitular(titularId: String): List<Int> {
+        return listDansByTitular(titularId)
+            .mapNotNull { it.campanya }
+            .distinct()
+            .sortedDescending()
     }
 
     internal suspend fun createEntrega(
         titularId: String,
+        campanya: Int,
         granjaOrigenId: String,
         data: String,
         quantitat: Double,
         terraDestiId: String? = null,
         receptorTitularId: String? = null
     ): EntregaDejeccioDto {
-        val dan = getOrCreateDan(titularId)
+        val dan = getOrCreateDan(titularId, campanya)
         val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)"
         val result: List<EntregaDejeccioDto> = restClient.post(
             "entrega_dejeccions",
@@ -114,27 +119,24 @@ internal class RamaderRepository(private val restClient: RestClient) {
         restClient.delete("entrega_dejeccions", "?id=eq.$id")
     }
 
-    private suspend fun getOrCreateDan(titularId: String): DanRefDto {
-        val existing = listDansByTitular(titularId)
-            .sortedByDescending { it.campanya ?: 0 }
-            .firstOrNull()
+    private suspend fun getOrCreateDan(titularId: String, campanya: Int): DanRefDto {
+        val existing = findDanByCampanya(titularId, campanya)
         if (existing != null) return existing
 
-        val currentYear = PlatformDateTime.currentYear()
         val q = "?select=id,titular_id,campanya"
         val result: List<DanRefDto> = restClient.post(
             "dan_declaracio",
             DanCreateRequest(
                 titular_id = titularId,
-                campanya = currentYear
+                campanya = campanya
             ),
             q
         )
         return result.first()
     }
 
-    private suspend fun listDanIdsByTitular(titularId: String): List<String> {
-        return listDansByTitular(titularId).map { it.id }
+    private suspend fun findDanByCampanya(titularId: String, campanya: Int): DanRefDto? {
+        return listDansByTitular(titularId).firstOrNull { it.campanya == campanya }
     }
 
     private suspend fun listDansByTitular(titularId: String): List<DanRefDto> {

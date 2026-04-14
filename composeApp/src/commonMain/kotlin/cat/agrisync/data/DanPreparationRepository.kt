@@ -11,17 +11,21 @@ internal class DanPreparationRepository(private val restClient: RestClient) {
     }
 
     internal suspend fun listTerres(titularId: String): List<DanPreparationTerraDto> {
-        val q = "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,superficie&titular_id=eq.$titularId&order=codi_sigpac_complet"
+        val q = "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha&titular_id=eq.$titularId&order=codi_sigpac_complet"
         return restClient.get("terra", q)
     }
 
-    internal suspend fun listAplicacionsByTitular(titularId: String): List<DanPreparationAplicacioDto> {
-        val danIds = listDanIdsByTitular(titularId)
-        if (danIds.isEmpty()) return emptyList()
-
-        val ids = danIds.joinToString(separator = ",")
-        val q = "?select=id,data,kg_n,uf,terra:terra_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,superficie),dan:dan_id(id,titular_id,campanya)&dan_id=in.($ids)&order=data.desc"
+    internal suspend fun listAplicacionsByTitular(titularId: String, campanya: Int): List<DanPreparationAplicacioDto> {
+        val dan = findDanByCampanya(titularId, campanya) ?: return emptyList()
+        val q = "?select=id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,uf,terra:terra_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha),dan:dan_id(id,titular_id,campanya)&dan_id=eq.${dan.id}&order=data.desc"
         return restClient.get("aplicacions_fertilitzants", q)
+    }
+
+    internal suspend fun listCampanyesByTitular(titularId: String): List<Int> {
+        return listDansByTitular(titularId)
+            .mapNotNull { it.campanya }
+            .distinct()
+            .sortedDescending()
     }
 
     internal suspend fun listGranges(titularId: String): List<GranjaDto> {
@@ -38,23 +42,20 @@ internal class DanPreparationRepository(private val restClient: RestClient) {
         return restClient.get("granja_bestiar", q)
     }
 
-    internal suspend fun listEntreguesByTitular(titularId: String): List<DanPreparationEntregaDto> {
-        val danIds = listDanIdsByTitular(titularId)
-        if (danIds.isEmpty()) return emptyList()
-
-        val ids = danIds.joinToString(separator = ",")
-        val q = "?select=id,data,quantitat,granja_origen:granja_origen_id(id,titular_id,marca_oficial,nom),receptor_titular:receptor_titular_id(id,nif,nom_rao),terra_desti:terra_desti_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,superficie),dan:dan_id(id,titular_id,campanya)&dan_id=in.($ids)&order=data.desc"
+    internal suspend fun listEntreguesByTitular(titularId: String, campanya: Int): List<DanPreparationEntregaDto> {
+        val dan = findDanByCampanya(titularId, campanya) ?: return emptyList()
+        val q = "?select=id,data,quantitat,granja_origen:granja_origen_id(id,titular_id,marca_oficial,nom),receptor_titular:receptor_titular_id(id,nif,nom_rao),terra_desti:terra_desti_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha),dan:dan_id(id,titular_id,campanya)&dan_id=eq.${dan.id}&order=data.desc"
         return restClient.get("entrega_dejeccions", q)
     }
 
-    private suspend fun listDanIdsByTitular(titularId: String): List<String> {
-        val q = "?select=id&titular_id=eq.$titularId"
-        val rows: List<DanIdRow> = restClient.get("dan_declaracio", q)
-        return rows.map { it.id }
+    private suspend fun findDanByCampanya(titularId: String, campanya: Int): DanRefDto? {
+        return listDansByTitular(titularId).firstOrNull { it.campanya == campanya }
     }
 
-    @Serializable
-    private data class DanIdRow(val id: String)
+    private suspend fun listDansByTitular(titularId: String): List<DanRefDto> {
+        val q = "?select=id,titular_id,campanya&titular_id=eq.$titularId&order=campanya.desc"
+        return restClient.get("dan_declaracio", q)
+    }
 }
 
 @Serializable
@@ -66,13 +67,22 @@ internal data class DanPreparationTerraDto(
     val parcela: Int? = null,
     val recinte: Int? = null,
     val codi_sigpac_complet: String? = null,
-    val superficie: Double? = null
+    val municipi_literal: String? = null,
+    val us_sigpac: String? = null,
+    val cultiu: String? = null,
+    val superficie: Double? = null,
+    val zona: String = "ZNV",
+    val limit_kg_n_ha: Double? = null
 )
 
 @Serializable
 internal data class DanPreparationAplicacioDto(
     val id: String,
     val data: String? = null,
+    val tipus_fertilitzant: String? = null,
+    val procedencia: String? = null,
+    val volum_m3: Double? = null,
+    val kg_n_m3: Double? = null,
     val kg_n: Double? = null,
     val uf: Double? = null,
     val terra: DanPreparationTerraDto? = null,

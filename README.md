@@ -81,6 +81,8 @@ Actualment el projecte ja disposa de:
 - Mòdul de titulars
 - Mòdul agrícola
 - Mòdul ramader
+- Pantalla `Preparar DAN` amb resum unificat per titular i campanya
+- Còpia ràpida al porta-retalls del resum DAN i de la checklist final
 - Pantalles de gestió per oficines, tècnics, titulars i terres
 - Alta i baixa de dades principals directament dins dels mòduls
 
@@ -109,6 +111,9 @@ Aplicacio KMP + Compose Desktop connectada a Supabase amb:
 - Sessio persistent local (Desktop) + refresh automàtic de token
 - Home de titulars carregada directament des de `titular` + `tecnic_titular`
 - Navegacio simple: `Login` -> `Titulars` -> `Modul Agricola` / `Modul Ramader`
+- Treball per campanya a `Modul Agricola`, `Modul Ramader` i `Preparar DAN`
+- Resum DAN amb dades agricoles i ramaderes en una sola pantalla
+- Còpia estructurada del resum i de la checklist des de `Preparar DAN`
 - Pantalla `El meu perfil` (nom, rol, oficina, email)
 - Gestio de `Oficines`, `Tecnics`, `Titulars` i `Terres`
 - Errors visibles per casos de permisos RLS (`401/403`)

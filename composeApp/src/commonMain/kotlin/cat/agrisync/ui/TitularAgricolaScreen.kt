@@ -21,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -91,6 +92,14 @@ internal fun TitularAgricolaScreen(
                     }
 
                     item {
+                        CampaignSelectorCard(
+                            selectedCampanya = ui.selectedCampanya,
+                            availableCampanyes = ui.availableCampanyes,
+                            onSelect = viewModel::onSelectCampanya
+                        )
+                    }
+
+                    item {
                         SectionHeader(
                             title = "Terres",
                             description = "Parcel·les i recintes associats al titular.",
@@ -107,10 +116,16 @@ internal fun TitularAgricolaScreen(
                         }
                     } else {
                         items(ui.terres, key = { it.id }) { terra ->
+                            val kgNAplicat = ui.aplicacions
+                                .filter { it.dan?.campanya == ui.selectedCampanya && it.terra_id == terra.id }
+                                .sumOf { it.kg_n ?: 0.0 }
                             EditableTerraCard(
                                 terra = terra,
+                                appliedKgN = kgNAplicat,
                                 actorLabel = ui.actorLabels[terra.updated_by],
-                                onSave = { superficie -> viewModel.updateTerra(terra.id, superficie) },
+                                onSave = { superficie, zona, municipiLiteral, usSigpac, cultiu ->
+                                    viewModel.updateTerra(terra.id, superficie, zona, municipiLiteral, usSigpac, cultiu)
+                                },
                                 onDelete = { pendingDeleteTerraId = terra.id }
                             )
                         }
@@ -138,7 +153,9 @@ internal fun TitularAgricolaScreen(
                             EditableAplicacioCard(
                                 app = app,
                                 actorLabel = ui.actorLabels[app.updated_by],
-                                onSave = { data, kgN, uf -> viewModel.updateAplicacio(app.id, data, kgN, uf) },
+                                onSave = { data, kgN, uf, tipus, procedencia, volum, kgNM3 ->
+                                    viewModel.updateAplicacio(app.id, data, kgN, uf, tipus, procedencia, volum, kgNM3)
+                                },
                                 onDelete = { pendingDeleteAplicacioId = app.id }
                             )
                         }
@@ -149,8 +166,8 @@ internal fun TitularAgricolaScreen(
 
         if (showCreateTerraDialog) {
             CreateTerraDialog(
-                onConfirm = { munCodi, poligon, parcela, recinte, superficie ->
-                    if (viewModel.createTerra(munCodi, poligon, parcela, recinte, superficie)) {
+                onConfirm = { munCodi, poligon, parcela, recinte, superficie, zona, municipiLiteral, usSigpac, cultiu ->
+                    if (viewModel.createTerra(munCodi, poligon, parcela, recinte, superficie, zona, municipiLiteral, usSigpac, cultiu)) {
                         showCreateTerraDialog = false
                     }
                 },
@@ -161,8 +178,9 @@ internal fun TitularAgricolaScreen(
         if (showCreateAplicacioDialog) {
             CreateAplicacioDialog(
                 terres = ui.terres,
-                onConfirm = { terraId, data, kgN, uf ->
-                    if (viewModel.createAplicacio(terraId, data, kgN, uf)) {
+                selectedCampanya = ui.selectedCampanya,
+                onConfirm = { terraId, data, kgN, uf, tipus, procedencia, volum, kgNM3 ->
+                    if (viewModel.createAplicacio(terraId, data, kgN, uf, tipus, procedencia, volum, kgNM3)) {
                         showCreateAplicacioDialog = false
                     }
                 },
@@ -194,6 +212,36 @@ internal fun TitularAgricolaScreen(
                 },
                 onDismiss = { pendingDeleteAplicacioId = null }
             )
+        }
+    }
+}
+
+@Composable
+private fun CampaignSelectorCard(
+    selectedCampanya: Int,
+    availableCampanyes: List<Int>,
+    onSelect: (Int) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Campanya de treball", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "Les aplicacions i els calculs es mostren per la campanya seleccionada.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                availableCampanyes.forEach { campanya ->
+                    FilterChip(
+                        selected = campanya == selectedCampanya,
+                        onClick = { onSelect(campanya) },
+                        label = { Text(campanya.toString()) }
+                    )
+                }
+            }
         }
     }
 }
@@ -263,24 +311,49 @@ private fun EditableTitularCard(
 @Composable
 private fun EditableTerraCard(
     terra: TerraDto,
+    appliedKgN: Double,
     actorLabel: String?,
-    onSave: (String) -> Boolean,
+    onSave: (String, String, String, String, String) -> Boolean,
     onDelete: () -> Unit
 ) {
     var editing by remember { mutableStateOf(false) }
     var superficie by remember(terra.id, terra.superficie) { mutableStateOf((terra.superficie ?: 0.0).toString()) }
+    var zona by remember(terra.id, terra.zona) { mutableStateOf(terra.zona) }
+    var municipiLiteral by remember(terra.id, terra.municipi_literal) { mutableStateOf(terra.municipi_literal ?: "") }
+    var usSigpac by remember(terra.id, terra.us_sigpac) { mutableStateOf(terra.us_sigpac ?: "") }
+    var cultiu by remember(terra.id, terra.cultiu) { mutableStateOf(terra.cultiu ?: "") }
+    val limitKgN = terra.limit_kg_n_ha ?: if (terra.zona == "ZV") 170.0 else 190.0
+    val kgNPerHa = terra.superficie?.takeIf { it > 0.0 }?.let { appliedKgN / it }
+    val margeDisponible = terra.superficie?.let { it * limitKgN - appliedKgN }
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(terra.codi_sigpac_complet ?: terra.id, style = MaterialTheme.typography.bodyLarge)
             if (editing) {
                 OutlinedTextField(value = superficie, onValueChange = { superficie = it }, label = { Text("Superficie (ha)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = municipiLiteral, onValueChange = { municipiLiteral = it }, label = { Text("Municipi literal") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = usSigpac, onValueChange = { usSigpac = it }, label = { Text("Us SIGPAC") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = cultiu, onValueChange = { cultiu = it }, label = { Text("Cultiu") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                ZonaSelector(zona = zona, onZonaChange = { zona = it })
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { if (onSave(superficie)) editing = false }) { Text("Guardar") }
-                    OutlinedButton(onClick = { superficie = (terra.superficie ?: 0.0).toString(); editing = false }) { Text("Cancel·lar") }
+                    Button(onClick = { if (onSave(superficie, zona, municipiLiteral, usSigpac, cultiu)) editing = false }) { Text("Guardar") }
+                    OutlinedButton(onClick = {
+                        superficie = (terra.superficie ?: 0.0).toString()
+                        zona = terra.zona
+                        municipiLiteral = terra.municipi_literal ?: ""
+                        usSigpac = terra.us_sigpac ?: ""
+                        cultiu = terra.cultiu ?: ""
+                        editing = false
+                    }) { Text("Cancel·lar") }
                 }
             } else {
                 Text("Superficie: ${terra.superficie ?: 0.0} ha")
+                Text("Zona: ${terra.zona} · Limit: ${formatKgN(limitKgN)} kg N/ha/any")
+                Text("Municipi: ${terra.municipi_literal ?: "-"}")
+                Text("Us SIGPAC: ${terra.us_sigpac ?: "-"} · Cultiu: ${terra.cultiu ?: "-"}")
+                Text("Aplicat campanya: ${formatKgN(appliedKgN)} kg N")
+                Text("Kg N/ha campanya: ${formatKgN(kgNPerHa)}")
+                Text("Marge disponible: ${formatKgN(margeDisponible)} kg N")
                 AuditInfoBlock(
                     updatedAt = terra.updated_at,
                     updatedByLabel = actorLabel,
@@ -299,30 +372,51 @@ private fun EditableTerraCard(
 private fun EditableAplicacioCard(
     app: AplicacioFertilitzantDto,
     actorLabel: String?,
-    onSave: (String, String, String) -> Boolean,
+    onSave: (String, String, String, String, String, String, String) -> Boolean,
     onDelete: () -> Unit
 ) {
     var editing by remember { mutableStateOf(false) }
     var data by remember(app.id, app.data) { mutableStateOf(app.data ?: "") }
     var kgN by remember(app.id, app.kg_n) { mutableStateOf((app.kg_n ?: 0.0).toString()) }
     var uf by remember(app.id, app.uf) { mutableStateOf((app.uf ?: 0.0).toString()) }
+    var tipusFertilitzant by remember(app.id, app.tipus_fertilitzant) { mutableStateOf(app.tipus_fertilitzant ?: "") }
+    var procedencia by remember(app.id, app.procedencia) { mutableStateOf(app.procedencia ?: "") }
+    var volumM3 by remember(app.id, app.volum_m3) { mutableStateOf(app.volum_m3?.toString() ?: "") }
+    var kgNM3 by remember(app.id, app.kg_n_m3) { mutableStateOf(app.kg_n_m3?.toString() ?: "") }
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Campanya: ${app.dan?.campanya ?: "-"}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             if (editing) {
                 OutlinedTextField(value = data, onValueChange = { data = it }, label = { Text("Data (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = tipusFertilitzant, onValueChange = { tipusFertilitzant = it }, label = { Text("Tipus fertilitzant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = procedencia, onValueChange = { procedencia = it }, label = { Text("Procedencia") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = kgN, onValueChange = { kgN = it }, label = { Text("Kg N") }, singleLine = true, modifier = Modifier.weight(1f))
                     OutlinedTextField(value = uf, onValueChange = { uf = it }, label = { Text("UF") }, singleLine = true, modifier = Modifier.weight(1f))
                 }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = volumM3, onValueChange = { volumM3 = it }, label = { Text("Volum m3") }, singleLine = true, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = kgNM3, onValueChange = { kgNM3 = it }, label = { Text("Kg N/m3") }, singleLine = true, modifier = Modifier.weight(1f))
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { if (onSave(data, kgN, uf)) editing = false }) { Text("Guardar") }
-                    OutlinedButton(onClick = { data = app.data ?: ""; kgN = (app.kg_n ?: 0.0).toString(); uf = (app.uf ?: 0.0).toString(); editing = false }) { Text("Cancel·lar") }
+                    Button(onClick = { if (onSave(data, kgN, uf, tipusFertilitzant, procedencia, volumM3, kgNM3)) editing = false }) { Text("Guardar") }
+                    OutlinedButton(onClick = {
+                        data = app.data ?: ""
+                        kgN = (app.kg_n ?: 0.0).toString()
+                        uf = (app.uf ?: 0.0).toString()
+                        tipusFertilitzant = app.tipus_fertilitzant ?: ""
+                        procedencia = app.procedencia ?: ""
+                        volumM3 = app.volum_m3?.toString() ?: ""
+                        kgNM3 = app.kg_n_m3?.toString() ?: ""
+                        editing = false
+                    }) { Text("Cancel·lar") }
                 }
             } else {
                 Text("Data: ${app.data ?: "-"}")
                 Text("Kg N: ${app.kg_n ?: 0.0} · UF: ${app.uf ?: 0.0}")
+                Text("Tipus: ${app.tipus_fertilitzant ?: "-"} · Procedencia: ${app.procedencia ?: "-"}")
+                Text("Volum m3: ${app.volum_m3 ?: "-"} · Kg N/m3: ${app.kg_n_m3 ?: "-"}")
                 AuditInfoBlock(
                     updatedAt = app.updated_at,
                     updatedByLabel = actorLabel,
@@ -339,7 +433,7 @@ private fun EditableAplicacioCard(
 
 @Composable
 private fun CreateTerraDialog(
-    onConfirm: (String, String, String, String, String) -> Unit,
+    onConfirm: (String, String, String, String, String, String, String, String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var munCodi by remember { mutableStateOf("") }
@@ -347,6 +441,10 @@ private fun CreateTerraDialog(
     var parcela by remember { mutableStateOf("") }
     var recinte by remember { mutableStateOf("") }
     var superficie by remember { mutableStateOf("") }
+    var zona by remember { mutableStateOf("ZNV") }
+    var municipiLiteral by remember { mutableStateOf("") }
+    var usSigpac by remember { mutableStateOf("") }
+    var cultiu by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -362,11 +460,15 @@ private fun CreateTerraDialog(
                 OutlinedTextField(value = poligon, onValueChange = { poligon = it }, label = { Text("Poligon") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = parcela, onValueChange = { parcela = it }, label = { Text("Parcela") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = recinte, onValueChange = { recinte = it }, label = { Text("Recinte") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = municipiLiteral, onValueChange = { municipiLiteral = it }, label = { Text("Municipi literal") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = usSigpac, onValueChange = { usSigpac = it }, label = { Text("Us SIGPAC") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = cultiu, onValueChange = { cultiu = it }, label = { Text("Cultiu") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = superficie, onValueChange = { superficie = it }, label = { Text("Superficie (ha)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                ZonaSelector(zona = zona, onZonaChange = { zona = it })
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(munCodi, poligon, parcela, recinte, superficie) }) { Text("Crear") }
+            Button(onClick = { onConfirm(munCodi, poligon, parcela, recinte, superficie, zona, municipiLiteral, usSigpac, cultiu) }) { Text("Crear") }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) { Text("Cancel·lar") }
@@ -375,15 +477,48 @@ private fun CreateTerraDialog(
 }
 
 @Composable
+private fun ZonaSelector(
+    zona: String,
+    onZonaChange: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Zona nitrogen", style = MaterialTheme.typography.labelMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = zona == "ZNV",
+                onClick = { onZonaChange("ZNV") },
+                label = { Text("ZNV · 190") }
+            )
+            FilterChip(
+                selected = zona == "ZV",
+                onClick = { onZonaChange("ZV") },
+                label = { Text("ZV · 170") }
+            )
+        }
+    }
+}
+
+private fun formatKgN(value: Double?): String {
+    if (value == null) return "-"
+    val rounded = kotlin.math.round(value * 100) / 100
+    return rounded.toString().replace('.', ',')
+}
+
+@Composable
 private fun CreateAplicacioDialog(
     terres: List<TerraDto>,
-    onConfirm: (String, String, String, String) -> Unit,
+    selectedCampanya: Int,
+    onConfirm: (String, String, String, String, String, String, String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var selectedTerraId by remember(terres) { mutableStateOf(terres.firstOrNull()?.id ?: "") }
     var data by remember { mutableStateOf("") }
     var kgN by remember { mutableStateOf("") }
     var uf by remember { mutableStateOf("") }
+    var tipusFertilitzant by remember { mutableStateOf("") }
+    var procedencia by remember { mutableStateOf("") }
+    var volumM3 by remember { mutableStateOf("") }
+    var kgNM3 by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -401,19 +536,33 @@ private fun CreateAplicacioDialog(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Text(
+                        "Campanya activa: $selectedCampanya",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                     TerraDropdown(
                         terres = terres,
                         selectedId = selectedTerraId,
                         onSelect = { selectedTerraId = it }
                     )
                     OutlinedTextField(value = data, onValueChange = { data = it }, label = { Text("Data (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = tipusFertilitzant, onValueChange = { tipusFertilitzant = it }, label = { Text("Tipus fertilitzant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = procedencia, onValueChange = { procedencia = it }, label = { Text("Procedencia") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = kgN, onValueChange = { kgN = it }, label = { Text("Kg N") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = uf, onValueChange = { uf = it }, label = { Text("UF") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = volumM3, onValueChange = { volumM3 = it }, label = { Text("Volum m3") }, singleLine = true, modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = kgNM3, onValueChange = { kgNM3 = it }, label = { Text("Kg N/m3") }, singleLine = true, modifier = Modifier.weight(1f))
+                    }
                 }
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(selectedTerraId, data, kgN, uf) }, enabled = terres.isNotEmpty()) { Text("Crear") }
+            Button(
+                onClick = { onConfirm(selectedTerraId, data, kgN, uf, tipusFertilitzant, procedencia, volumM3, kgNM3) },
+                enabled = terres.isNotEmpty()
+            ) { Text("Crear") }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) { Text("Cancel·lar") }

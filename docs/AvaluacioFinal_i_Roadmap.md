@@ -10,7 +10,7 @@ La conclusio actual és aquesta:
 
 - sí, el projecte compleix bé els objectius principals del MVP
 - sí, es pot defensar com a projecte funcional i coherent
-- sí, després de les iteracions 1, 2, 3, 4 i 5 ha quedat més sòlid, més complet i més presentable
+- sí, després de les iteracions 1, 2, 3, 4, 5 i 6 ha quedat més sòlid, més complet i més presentable
 - el que queda ara és sobretot tancament fi i valor afegit opcional, no mancances greus del nucli ni de l'experiència bàsica d'ús
 
 En altres paraules:
@@ -41,6 +41,7 @@ Actualment el projecte ja resol bé aquests punts:
 - estats buits, errors i textos d'ajuda més coherents a les pantalles principals
 - pantalla de resum per titular orientada a la preparació de la DAN real
 - càlculs derivats visibles per ajudar en la revisió abans de presentar
+- còpia ràpida al porta-retalls del resum DAN i de la checklist de revisió
 
 Per tant, el nucli del projecte, la part administrativa, la part operativa principal i la UX essencial ja estan assolits.
 
@@ -67,7 +68,7 @@ Per què:
 
 Encara hi ha millores clares:
 
-- exportació o impressió del resum DAN
+- exportació a fitxer o impressió del resum DAN
 - modelatge de més camps finals de les DAN reals
 - eliminació de dependència de `service_role` al client
 - utilitats de còpia ràpida o importació des de fulls de càlcul
@@ -80,7 +81,14 @@ Estat: resolt a la iteració 1.
 
 ### 5.2. Fallback de login amb `service_role`
 
-Estat: resolt a la iteració 1.
+Estat: resolt en el flux principal a la iteració 1, pero es mante un fallback tecnic de recuperacio.
+
+Matís actual:
+
+- el login normal ja no depen de `service_role`
+- la ruta principal passa per Supabase Auth i `get_my_tecnic()`
+- encara existeix un fallback tecnic per email amb `service_role` si cal autocorregir un `user_id` desalineat
+- aquest fallback s'entén com a mecanisme de recuperacio, no com a cami normal del login
 
 ### 5.3. Guardats invàlids que podien acabar en `0`
 
@@ -121,9 +129,11 @@ Ja el pots defensar com a MVP acadèmic ben tancat.
 
 ### Si vols continuar evolucionant-lo
 
-La següent iteració amb més valor ara és la 6:
+Les següents línies amb més valor ara són:
 
-- exportació, automatització parcial o reducció de dependències d'administració
+- balanc ramader més complet
+- reducció de dependències de `service_role`
+- exportació a fitxer com a ampliació futura opcional
 
 ## 7. Estat del roadmap
 
@@ -201,7 +211,7 @@ Nota sobre BDD:
 
 ### Iteracio 6: Tancament opcional de nivell alt
 
-Estat: opcional futura.
+Estat: completada en versio MVP.
 
 Objectiu:
 
@@ -214,16 +224,32 @@ Tasques possibles:
 - separar les operacions administratives del client per poder prescindir de `service_role` a l'executable
 - estudiar una petita importació des de full de càlcul
 
+S'ha fet en aquesta iteracio:
+
+- afegir una checklist automàtica de completitud dins de `Preparar DAN`
+- afegir botons per copiar al porta-retalls el resum DAN estructurat i la checklist
+- deixar la sortida preparada per enganxar-la en notes, correus o al flux extern de declaració
+
+Resultat:
+
+- el tècnic pot sortir del resum amb una síntesi reutilitzable sense reescriure dades a mà
+- la defensa guanya un tancament més clar perquè el MVP ja té una "sortida final" funcional
+
+El que continua pendent si es vol pujar encara més el nivell:
+
+- exportació real a fitxer o PDF
+- més camps finals de DAN totalment modelats
+
 ## 8. Quines millores faria jo abans d'una entrega encara més forta
 
 Ara mateix prioritzaria exactament això:
 
-1. afegir exportació o còpia ràpida del resum DAN
-2. decidir si cal modelar algun camp final més dels PDFs reals
-3. valorar si vols conservar o no la gestió administrativa completa dins del client
+1. decidir si cal modelar algun camp final més dels PDFs reals
+2. valorar si vols conservar o no la gestió administrativa completa dins del client
+3. deixar l'exportació real a fitxer o PDF com a ampliació futura separada
 
 ## 9. Resum final
 
-El projecte, en l'estat actual, compleix bé els objectius del MVP i es pot defensar amb criteri com a projecte final de curs funcional. Les iteracions 1, 2, 3, 4 i 5 han reforçat els punts que feien més mal: seguretat bàsica, validació, administració, operativa real dels mòduls, experiència d'usuari i connexió directa amb el procés real de preparació de la DAN.
+El projecte, en l'estat actual, compleix bé els objectius del MVP i es pot defensar amb criteri com a projecte final de curs funcional. Les iteracions 1, 2, 3, 4, 5 i 6 han reforçat els punts que feien més mal: seguretat bàsica, validació, administració, operativa real dels mòduls, experiència d'usuari, connexió directa amb el procés real de preparació de la DAN i sortida ràpida del resum final.
 
 A partir d'aquí, el que queda ja no és tapar mancances crítiques, sinó decidir si vols invertir una última iteració en automatització, exportació o refinament de producte.

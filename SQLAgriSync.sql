@@ -15,9 +15,23 @@ drop function if exists public.current_oficina_id() cascade;
 drop function if exists public.is_admin() cascade;
 drop function if exists public.is_oficina_manager() cascade;
 drop function if exists public.same_oficina(uuid) cascade;
+drop function if exists public.can_manage_office_titular(uuid) cascade;
 drop function if exists public.can_read_titular(uuid) cascade;
 drop function if exists public.can_write_agricola(uuid) cascade;
 drop function if exists public.can_write_ramader(uuid) cascade;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_proc
+    where pronamespace = 'public'::regnamespace
+      and proname = 'can_self_update_tecnic'
+  ) then
+    execute 'drop function if exists public.can_self_update_tecnic(uuid, uuid, uuid, public.rol_global, boolean) cascade';
+  end if;
+end
+$$;
 
 do $$
 begin
@@ -47,6 +61,7 @@ drop table if exists public.oficina cascade;
 
 drop type if exists public.scope_titular cascade;
 drop type if exists public.rol_global cascade;
+drop type if exists public.zona_nitrogen cascade;
 
 create extension if not exists pgcrypto;
 
@@ -56,6 +71,7 @@ create extension if not exists pgcrypto;
 
 create type public.rol_global as enum ('admin', 'oficina_manager', 'tecnic', 'lectura');
 create type public.scope_titular as enum ('comu', 'agricola', 'ramader', 'lectura');
+create type public.zona_nitrogen as enum ('ZV', 'ZNV');
 
 -- =========================================================
 -- 2) HELPERS D'AUDITORIA
@@ -155,7 +171,17 @@ create table public.terra (
   codi_sigpac_complet text generated always as (
     mun_codi || ':0:0:' || poligon::text || ':' || parcela::text || ':' || recinte::text
   ) stored,
+  municipi_literal text,
+  us_sigpac text,
+  cultiu text,
   superficie numeric not null check (superficie >= 0),
+  zona public.zona_nitrogen not null default 'ZNV',
+  limit_kg_n_ha numeric generated always as (
+    case
+      when zona = 'ZV'::public.zona_nitrogen then 170
+      else 190
+    end
+  ) stored,
   created_at timestamptz not null default now(),
   created_by uuid,
   updated_at timestamptz not null default now(),
@@ -168,6 +194,10 @@ create table public.aplicacions_fertilitzants (
   dan_id uuid not null references public.dan_declaracio(id) on delete cascade,
   terra_id uuid not null references public.terra(id) on delete restrict,
   data date not null,
+  tipus_fertilitzant text,
+  procedencia text,
+  volum_m3 numeric check (volum_m3 is null or volum_m3 >= 0),
+  kg_n_m3 numeric check (kg_n_m3 is null or kg_n_m3 >= 0),
   kg_n numeric not null default 0 check (kg_n >= 0),
   uf numeric not null default 0 check (uf >= 0),
   tecnic_id uuid references public.tecnic(id) on delete set null,
@@ -358,6 +388,57 @@ as $$
   );
 $$;
 
+create or replace function public.can_self_update_tecnic(
+  p_tecnic_id uuid,
+  p_user_id uuid,
+  p_oficina_id uuid,
+  p_rol public.rol_global,
+  p_actiu boolean
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.tecnic t
+    where t.id = p_tecnic_id
+      and t.user_id = auth.uid()
+      and t.user_id is not distinct from p_user_id
+      and t.oficina_id = p_oficina_id
+      and t.rol = p_rol
+      and t.actiu = p_actiu
+  );
+$$;
+
+create or replace function public.can_manage_office_titular(p_titular_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.titular ti
+    where ti.id = p_titular_id
+      and (
+        ti.created_by = auth.uid()
+        or exists (
+          select 1
+          from public.tecnic_titular tt
+          join public.tecnic t on t.id = tt.tecnic_id
+          where tt.titular_id = p_titular_id
+            and tt.actiu = true
+            and t.actiu = true
+            and t.oficina_id = public.current_oficina_id()
+        )
+      )
+  );
+$$;
+
 create or replace function public.can_read_titular(p_titular_id uuid)
 returns boolean
 language sql
@@ -367,7 +448,7 @@ set search_path = public
 as $$
   select
     public.is_admin()
-    or public.is_oficina_manager()
+    or (public.is_oficina_manager() and public.can_manage_office_titular(p_titular_id))
     or exists (
       select 1
       from public.tecnic_titular tt
@@ -388,7 +469,7 @@ set search_path = public
 as $$
   select
     public.is_admin()
-    or public.is_oficina_manager()
+    or (public.is_oficina_manager() and public.can_manage_office_titular(p_titular_id))
     or exists (
       select 1
       from public.tecnic_titular tt
@@ -422,6 +503,7 @@ as $$
 $$;
 
 grant execute on function public.get_my_tecnic() to authenticated;
+grant execute on function public.can_self_update_tecnic(uuid, uuid, uuid, public.rol_global, boolean) to authenticated;
 
 -- =========================================================
 -- 6) GRANTS
@@ -496,12 +578,12 @@ for update to authenticated
 using (
   public.is_admin()
   or (public.is_oficina_manager() and public.same_oficina(tecnic.id))
-  or tecnic.user_id = auth.uid()
+  or public.can_self_update_tecnic(tecnic.id, tecnic.user_id, tecnic.oficina_id, tecnic.rol, tecnic.actiu)
 )
 with check (
   public.is_admin()
   or (public.is_oficina_manager() and oficina_id = public.current_oficina_id())
-  or tecnic.user_id = auth.uid()
+  or public.can_self_update_tecnic(id, user_id, oficina_id, rol, actiu)
 );
 
 create policy tecnic_delete on public.tecnic
@@ -522,32 +604,22 @@ with check (public.is_admin() or public.is_oficina_manager());
 
 create policy titular_update on public.titular
 for update to authenticated
-using (
-  public.is_admin()
-  or public.is_oficina_manager()
-  or exists (
-    select 1
-    from public.tecnic_titular tt
-    join public.tecnic t on t.id = tt.tecnic_id
-    where t.user_id = auth.uid()
-      and t.actiu = true
-      and tt.titular_id = titular.id
-      and tt.actiu = true
-      and tt.scope = 'comu'
-  )
-)
-with check (true);
+using (public.can_write_scope(titular.id, 'comu'::public.scope_titular))
+with check (public.can_write_scope(titular.id, 'comu'::public.scope_titular));
 
 create policy titular_delete on public.titular
 for delete to authenticated
-using (public.is_admin() or public.is_oficina_manager());
+using (
+  public.is_admin()
+  or (public.is_oficina_manager() and public.can_manage_office_titular(titular.id))
+);
 
 -- TECNIC_TITULAR
 create policy tecnic_titular_select on public.tecnic_titular
 for select to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
+  or (public.is_oficina_manager() and public.same_oficina(tecnic_titular.tecnic_id))
   or exists (
     select 1
     from public.tecnic t
@@ -559,16 +631,44 @@ using (
 
 create policy tecnic_titular_insert on public.tecnic_titular
 for insert to authenticated
-with check (public.is_admin() or public.is_oficina_manager());
+with check (
+  public.is_admin()
+  or (
+    public.is_oficina_manager()
+    and public.same_oficina(tecnic_id)
+    and public.can_manage_office_titular(titular_id)
+  )
+);
 
 create policy tecnic_titular_update on public.tecnic_titular
 for update to authenticated
-using (public.is_admin() or public.is_oficina_manager())
-with check (public.is_admin() or public.is_oficina_manager());
+using (
+  public.is_admin()
+  or (
+    public.is_oficina_manager()
+    and public.same_oficina(tecnic_titular.tecnic_id)
+    and public.can_manage_office_titular(tecnic_titular.titular_id)
+  )
+)
+with check (
+  public.is_admin()
+  or (
+    public.is_oficina_manager()
+    and public.same_oficina(tecnic_id)
+    and public.can_manage_office_titular(titular_id)
+  )
+);
 
 create policy tecnic_titular_delete on public.tecnic_titular
 for delete to authenticated
-using (public.is_admin() or public.is_oficina_manager());
+using (
+  public.is_admin()
+  or (
+    public.is_oficina_manager()
+    and public.same_oficina(tecnic_titular.tecnic_id)
+    and public.can_manage_office_titular(tecnic_titular.titular_id)
+  )
+);
 
 -- DAN
 create policy dan_select on public.dan_declaracio
@@ -578,37 +678,34 @@ using (public.can_read_titular(dan_declaracio.titular_id));
 create policy dan_insert on public.dan_declaracio
 for insert to authenticated
 with check (
-  public.is_admin()
-  or public.is_oficina_manager()
-  or public.can_write_agricola(titular_id)
+  public.can_write_agricola(titular_id)
   or public.can_write_ramader(titular_id)
 );
 
 create policy dan_update on public.dan_declaracio
 for update to authenticated
 using (
-  public.is_admin()
-  or public.is_oficina_manager()
-  or public.can_write_agricola(dan_declaracio.titular_id)
+  public.can_write_agricola(dan_declaracio.titular_id)
   or public.can_write_ramader(dan_declaracio.titular_id)
 )
 with check (
-  public.is_admin()
-  or public.is_oficina_manager()
-  or public.can_write_agricola(titular_id)
+  public.can_write_agricola(titular_id)
   or public.can_write_ramader(titular_id)
 );
 
 create policy dan_delete on public.dan_declaracio
 for delete to authenticated
-using (public.is_admin() or public.is_oficina_manager());
+using (
+  public.is_admin()
+  or (public.is_oficina_manager() and public.can_manage_office_titular(dan_declaracio.titular_id))
+);
 
 -- TERRA
 create policy terra_select on public.terra
 for select to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
+  or (public.is_oficina_manager() and terra.titular_id is null and terra.created_by = auth.uid())
   or (terra.titular_id is not null and public.can_read_titular(terra.titular_id))
 );
 
@@ -616,7 +713,7 @@ create policy terra_insert on public.terra
 for insert to authenticated
 with check (
   public.is_admin()
-  or public.is_oficina_manager()
+  or (public.is_oficina_manager() and (titular_id is null or public.can_manage_office_titular(titular_id)))
   or (titular_id is not null and public.can_write_agricola(titular_id))
 );
 
@@ -624,12 +721,12 @@ create policy terra_update on public.terra
 for update to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
+  or (public.is_oficina_manager() and terra.titular_id is null and terra.created_by = auth.uid())
   or (terra.titular_id is not null and public.can_write_agricola(terra.titular_id))
 )
 with check (
   public.is_admin()
-  or public.is_oficina_manager()
+  or (public.is_oficina_manager() and (titular_id is null or public.can_manage_office_titular(titular_id)))
   or (titular_id is not null and public.can_write_agricola(titular_id))
 );
 
@@ -637,7 +734,7 @@ create policy terra_delete on public.terra
 for delete to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
+  or (public.is_oficina_manager() and terra.titular_id is null and terra.created_by = auth.uid())
   or (terra.titular_id is not null and public.can_write_agricola(terra.titular_id))
 );
 
@@ -646,7 +743,6 @@ create policy aplicacions_select on public.aplicacions_fertilitzants
 for select to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.dan_declaracio d
@@ -659,7 +755,6 @@ create policy aplicacions_insert on public.aplicacions_fertilitzants
 for insert to authenticated
 with check (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.dan_declaracio d
@@ -672,7 +767,6 @@ create policy aplicacions_update on public.aplicacions_fertilitzants
 for update to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.dan_declaracio d
@@ -682,7 +776,6 @@ using (
 )
 with check (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.dan_declaracio d
@@ -695,7 +788,6 @@ create policy aplicacions_delete on public.aplicacions_fertilitzants
 for delete to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.dan_declaracio d
@@ -709,7 +801,6 @@ create policy granja_select on public.granja
 for select to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
   or public.can_read_titular(granja.titular_id)
 );
 
@@ -717,7 +808,6 @@ create policy granja_insert on public.granja
 for insert to authenticated
 with check (
   public.is_admin()
-  or public.is_oficina_manager()
   or public.can_write_ramader(titular_id)
 );
 
@@ -725,12 +815,10 @@ create policy granja_update on public.granja
 for update to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
   or public.can_write_ramader(granja.titular_id)
 )
 with check (
   public.is_admin()
-  or public.is_oficina_manager()
   or public.can_write_ramader(titular_id)
 );
 
@@ -738,7 +826,6 @@ create policy granja_delete on public.granja
 for delete to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
   or public.can_write_ramader(granja.titular_id)
 );
 
@@ -783,7 +870,6 @@ create policy gb_select on public.granja_bestiar
 for select to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.granja g
@@ -796,7 +882,6 @@ create policy gb_insert on public.granja_bestiar
 for insert to authenticated
 with check (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.granja g
@@ -809,7 +894,6 @@ create policy gb_update on public.granja_bestiar
 for update to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.granja g
@@ -819,7 +903,6 @@ using (
 )
 with check (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.granja g
@@ -832,7 +915,6 @@ create policy gb_delete on public.granja_bestiar
 for delete to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.granja g
@@ -846,7 +928,6 @@ create policy entrega_select on public.entrega_dejeccions
 for select to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.dan_declaracio d
@@ -859,7 +940,6 @@ create policy entrega_insert on public.entrega_dejeccions
 for insert to authenticated
 with check (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.dan_declaracio d
@@ -872,7 +952,6 @@ create policy entrega_update on public.entrega_dejeccions
 for update to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.dan_declaracio d
@@ -882,7 +961,6 @@ using (
 )
 with check (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.dan_declaracio d
@@ -895,7 +973,6 @@ create policy entrega_delete on public.entrega_dejeccions
 for delete to authenticated
 using (
   public.is_admin()
-  or public.is_oficina_manager()
   or exists (
     select 1
     from public.dan_declaracio d
