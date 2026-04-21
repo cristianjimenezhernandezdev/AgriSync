@@ -36,7 +36,7 @@ internal class AgricolaRepository(private val restClient: RestClient) {
 
     internal suspend fun listAplicacionsByTitular(titularId: String, campanya: Int): List<AplicacioFertilitzantDto> {
         val dan = findDanByCampanya(titularId, campanya) ?: return emptyList()
-        val q = "?select=id,terra_id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,uf,tecnic_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)&dan_id=eq.${dan.id}&order=data.desc"
+        val q = "?select=id,terra_id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,tecnic_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)&dan_id=eq.${dan.id}&order=data.desc"
         return restClient.get("aplicacions_fertilitzants", q)
     }
 
@@ -56,11 +56,10 @@ internal class AgricolaRepository(private val restClient: RestClient) {
         procedencia: String?,
         volumM3: Double?,
         kgNM3: Double?,
-        kgN: Double,
-        uf: Double
+        kgN: Double
     ): AplicacioFertilitzantDto {
         val dan = getOrCreateDan(titularId, campanya)
-        val q = "?select=id,terra_id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,uf,tecnic_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)"
+        val q = "?select=id,terra_id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,tecnic_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)"
         val result: List<AplicacioFertilitzantDto> = restClient.post(
             "aplicacions_fertilitzants",
             AplicacioCreateRequest(
@@ -71,8 +70,7 @@ internal class AgricolaRepository(private val restClient: RestClient) {
                 procedencia = procedencia,
                 volum_m3 = volumM3,
                 kg_n_m3 = kgNM3,
-                kg_n = kgN,
-                uf = uf
+                kg_n = kgN
             ),
             q
         )
@@ -80,7 +78,7 @@ internal class AgricolaRepository(private val restClient: RestClient) {
     }
 
     internal suspend fun updateAplicacio(id: String, body: AplicacioUpdateRequest): AplicacioFertilitzantDto {
-        val q = "?select=id,terra_id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,uf,tecnic_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)&id=eq.$id"
+        val q = "?select=id,terra_id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,tecnic_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)&id=eq.$id"
         val result: List<AplicacioFertilitzantDto> = restClient.patch("aplicacions_fertilitzants", body, q)
         return result.first()
     }

@@ -1,5 +1,5 @@
 -- =========================================================
--- fix_user_ids.sql
+-- resincronitza_tecnic_user_ids.sql
 -- Sincronitza el user_id de public.tecnic amb auth.users
 -- basant-se en l'email que comparteixen.
 -- Executa al SQL Editor de Supabase.

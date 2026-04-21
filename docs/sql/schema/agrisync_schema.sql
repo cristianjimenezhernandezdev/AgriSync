@@ -215,7 +215,6 @@ create table public.aplicacions_fertilitzants (
   volum_m3 numeric check (volum_m3 is null or volum_m3 >= 0),
   kg_n_m3 numeric check (kg_n_m3 is null or kg_n_m3 >= 0),
   kg_n numeric not null default 0 check (kg_n >= 0),
-  uf numeric not null default 0 check (uf >= 0),
   tecnic_id uuid references public.tecnic(id) on delete set null,
   created_at timestamptz not null default now(),
   created_by uuid,
@@ -1156,6 +1155,6 @@ using (
 --   - public.v_titular_access
 --   - helper public.current_tecnic_id()
 --
--- Les columnes tipus "kg N/ha" o "kg N/UF" es poden calcular,
+-- Les columnes tipus "kg N/ha" es poden calcular,
 -- no cal guardar-les duplicades a base de dades.
 -- =========================================================

@@ -21,7 +21,13 @@ data class TitularAgricolaUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val saveMessage: String? = null
-)
+) {
+    fun appliedKgNForTerra(terraId: String): Double {
+        return aplicacions
+            .filter { it.terra_id == terraId && it.dan?.campanya == selectedCampanya }
+            .sumOf { it.kg_n ?: 0.0 }
+    }
+}
 
 internal class TitularAgricolaViewModel(
     private val repository: AgricolaRepository,
@@ -235,7 +241,6 @@ internal class TitularAgricolaViewModel(
         id: String,
         data: String,
         kgNText: String,
-        ufText: String,
         tipusFertilitzant: String,
         procedencia: String,
         volumText: String,
@@ -243,15 +248,14 @@ internal class TitularAgricolaViewModel(
     ): Boolean {
         val cleanData = data.trim()
         val kgN = kgNText.toDoubleOrNull()
-        val uf = ufText.toDoubleOrNull()
         val volum = volumText.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
         val kgNM3 = kgNM3Text.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
         if (!isValidIsoDate(cleanData)) {
             _uiState.update { it.copy(saveMessage = "La data ha de tenir format YYYY-MM-DD") }
             return false
         }
-        if (kgN == null || uf == null) {
-            _uiState.update { it.copy(saveMessage = "Kg N i UF han de ser nombres valids") }
+        if (kgN == null) {
+            _uiState.update { it.copy(saveMessage = "Kg N ha de ser un nombre valid") }
             return false
         }
         if (volumText.isNotBlank() && volum == null) {
@@ -262,8 +266,8 @@ internal class TitularAgricolaViewModel(
             _uiState.update { it.copy(saveMessage = "El kg N/m3 ha de ser un nombre valid") }
             return false
         }
-        if (kgN < 0 || uf < 0) {
-            _uiState.update { it.copy(saveMessage = "Kg N i UF no poden ser negatius") }
+        if (kgN < 0) {
+            _uiState.update { it.copy(saveMessage = "Kg N no pot ser negatiu") }
             return false
         }
         if ((volum ?: 0.0) < 0 || (kgNM3 ?: 0.0) < 0) {
@@ -280,16 +284,17 @@ internal class TitularAgricolaViewModel(
                         procedencia = procedencia.trim().ifBlank { null },
                         volum_m3 = volum,
                         kg_n_m3 = kgNM3,
-                        kg_n = kgN,
-                        uf = uf
+                        kg_n = kgN
                     )
                 )
                 val actorLabels = updateActorLabels(_uiState.value.actorLabels, updated.updated_by)
                 _uiState.update { st ->
+                    val updatedAplicacions = st.aplicacions.map { if (it.id == id) updated else it }
+                    val warning = buildNitrogenLimitWarning(updated.terra_id ?: "", updatedAplicacions, st.selectedCampanya)
                     st.copy(
-                        aplicacions = st.aplicacions.map { if (it.id == id) updated else it },
+                        aplicacions = updatedAplicacions,
                         actorLabels = actorLabels,
-                        saveMessage = "Aplicacio guardada"
+                        saveMessage = warning ?: "Aplicacio guardada"
                     )
                 }
             } catch (ex: Exception) {
@@ -303,7 +308,6 @@ internal class TitularAgricolaViewModel(
         terraId: String,
         data: String,
         kgNText: String,
-        ufText: String,
         tipusFertilitzant: String,
         procedencia: String,
         volumText: String,
@@ -311,7 +315,6 @@ internal class TitularAgricolaViewModel(
     ): Boolean {
         val cleanData = data.trim()
         val kgN = kgNText.toDoubleOrNull()
-        val uf = ufText.toDoubleOrNull()
         val volum = volumText.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
         val kgNM3 = kgNM3Text.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
         if (terraId.isBlank()) {
@@ -322,8 +325,8 @@ internal class TitularAgricolaViewModel(
             _uiState.update { it.copy(saveMessage = "La data ha de tenir format YYYY-MM-DD") }
             return false
         }
-        if (kgN == null || uf == null) {
-            _uiState.update { it.copy(saveMessage = "Kg N i UF han de ser nombres valids") }
+        if (kgN == null) {
+            _uiState.update { it.copy(saveMessage = "Kg N ha de ser un nombre valid") }
             return false
         }
         if (volumText.isNotBlank() && volum == null) {
@@ -334,8 +337,8 @@ internal class TitularAgricolaViewModel(
             _uiState.update { it.copy(saveMessage = "El kg N/m3 ha de ser un nombre valid") }
             return false
         }
-        if (kgN < 0 || uf < 0) {
-            _uiState.update { it.copy(saveMessage = "Kg N i UF no poden ser negatius") }
+        if (kgN < 0) {
+            _uiState.update { it.copy(saveMessage = "Kg N no pot ser negatiu") }
             return false
         }
         if ((volum ?: 0.0) < 0 || (kgNM3 ?: 0.0) < 0) {
@@ -353,15 +356,15 @@ internal class TitularAgricolaViewModel(
                     procedencia = procedencia.trim().ifBlank { null },
                     volumM3 = volum,
                     kgNM3 = kgNM3,
-                    kgN = kgN,
-                    uf = uf
+                    kgN = kgN
                 )
                 val actorLabels = updateActorLabels(_uiState.value.actorLabels, created.updated_by)
                 _uiState.update { st ->
+                    val warning = buildNitrogenLimitWarning(created.terra_id ?: terraId, listOf(created) + st.aplicacions, st.selectedCampanya)
                     st.copy(
                         aplicacions = listOf(created) + st.aplicacions,
                         actorLabels = actorLabels,
-                        saveMessage = "Aplicacio creada correctament"
+                        saveMessage = warning ?: "Aplicacio creada correctament"
                     )
                 }
             } catch (ex: Exception) {
@@ -418,6 +421,34 @@ internal class TitularAgricolaViewModel(
         val label = auditRepository.resolveActorLabel(cleanUserId) ?: return current
         return current + (cleanUserId to label)
     }
+
+    private fun buildNitrogenLimitWarning(
+        terraId: String,
+        aplicacionsActuals: List<AplicacioFertilitzantDto>,
+        selectedCampanya: Int
+    ): String? {
+        val terra = _uiState.value.terres.firstOrNull { it.id == terraId } ?: return null
+        val superficie = terra.superficie ?: return null
+        if (superficie <= 0.0) return null
+
+        val limitKgNHa = terra.limit_kg_n_ha ?: if (terra.zona == "ZV") 170.0 else 190.0
+        val limitTotal = superficie * limitKgNHa
+        val appliedTotal = aplicacionsActuals
+            .filter { it.terra_id == terraId && it.dan?.campanya == selectedCampanya }
+            .sumOf { it.kg_n ?: 0.0 }
+        val excess = appliedTotal - limitTotal
+
+        return if (excess > 0.0001) {
+            "Aplicacio guardada, pero la terra supera el limit anual per campanya en ${formatKgN(excess)} kg N."
+        } else {
+            null
+        }
+    }
+}
+
+private fun formatKgN(value: Double): String {
+    val rounded = kotlin.math.round(value * 100) / 100
+    return rounded.toString().replace('.', ',')
 }
 
 private fun mapHttpError(message: String?): String {

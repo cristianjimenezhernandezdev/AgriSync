@@ -46,7 +46,6 @@ data class AplicacioFertilitzantDto(
     val volum_m3: Double? = null,
     val kg_n_m3: Double? = null,
     val kg_n: Double? = null,
-    val uf: Double? = null,
     val tecnic_id: String? = null,
     val updated_at: String? = null,
     val updated_by: String? = null,
@@ -128,8 +127,7 @@ data class AplicacioCreateRequest(
     val procedencia: String? = null,
     val volum_m3: Double? = null,
     val kg_n_m3: Double? = null,
-    val kg_n: Double,
-    val uf: Double
+    val kg_n: Double
 )
 
 @Serializable
@@ -139,8 +137,7 @@ data class AplicacioUpdateRequest(
     val procedencia: String? = null,
     val volum_m3: Double? = null,
     val kg_n_m3: Double? = null,
-    val kg_n: Double? = null,
-    val uf: Double? = null
+    val kg_n: Double? = null
 )
 
 @Serializable

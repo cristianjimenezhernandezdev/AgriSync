@@ -1,5 +1,5 @@
 -- =========================================================
--- fix_permisos.sql
+-- reaplica_permisos.sql
 -- Reaplica grants i execucio de funcions a l'esquema MVP actual
 -- Executa'l nomes si algun permís ha quedat desalineat
 -- =========================================================

@@ -142,7 +142,9 @@ internal fun DanPreparationScreen(
                                 TerraPreparationCard(
                                     terra = terra,
                                     appliedKgN = ui.totalKgNByTerra(terra.id),
-                                    kgNPerHa = ui.kgNPerHaByTerra(terra.id)
+                                    kgNPerHa = ui.kgNPerHaByTerra(terra.id),
+                                    allowedKgN = ui.allowedKgNByTerra(terra.id),
+                                    excessKgN = ui.excessKgNByTerra(terra.id)
                                 )
                             }
                         }
@@ -150,10 +152,7 @@ internal fun DanPreparationScreen(
                         if (ui.aplicacions.isNotEmpty()) {
                             item { SubsectionTitle("Aplicacions fertilitzants") }
                             items(ui.aplicacions, key = { it.id }) { aplicacio ->
-                                AplicacioPreparationCard(
-                                    ui = ui,
-                                    aplicacio = aplicacio
-                                )
+                                AplicacioPreparationCard(aplicacio = aplicacio)
                             }
                         }
                     }
@@ -283,7 +282,7 @@ private fun CampaignSelectorCard(
         ) {
             Text("Campanya de resum", style = MaterialTheme.typography.titleSmall)
             Text(
-                "Els totals de kg N, UF i entregues es calculen per la campanya seleccionada.",
+                "Els totals de kg N, volum m3 i entregues es calculen per la campanya seleccionada.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -316,8 +315,8 @@ private fun SummaryMetrics(ui: DanPreparationUiState) {
             rightValue = formatDecimal(ui.totalKgN)
         )
         MetricsRow(
-            leftLabel = "UF totals",
-            leftValue = formatDecimal(ui.totalUf),
+            leftLabel = "Volum total m3",
+            leftValue = formatDecimal(ui.totalVolumM3),
             rightLabel = "Kg N/ha",
             rightValue = formatDecimal(ui.kgNPerHa)
         )
@@ -333,12 +332,7 @@ private fun SummaryMetrics(ui: DanPreparationUiState) {
             rightLabel = "Total entregat",
             rightValue = formatDecimal(ui.totalQuantitatEntregada)
         )
-        MetricsRow(
-            leftLabel = "Kg N/UF",
-            leftValue = formatDecimal(ui.kgNPerUf),
-            rightLabel = "Llistes revisio",
-            rightValue = "1 bloc final"
-        )
+        MetricsRow(leftLabel = "Checklist", leftValue = "1 bloc final", rightLabel = "Campanya", rightValue = ui.selectedCampanya.toString())
     }
 }
 
@@ -421,11 +415,11 @@ private fun SubsectionTitle(title: String) {
 private fun TerraPreparationCard(
     terra: DanPreparationTerraDto,
     appliedKgN: Double,
-    kgNPerHa: Double?
+    kgNPerHa: Double?,
+    allowedKgN: Double?,
+    excessKgN: Double?
 ) {
     val limitKgN = terra.limit_kg_n_ha ?: if (terra.zona == "ZV") 170.0 else 190.0
-    val totalAllowedKgN = terra.superficie?.let { it * limitKgN }
-    val remainingKgN = totalAllowedKgN?.minus(appliedKgN)
     Card(Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -444,21 +438,19 @@ private fun TerraPreparationCard(
             PreparationFieldRow("Limit kg N/ha", formatDecimal(limitKgN))
             PreparationFieldRow("Kg N aplicats", formatDecimal(appliedKgN))
             PreparationFieldRow("Kg N/ha campanya", formatDecimal(kgNPerHa))
-            PreparationFieldRow("Kg N totals permesos", formatDecimal(totalAllowedKgN))
-            PreparationFieldRow("Marge disponible", formatDecimal(remainingKgN))
+            PreparationFieldRow("Kg N totals permesos", formatDecimal(allowedKgN))
+            PreparationFieldRow("Excés sobre límit", formatDecimal(excessKgN))
         }
     }
 }
 
 @Composable
 private fun AplicacioPreparationCard(
-    ui: DanPreparationUiState,
     aplicacio: DanPreparationAplicacioDto
 ) {
     val terra = aplicacio.terra
     val hectares = terra?.superficie
     val kgNPerHa = if ((hectares ?: 0.0) > 0.0) (aplicacio.kg_n ?: 0.0) / (hectares ?: 1.0) else null
-    val kgNPerUf = if ((aplicacio.uf ?: 0.0) > 0.0) (aplicacio.kg_n ?: 0.0) / (aplicacio.uf ?: 1.0) else null
 
     Card(Modifier.fillMaxWidth()) {
         Column(
@@ -466,8 +458,6 @@ private fun AplicacioPreparationCard(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text("Aplicacio ${aplicacio.dan?.campanya ?: "-"}", style = MaterialTheme.typography.titleSmall)
-            PreparationFieldRow("Agricultor", ui.titular?.nom_rao ?: "-")
-            PreparationFieldRow("NIF", ui.titular?.nif ?: "-")
             PreparationFieldRow("Mun.", terra?.mun_codi ?: "-")
             PreparationFieldRow("Pol.", terra?.poligon?.toString() ?: "-")
             PreparationFieldRow("Par.", terra?.parcela?.toString() ?: "-")
@@ -480,10 +470,8 @@ private fun AplicacioPreparationCard(
             PreparationFieldRow("Procedencia", aplicacio.procedencia ?: "-")
             PreparationFieldRow("Volum m3", formatDecimal(aplicacio.volum_m3))
             PreparationFieldRow("Kg N/m3", formatDecimal(aplicacio.kg_n_m3))
-            PreparationFieldRow("UF", formatDecimal(aplicacio.uf))
             PreparationFieldRow("kg N", formatDecimal(aplicacio.kg_n))
             PreparationFieldRow("kg N/ha", formatDecimal(kgNPerHa))
-            PreparationFieldRow("kg N/UF", formatDecimal(kgNPerUf))
             PreparationFieldRow("Campanya", aplicacio.dan?.campanya?.toString() ?: "-")
         }
     }

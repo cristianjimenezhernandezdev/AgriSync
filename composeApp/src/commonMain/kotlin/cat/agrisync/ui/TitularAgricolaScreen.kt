@@ -22,6 +22,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -116,12 +117,10 @@ internal fun TitularAgricolaScreen(
                         }
                     } else {
                         items(ui.terres, key = { it.id }) { terra ->
-                            val kgNAplicat = ui.aplicacions
-                                .filter { it.dan?.campanya == ui.selectedCampanya && it.terra_id == terra.id }
-                                .sumOf { it.kg_n ?: 0.0 }
                             EditableTerraCard(
                                 terra = terra,
-                                appliedKgN = kgNAplicat,
+                                appliedKgN = ui.appliedKgNForTerra(terra.id),
+                                selectedCampanya = ui.selectedCampanya,
                                 actorLabel = ui.actorLabels[terra.updated_by],
                                 onSave = { superficie, zona, municipiLiteral, usSigpac, cultiu ->
                                     viewModel.updateTerra(terra.id, superficie, zona, municipiLiteral, usSigpac, cultiu)
@@ -152,9 +151,12 @@ internal fun TitularAgricolaScreen(
                         items(ui.aplicacions, key = { it.id }) { app ->
                             EditableAplicacioCard(
                                 app = app,
+                                terres = ui.terres,
+                                selectedCampanya = ui.selectedCampanya,
+                                currentAppliedKgNForTerra = ui.appliedKgNForTerra(app.terra_id ?: ""),
                                 actorLabel = ui.actorLabels[app.updated_by],
-                                onSave = { data, kgN, uf, tipus, procedencia, volum, kgNM3 ->
-                                    viewModel.updateAplicacio(app.id, data, kgN, uf, tipus, procedencia, volum, kgNM3)
+                                onSave = { data, kgN, tipus, procedencia, volum, kgNM3 ->
+                                    viewModel.updateAplicacio(app.id, data, kgN, tipus, procedencia, volum, kgNM3)
                                 },
                                 onDelete = { pendingDeleteAplicacioId = app.id }
                             )
@@ -179,8 +181,9 @@ internal fun TitularAgricolaScreen(
             CreateAplicacioDialog(
                 terres = ui.terres,
                 selectedCampanya = ui.selectedCampanya,
-                onConfirm = { terraId, data, kgN, uf, tipus, procedencia, volum, kgNM3 ->
-                    if (viewModel.createAplicacio(terraId, data, kgN, uf, tipus, procedencia, volum, kgNM3)) {
+                currentAppliedKgNByTerra = { terraId -> ui.appliedKgNForTerra(terraId) },
+                onConfirm = { terraId, data, kgN, tipus, procedencia, volum, kgNM3 ->
+                    if (viewModel.createAplicacio(terraId, data, kgN, tipus, procedencia, volum, kgNM3)) {
                         showCreateAplicacioDialog = false
                     }
                 },
@@ -312,6 +315,7 @@ private fun EditableTitularCard(
 private fun EditableTerraCard(
     terra: TerraDto,
     appliedKgN: Double,
+    selectedCampanya: Int,
     actorLabel: String?,
     onSave: (String, String, String, String, String) -> Boolean,
     onDelete: () -> Unit
@@ -324,7 +328,8 @@ private fun EditableTerraCard(
     var cultiu by remember(terra.id, terra.cultiu) { mutableStateOf(terra.cultiu ?: "") }
     val limitKgN = terra.limit_kg_n_ha ?: if (terra.zona == "ZV") 170.0 else 190.0
     val kgNPerHa = terra.superficie?.takeIf { it > 0.0 }?.let { appliedKgN / it }
-    val margeDisponible = terra.superficie?.let { it * limitKgN - appliedKgN }
+    val allowedKgN = terra.superficie?.let { it * limitKgN }
+    val excessKgN = allowedKgN?.let { appliedKgN - it }?.takeIf { it > 0.0 }
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -352,8 +357,16 @@ private fun EditableTerraCard(
                 Text("Municipi: ${terra.municipi_literal ?: "-"}")
                 Text("Us SIGPAC: ${terra.us_sigpac ?: "-"} · Cultiu: ${terra.cultiu ?: "-"}")
                 Text("Aplicat campanya: ${formatKgN(appliedKgN)} kg N")
+                Text("Maxim admissible campanya: ${formatKgN(allowedKgN)} kg N")
                 Text("Kg N/ha campanya: ${formatKgN(kgNPerHa)}")
-                Text("Marge disponible: ${formatKgN(margeDisponible)} kg N")
+                if (excessKgN != null) {
+                    Text(
+                        "Avis campanya $selectedCampanya: aquesta terra supera el limit anual en ${formatKgN(excessKgN)} kg N.",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    Text("Situacio campanya $selectedCampanya: dins del limit anual.")
+                }
                 AuditInfoBlock(
                     updatedAt = terra.updated_at,
                     updatedByLabel = actorLabel,
@@ -371,18 +384,26 @@ private fun EditableTerraCard(
 @Composable
 private fun EditableAplicacioCard(
     app: AplicacioFertilitzantDto,
+    terres: List<TerraDto>,
+    selectedCampanya: Int,
+    currentAppliedKgNForTerra: Double,
     actorLabel: String?,
-    onSave: (String, String, String, String, String, String, String) -> Boolean,
+    onSave: (String, String, String, String, String, String) -> Boolean,
     onDelete: () -> Unit
 ) {
     var editing by remember { mutableStateOf(false) }
     var data by remember(app.id, app.data) { mutableStateOf(app.data ?: "") }
     var kgN by remember(app.id, app.kg_n) { mutableStateOf((app.kg_n ?: 0.0).toString()) }
-    var uf by remember(app.id, app.uf) { mutableStateOf((app.uf ?: 0.0).toString()) }
     var tipusFertilitzant by remember(app.id, app.tipus_fertilitzant) { mutableStateOf(app.tipus_fertilitzant ?: "") }
     var procedencia by remember(app.id, app.procedencia) { mutableStateOf(app.procedencia ?: "") }
     var volumM3 by remember(app.id, app.volum_m3) { mutableStateOf(app.volum_m3?.toString() ?: "") }
     var kgNM3 by remember(app.id, app.kg_n_m3) { mutableStateOf(app.kg_n_m3?.toString() ?: "") }
+    val terra = terres.find { it.id == app.terra_id }
+    val limitKgNHa = terra?.limit_kg_n_ha ?: if (terra?.zona == "ZV") 170.0 else 190.0
+    val allowedKgN = terra?.superficie?.let { it * limitKgNHa }
+    val editedKgN = kgN.toDoubleOrNull() ?: 0.0
+    val projectedAppliedKgN = currentAppliedKgNForTerra - (app.kg_n ?: 0.0) + editedKgN
+    val projectedExcessKgN = allowedKgN?.let { projectedAppliedKgN - it }?.takeIf { it > 0.0 }
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -393,18 +414,23 @@ private fun EditableAplicacioCard(
                 OutlinedTextField(value = procedencia, onValueChange = { procedencia = it }, label = { Text("Procedencia") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = kgN, onValueChange = { kgN = it }, label = { Text("Kg N") }, singleLine = true, modifier = Modifier.weight(1f))
-                    OutlinedTextField(value = uf, onValueChange = { uf = it }, label = { Text("UF") }, singleLine = true, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = volumM3, onValueChange = { volumM3 = it }, label = { Text("Volum m3") }, singleLine = true, modifier = Modifier.weight(1f))
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = volumM3, onValueChange = { volumM3 = it }, label = { Text("Volum m3") }, singleLine = true, modifier = Modifier.weight(1f))
-                    OutlinedTextField(value = kgNM3, onValueChange = { kgNM3 = it }, label = { Text("Kg N/m3") }, singleLine = true, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = kgNM3, onValueChange = { kgNM3 = it }, label = { Text("Kg N/m3") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+                if (projectedExcessKgN != null) {
+                    HorizontalDivider()
+                    Text(
+                        "Avis campanya $selectedCampanya: si guardes aquest valor, la terra quedara ${formatKgN(projectedExcessKgN)} kg N per sobre del limit anual.",
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { if (onSave(data, kgN, uf, tipusFertilitzant, procedencia, volumM3, kgNM3)) editing = false }) { Text("Guardar") }
+                    Button(onClick = { if (onSave(data, kgN, tipusFertilitzant, procedencia, volumM3, kgNM3)) editing = false }) { Text("Guardar") }
                     OutlinedButton(onClick = {
                         data = app.data ?: ""
                         kgN = (app.kg_n ?: 0.0).toString()
-                        uf = (app.uf ?: 0.0).toString()
                         tipusFertilitzant = app.tipus_fertilitzant ?: ""
                         procedencia = app.procedencia ?: ""
                         volumM3 = app.volum_m3?.toString() ?: ""
@@ -414,9 +440,15 @@ private fun EditableAplicacioCard(
                 }
             } else {
                 Text("Data: ${app.data ?: "-"}")
-                Text("Kg N: ${app.kg_n ?: 0.0} · UF: ${app.uf ?: 0.0}")
+                Text("Kg N: ${app.kg_n ?: 0.0} · Volum m3: ${app.volum_m3 ?: "-"}")
                 Text("Tipus: ${app.tipus_fertilitzant ?: "-"} · Procedencia: ${app.procedencia ?: "-"}")
-                Text("Volum m3: ${app.volum_m3 ?: "-"} · Kg N/m3: ${app.kg_n_m3 ?: "-"}")
+                Text("Kg N/m3: ${app.kg_n_m3 ?: "-"}")
+                if (allowedKgN != null && projectedExcessKgN != null) {
+                    Text(
+                        "Avis campanya $selectedCampanya: terra per sobre del limit anual en ${formatKgN(projectedExcessKgN)} kg N.",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
                 AuditInfoBlock(
                     updatedAt = app.updated_at,
                     updatedByLabel = actorLabel,
@@ -508,17 +540,23 @@ private fun formatKgN(value: Double?): String {
 private fun CreateAplicacioDialog(
     terres: List<TerraDto>,
     selectedCampanya: Int,
-    onConfirm: (String, String, String, String, String, String, String, String) -> Unit,
+    currentAppliedKgNByTerra: (String) -> Double,
+    onConfirm: (String, String, String, String, String, String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var selectedTerraId by remember(terres) { mutableStateOf(terres.firstOrNull()?.id ?: "") }
     var data by remember { mutableStateOf("") }
     var kgN by remember { mutableStateOf("") }
-    var uf by remember { mutableStateOf("") }
     var tipusFertilitzant by remember { mutableStateOf("") }
     var procedencia by remember { mutableStateOf("") }
     var volumM3 by remember { mutableStateOf("") }
     var kgNM3 by remember { mutableStateOf("") }
+    val selectedTerra = terres.find { it.id == selectedTerraId }
+    val limitKgNHa = selectedTerra?.limit_kg_n_ha ?: if (selectedTerra?.zona == "ZV") 170.0 else 190.0
+    val allowedKgN = selectedTerra?.superficie?.let { it * limitKgNHa }
+    val enteredKgN = kgN.toDoubleOrNull() ?: 0.0
+    val projectedAppliedKgN = if (selectedTerraId.isBlank()) 0.0 else currentAppliedKgNByTerra(selectedTerraId) + enteredKgN
+    val projectedExcessKgN = allowedKgN?.let { projectedAppliedKgN - it }?.takeIf { it > 0.0 }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -532,7 +570,7 @@ private fun CreateAplicacioDialog(
                     )
                 } else {
                     Text(
-                        "Selecciona la terra i informa la data i les unitats aplicades.",
+                        "Selecciona la terra i informa la data i les quantitats aplicades.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -550,17 +588,23 @@ private fun CreateAplicacioDialog(
                     OutlinedTextField(value = tipusFertilitzant, onValueChange = { tipusFertilitzant = it }, label = { Text("Tipus fertilitzant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = procedencia, onValueChange = { procedencia = it }, label = { Text("Procedencia") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = kgN, onValueChange = { kgN = it }, label = { Text("Kg N") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = uf, onValueChange = { uf = it }, label = { Text("UF") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(value = volumM3, onValueChange = { volumM3 = it }, label = { Text("Volum m3") }, singleLine = true, modifier = Modifier.weight(1f))
                         OutlinedTextField(value = kgNM3, onValueChange = { kgNM3 = it }, label = { Text("Kg N/m3") }, singleLine = true, modifier = Modifier.weight(1f))
+                    }
+                    if (projectedExcessKgN != null) {
+                        HorizontalDivider()
+                        Text(
+                            "Avis campanya $selectedCampanya: aquesta entrada deixara la terra ${formatKgN(projectedExcessKgN)} kg N per sobre del limit anual.",
+                            color = MaterialTheme.colorScheme.error
+                        )
                     }
                 }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(selectedTerraId, data, kgN, uf, tipusFertilitzant, procedencia, volumM3, kgNM3) },
+                onClick = { onConfirm(selectedTerraId, data, kgN, tipusFertilitzant, procedencia, volumM3, kgNM3) },
                 enabled = terres.isNotEmpty()
             ) { Text("Crear") }
         },

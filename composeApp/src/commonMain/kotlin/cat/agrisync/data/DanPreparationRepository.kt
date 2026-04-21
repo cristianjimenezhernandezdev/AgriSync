@@ -17,7 +17,7 @@ internal class DanPreparationRepository(private val restClient: RestClient) {
 
     internal suspend fun listAplicacionsByTitular(titularId: String, campanya: Int): List<DanPreparationAplicacioDto> {
         val dan = findDanByCampanya(titularId, campanya) ?: return emptyList()
-        val q = "?select=id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,uf,terra:terra_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha),dan:dan_id(id,titular_id,campanya)&dan_id=eq.${dan.id}&order=data.desc"
+        val q = "?select=id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,terra:terra_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha),dan:dan_id(id,titular_id,campanya)&dan_id=eq.${dan.id}&order=data.desc"
         return restClient.get("aplicacions_fertilitzants", q)
     }
 
@@ -84,7 +84,6 @@ internal data class DanPreparationAplicacioDto(
     val volum_m3: Double? = null,
     val kg_n_m3: Double? = null,
     val kg_n: Double? = null,
-    val uf: Double? = null,
     val terra: DanPreparationTerraDto? = null,
     val dan: DanRefDto? = null
 )

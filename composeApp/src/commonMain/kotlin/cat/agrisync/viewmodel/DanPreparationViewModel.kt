@@ -35,8 +35,8 @@ internal data class DanPreparationUiState(
     val totalKgN: Double
         get() = aplicacions.sumOf { it.kg_n ?: 0.0 }
 
-    val totalUf: Double
-        get() = aplicacions.sumOf { it.uf ?: 0.0 }
+    val totalVolumM3: Double
+        get() = aplicacions.sumOf { it.volum_m3 ?: 0.0 }
 
     val totalCens: Double
         get() = granjaBestiar.sumOf { it.cens ?: 0.0 }
@@ -47,11 +47,15 @@ internal data class DanPreparationUiState(
     val kgNPerHa: Double?
         get() = totalHectares.takeIf { it > 0 }?.let { totalKgN / it }
 
-    val kgNPerUf: Double?
-        get() = totalUf.takeIf { it > 0 }?.let { totalKgN / it }
-
     fun totalKgNByTerra(terraId: String): Double {
         return aplicacions.filter { it.terra?.id == terraId }.sumOf { it.kg_n ?: 0.0 }
+    }
+
+    fun allowedKgNByTerra(terraId: String): Double? {
+        val terra = terres.firstOrNull { it.id == terraId } ?: return null
+        val hectares = terra.superficie ?: return null
+        val limitKgNHa = terra.limit_kg_n_ha ?: if (terra.zona == "ZV") 170.0 else 190.0
+        return hectares * limitKgNHa
     }
 
     fun kgNPerHaByTerra(terraId: String): Double? {
@@ -59,6 +63,13 @@ internal data class DanPreparationUiState(
         val hectares = terra.superficie ?: return null
         if (hectares <= 0.0) return null
         return totalKgNByTerra(terraId) / hectares
+    }
+
+    fun excessKgNByTerra(terraId: String): Double? {
+        val allowed = allowedKgNByTerra(terraId) ?: return null
+        val applied = totalKgNByTerra(terraId)
+        val excess = applied - allowed
+        return excess.takeIf { it > 0.0 }
     }
 
     fun automaticChecklistItems(): List<String> {
@@ -119,9 +130,8 @@ internal data class DanPreparationUiState(
         appendLine("- Total ha: ${formatForExport(totalHectares)}")
         appendLine("- Aplicacions: ${aplicacions.size}")
         appendLine("- Kg N total: ${formatForExport(totalKgN)}")
-        appendLine("- UF totals: ${formatForExport(totalUf)}")
+        appendLine("- Volum total m3: ${formatForExport(totalVolumM3)}")
         appendLine("- Kg N/ha: ${formatForExport(kgNPerHa)}")
-        appendLine("- Kg N/UF: ${formatForExport(kgNPerUf)}")
         appendLine("- Granges: ${granges.size}")
         appendLine("- Cens total: ${formatForExport(totalCens)}")
         appendLine("- Entregues: ${entregues.size}")
@@ -134,7 +144,7 @@ internal data class DanPreparationUiState(
         } else {
             terres.forEach { terra ->
                 appendLine(
-                    "- ${terra.codi_sigpac_complet ?: terra.id} | ha=${formatForExport(terra.superficie)} | zona=${terra.zona} | cultiu=${terra.cultiu ?: "-"} | us=${terra.us_sigpac ?: "-"} | kgN aplicats=${formatForExport(totalKgNByTerra(terra.id))} | kgN/ha=${formatForExport(kgNPerHaByTerra(terra.id))}"
+                    "- ${terra.codi_sigpac_complet ?: terra.id} | ha=${formatForExport(terra.superficie)} | zona=${terra.zona} | cultiu=${terra.cultiu ?: "-"} | us=${terra.us_sigpac ?: "-"} | kgN aplicats=${formatForExport(totalKgNByTerra(terra.id))} | kgN permesos=${formatForExport(allowedKgNByTerra(terra.id))} | exces=${formatForExport(excessKgNByTerra(terra.id))}"
                 )
             }
         }
@@ -146,7 +156,7 @@ internal data class DanPreparationUiState(
         } else {
             aplicacions.forEach { aplicacio ->
                 appendLine(
-                    "- ${aplicacio.data ?: "-"} | terra=${aplicacio.terra?.codi_sigpac_complet ?: aplicacio.terra?.id ?: "-"} | tipus=${aplicacio.tipus_fertilitzant ?: "-"} | procedencia=${aplicacio.procedencia ?: "-"} | volum m3=${formatForExport(aplicacio.volum_m3)} | kg N/m3=${formatForExport(aplicacio.kg_n_m3)} | kg N=${formatForExport(aplicacio.kg_n)} | UF=${formatForExport(aplicacio.uf)}"
+                    "- ${aplicacio.data ?: "-"} | terra=${aplicacio.terra?.codi_sigpac_complet ?: aplicacio.terra?.id ?: "-"} | tipus=${aplicacio.tipus_fertilitzant ?: "-"} | procedencia=${aplicacio.procedencia ?: "-"} | volum m3=${formatForExport(aplicacio.volum_m3)} | kg N/m3=${formatForExport(aplicacio.kg_n_m3)} | kg N=${formatForExport(aplicacio.kg_n)}"
                 )
             }
         }
