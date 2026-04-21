@@ -18,6 +18,7 @@ El model es basa en quatre peces:
 - Supabase Auth
 - taula `public.tecnic`
 - taula `public.tecnic_titular`
+- taula `public.oficina_titular_compartit`
 - policies RLS del `SQLAgriSync.sql`
 
 ## 3. Que fa cada capa
@@ -53,6 +54,16 @@ Camps clau:
 - `titular_id`
 - `scope`
 - `actiu`
+
+### 3.4. `public.oficina_titular_compartit`
+
+Defineix quina part d'un titular es comparteix amb una altra oficina.
+
+Camps clau:
+
+- `oficina_id`
+- `titular_id`
+- `scope`
 
 ## 4. Rols globals
 
@@ -125,10 +136,13 @@ El `SQLAgriSync.sql` defineix aquestes funcions helper:
 - `same_oficina(uuid)`
 - `can_self_update_tecnic(...)`
 - `can_manage_office_titular(uuid)`
+- `office_has_any_share(...)`
+- `office_has_shared_scope(...)`
 - `can_read_titular(uuid)`
 - `can_write_scope(uuid, scope_titular)`
 - `can_write_agricola(uuid)`
 - `can_write_ramader(uuid)`
+- `can_reference_terra(uuid)`
 
 ## 8. Significat real dels helpers importants
 
@@ -157,6 +171,7 @@ Permet lectura si:
 
 - l'usuari es `admin`
 - o es `oficina_manager` i el titular entra dins del seu ambit de gestio
+- o es `oficina_manager` i la seva oficina rep una comparticio d'aquest titular
 - o te una assignacio activa a `tecnic_titular`
 
 ### 8.5. `can_write_scope(...)`
@@ -165,8 +180,18 @@ Permet escriptura si:
 
 - l'usuari es `admin`
 - o es `oficina_manager` i el titular entra dins del seu ambit
+- o es `oficina_manager` i la seva oficina te compartida exactament aquella part o `comu`
 - o te `scope = comu`
 - o te exactament el scope demanat
+
+### 8.7. `can_reference_terra(p_terra_id)`
+
+Serveix per validar que una entrega ramadera nomes pugui referenciar una terra que l'usuari pot llegir.
+
+Amb aixo:
+
+- no n'hi ha prou amb coneixer un UUID
+- l'acces a terres externes queda lligat a permisos reals o a comparticions per oficina
 
 ### 8.6. `can_self_update_tecnic(...)`
 
@@ -316,9 +341,14 @@ L'RLS esta actiu a:
 ### 12.12. `entrega_dejeccions`
 
 - `select`
-  qui pot llegir el titular de la DAN relacionada
+  qui pot llegir el titular d'origen o el titular/terra receptor
 - `insert`, `update`, `delete`
   qui pot escriure part ramadera del titular de la DAN
+
+Matis funcional:
+
+- una entrega pot anar a un titular receptor o a una terra concreta d'un altre titular
+- la BDD comprova que el receptor seleccionat sigui realment accessible
 
 ## 13. Herencia funcional dels permisos
 
@@ -384,3 +414,4 @@ La part mes important del model actual es que:
 - `oficina_manager` ja no es global
 - el tecnic normal depen de titular i `scope`
 - l'autoedicio de perfil ha quedat acotada per no permetre canvis de privilegi
+- la comparticio entre oficines passa per `scope` i no obliga a obrir visio global de dades

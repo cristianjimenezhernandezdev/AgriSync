@@ -17,6 +17,8 @@ data class TitularRamaderUiState(
     val granjaBestiar: List<GranjaBestiarDto> = emptyList(),
     val entregues: List<EntregaDejeccioDto> = emptyList(),
     val terres: List<TerraDto> = emptyList(),
+    val receptorTitulars: List<TitularDto> = emptyList(),
+    val receptorTerres: List<TerraDto> = emptyList(),
     val availableCampanyes: List<Int> = emptyList(),
     val selectedCampanya: Int = 0,
     val bestiars: List<BestiarDto> = emptyList(),
@@ -48,6 +50,8 @@ internal class TitularRamaderViewModel(
                 val selectedCampanya = resolveSelectedCampanya(existingCampanyes, preferredCampanya)
                 val entregues = repository.listEntreguesByTitular(titularId, selectedCampanya)
                 val terres = repository.listTerres(titularId)
+                val receptorTitulars = repository.listAccessibleTitulars()
+                val receptorTerres = repository.listAccessibleTerres()
                 val bestiars = repository.listBestiarCatalog()
                 val fases = repository.listFaseProductivaCatalog()
                 val actorLabels = resolveActorLabels(titular, granges, gb, entregues, terres)
@@ -59,6 +63,8 @@ internal class TitularRamaderViewModel(
                         granjaBestiar = gb,
                         entregues = entregues,
                         terres = terres,
+                        receptorTitulars = receptorTitulars,
+                        receptorTerres = receptorTerres,
                         availableCampanyes = normalizedCampanyes(existingCampanyes),
                         selectedCampanya = selectedCampanya,
                         bestiars = bestiars,

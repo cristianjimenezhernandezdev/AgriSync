@@ -35,7 +35,16 @@ internal class RamaderRepository(private val restClient: RestClient) {
     }
 
     internal suspend fun listTerres(titularId: String): List<TerraDto> {
-        val q = "?select=id,titular_id,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,updated_at,updated_by&titular_id=eq.$titularId&order=updated_at.desc"
+        val q = "?select=id,titular_id,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,updated_at,updated_by,titular:titular_id(id,nif,nom_rao)&titular_id=eq.$titularId&order=updated_at.desc"
+        return restClient.get("terra", q)
+    }
+
+    internal suspend fun listAccessibleTitulars(): List<TitularDto> {
+        return restClient.get("titular", "?select=id,nif,nom_rao&order=nom_rao")
+    }
+
+    internal suspend fun listAccessibleTerres(): List<TerraDto> {
+        val q = "?select=id,titular_id,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,updated_at,updated_by,titular:titular_id(id,nif,nom_rao)&order=codi_sigpac_complet"
         return restClient.get("terra", q)
     }
 
@@ -73,7 +82,7 @@ internal class RamaderRepository(private val restClient: RestClient) {
 
     internal suspend fun listEntreguesByTitular(titularId: String, campanya: Int): List<EntregaDejeccioDto> {
         val dan = findDanByCampanya(titularId, campanya) ?: return emptyList()
-        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)&dan_id=eq.${dan.id}&order=data.desc"
+        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya),receptor_titular:receptor_titular_id(id,nif,nom_rao),terra_desti:terra_desti_id(id,titular_id,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,titular:titular_id(id,nif,nom_rao))&dan_id=eq.${dan.id}&order=data.desc"
         return restClient.get("entrega_dejeccions", q)
     }
 
@@ -94,7 +103,7 @@ internal class RamaderRepository(private val restClient: RestClient) {
         receptorTitularId: String? = null
     ): EntregaDejeccioDto {
         val dan = getOrCreateDan(titularId, campanya)
-        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)"
+        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya),receptor_titular:receptor_titular_id(id,nif,nom_rao),terra_desti:terra_desti_id(id,titular_id,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,titular:titular_id(id,nif,nom_rao))"
         val result: List<EntregaDejeccioDto> = restClient.post(
             "entrega_dejeccions",
             EntregaCreateRequest(
@@ -111,7 +120,7 @@ internal class RamaderRepository(private val restClient: RestClient) {
     }
 
     internal suspend fun updateEntrega(id: String, body: EntregaUpdateRequest): List<EntregaDejeccioDto> {
-        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)&id=eq.$id"
+        val q = "?select=id,data,quantitat,granja_origen_id,receptor_titular_id,terra_desti_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya),receptor_titular:receptor_titular_id(id,nif,nom_rao),terra_desti:terra_desti_id(id,titular_id,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,titular:titular_id(id,nif,nom_rao))&id=eq.$id"
         return restClient.patch("entrega_dejeccions", body, q)
     }
 

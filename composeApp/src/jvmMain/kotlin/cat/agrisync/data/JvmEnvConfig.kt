@@ -7,15 +7,45 @@ class JvmEnvConfig : EnvConfig {
 
     private val propertiesFileNames = listOf("agrisync.properties", "config/agrisync.properties")
 
+    private fun addIfDirectory(target: MutableSet<File>, directory: File?) {
+        val normalized = runCatching { directory?.canonicalFile }.getOrNull() ?: return
+        if (normalized.exists() && normalized.isDirectory) {
+            target += normalized
+        }
+    }
+
+    private fun candidateDirectories(): List<File> {
+        val directories = linkedSetOf<File>()
+
+        addIfDirectory(directories, File(System.getProperty("user.dir")))
+
+        runCatching {
+            val codeSource = File(
+                JvmEnvConfig::class.java.protectionDomain.codeSource.location.toURI()
+            ).canonicalFile
+            val codeSourceDir = codeSource.takeIf { it.isDirectory } ?: codeSource.parentFile
+            addIfDirectory(directories, codeSourceDir)
+            addIfDirectory(directories, codeSourceDir?.parentFile)
+            addIfDirectory(directories, codeSourceDir?.parentFile?.parentFile)
+        }
+
+        runCatching {
+            val command = ProcessHandle.current().info().command().orElse(null) ?: return@runCatching
+            val executable = File(command).canonicalFile
+            addIfDirectory(directories, executable.parentFile)
+            addIfDirectory(directories, executable.parentFile?.parentFile)
+        }
+
+        System.getProperty("compose.application.resources.dir")?.let { addIfDirectory(directories, File(it)) }
+        System.getenv("APP_HOME")?.let { addIfDirectory(directories, File(it)) }
+
+        return directories.toList()
+    }
+
     private fun loadPropertiesFile(): Properties? {
-        val workingDir = File(System.getProperty("user.dir"))
         val candidates = buildList {
-            propertiesFileNames.forEach { add(File(workingDir, it)) }
-            runCatching {
-                val jarDir = File(
-                    JvmEnvConfig::class.java.protectionDomain.codeSource.location.toURI()
-                ).parentFile
-                propertiesFileNames.forEach { add(File(jarDir, it)) }
+            candidateDirectories().forEach { directory ->
+                propertiesFileNames.forEach { add(File(directory, it)) }
             }
         }
 

@@ -25,7 +25,8 @@ data class TerraDto(
     val zona: String = "ZNV",
     val limit_kg_n_ha: Double? = null,
     val updated_at: String? = null,
-    val updated_by: String? = null
+    val updated_by: String? = null,
+    val titular: TitularDto? = null
 )
 
 @Serializable
@@ -97,7 +98,9 @@ data class EntregaDejeccioDto(
     val terra_desti_id: String? = null,
     val updated_at: String? = null,
     val updated_by: String? = null,
-    val dan: DanRefDto? = null
+    val dan: DanRefDto? = null,
+    val receptor_titular: TitularDto? = null,
+    val terra_desti: TerraDto? = null
 )
 
 @Serializable

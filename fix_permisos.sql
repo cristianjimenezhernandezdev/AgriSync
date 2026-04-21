@@ -15,6 +15,7 @@ grant select, insert, update, delete on public.oficina to authenticated;
 grant select, insert, update, delete on public.tecnic to authenticated;
 grant select, insert, update, delete on public.titular to authenticated;
 grant select, insert, update, delete on public.tecnic_titular to authenticated;
+grant select, insert, update, delete on public.oficina_titular_compartit to authenticated;
 grant select, insert, update, delete on public.dan_declaracio to authenticated;
 grant select, insert, update, delete on public.terra to authenticated;
 grant select, insert, update, delete on public.aplicacions_fertilitzants to authenticated;
@@ -31,10 +32,13 @@ grant execute on function public.is_oficina_manager() to authenticated;
 grant execute on function public.same_oficina(uuid) to authenticated;
 grant execute on function public.can_self_update_tecnic(uuid, uuid, uuid, public.rol_global, boolean) to authenticated;
 grant execute on function public.can_manage_office_titular(uuid) to authenticated;
+grant execute on function public.office_has_any_share(uuid, uuid) to authenticated;
+grant execute on function public.office_has_shared_scope(uuid, public.scope_titular, uuid) to authenticated;
 grant execute on function public.can_read_titular(uuid) to authenticated;
 grant execute on function public.can_write_scope(uuid, public.scope_titular) to authenticated;
 grant execute on function public.can_write_agricola(uuid) to authenticated;
 grant execute on function public.can_write_ramader(uuid) to authenticated;
+grant execute on function public.can_reference_terra(uuid) to authenticated;
 
 grant execute on all functions in schema public to service_role;
 

@@ -99,6 +99,7 @@ El model del MVP es basa en aquestes entitats:
 - `tecnic`
 - `titular`
 - `tecnic_titular`
+- `oficina_titular_compartit`
 - `dan_declaracio`
 - `terra`
 - `aplicacions_fertilitzants`
@@ -122,6 +123,12 @@ Ara el model fa servir `can_manage_office_titular(...)` i limita el gestor a:
 - o titulars que ja tenen tecnics actius de la seva oficina assignats
 
 Aixo acosta molt mes l'app al comportament esperat per oficines.
+
+En una evolucio posterior del mateix MVP s'ha afegit tambe `oficina_titular_compartit`, que permet:
+
+- compartir nomes la part agricola d'un titular amb una altra oficina
+- compartir nomes la part ramadera
+- o compartir `comu` si es vol una col.laboracio mes ampla
 
 ### 6.2. Treball real per campanya
 
@@ -182,6 +189,7 @@ Permet:
 - gestionar cens per bestiar i fase
 - gestionar entregues de dejeccions
 - treballar sobre la campanya activa
+- enviar una entrega a titulars o terres accessibles d'altres titulars
 
 ### 8.4. Preparar DAN
 
@@ -220,6 +228,7 @@ Es basa en:
 - `auth.uid()` de Supabase Auth
 - la taula funcional `public.tecnic`
 - scopes a `tecnic_titular`
+- comparticions interoficina a `oficina_titular_compartit`
 - funcions helper de permisos
 - policies RLS per taula
 

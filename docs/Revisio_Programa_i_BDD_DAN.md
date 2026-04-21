@@ -33,6 +33,7 @@ El que avui queda ben cobert:
 - resum DAN orientat a trasllat
 - copia estructurada del resum i checklist automatica per al tancament final
 - login principal sense dependència operativa directa de `service_role`, amb fallback tecnic nomes per recuperacio de desalineaments
+- comparticio interoficina per `scope` del titular
 
 El que encara no queda tancat del tot:
 
@@ -86,6 +87,7 @@ Matis:
 
 - un `oficina_manager` pot donar d'alta titulars nous
 - pero la gestio forta per oficina no es basa en "veure tot", sino en titulars creats o ja vinculats al seu ambit
+- ara, a mes, un titular es pot compartir amb una altra oficina nomes per la part `agricola`, `ramader`, `lectura` o `comu`
 
 ### 3.3. Part agricola
 
@@ -192,7 +194,7 @@ Consequencies:
 
 ### 3.7. Entregues a altres titulars o terres externes
 
-Estat: parcial.
+Estat: millorada respecte revisions anteriors, encara no total.
 
 La BDD admet:
 
@@ -201,13 +203,13 @@ La BDD admet:
 
 La UI actual permet:
 
-- entregar al mateix titular que s'esta treballant
-- o a una terra del mateix titular
+- entregar a titulars accessibles
+- entregar a terres accessibles, incloses terres d'altres titulars si hi ha permisos
 
 Per tant:
 
-- el model de dades ja no obliga nomes a terra
-- pero la pantalla encara no resol un flux complet de receptors externs arbitraris
+- el model de dades i la pantalla ja suporten receptors externs accessibles
+- la limitacio actual no es la pantalla, sino la necessitat de tenir permisos reals sobre el titular o terra receptor
 
 ## 4. Diagnosi resumida
 

@@ -83,7 +83,8 @@ internal fun TitularManagementScreen(
                                 onEditNom = viewModel::onEditNom,
                                 onEditNif = viewModel::onEditNif,
                                 onSave = viewModel::saveEdit,
-                                onDelete = { viewModel.deleteTitular(titular.id) }
+                                onDelete = { viewModel.deleteTitular(titular.id) },
+                                onShare = { viewModel.openShareDialog(titular) }
                             )
                         }
                     }
@@ -117,6 +118,23 @@ internal fun TitularManagementScreen(
                 onDismiss = viewModel::hideCreateDialog
             )
         }
+
+        val shareTargetTitular = ui.shareTargetTitular
+        if (ui.showShareDialog && shareTargetTitular != null) {
+            ShareTitularDialog(
+                titular = shareTargetTitular,
+                oficines = ui.oficines,
+                officeShares = ui.officeShares,
+                selectedOficinaId = ui.newShareOficinaId,
+                selectedScope = ui.newShareScope,
+                isSaving = ui.isSharing,
+                onSelectOficina = viewModel::onNewShareOficina,
+                onSelectScope = viewModel::onNewShareScope,
+                onConfirm = viewModel::createOfficeShare,
+                onDeleteShare = viewModel::deleteOfficeShare,
+                onDismiss = viewModel::closeShareDialog
+            )
+        }
     }
 }
 
@@ -132,7 +150,8 @@ private fun TitularManagementCard(
     onEditNom: (String) -> Unit,
     onEditNif: (String) -> Unit,
     onSave: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onShare: () -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -180,6 +199,7 @@ private fun TitularManagementCard(
                     }
                     Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         TextButton(onClick = onStartEdit) { Text("Editar") }
+                        TextButton(onClick = onShare) { Text("Compartir") }
                         TextButton(
                             onClick = { showDeleteConfirm = true },
                             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
@@ -206,6 +226,95 @@ private fun TitularManagementCard(
             }
         )
     }
+}
+
+@Composable
+private fun ShareTitularDialog(
+    titular: TitularDto,
+    oficines: List<cat.agrisync.data.OficinaDto>,
+    officeShares: List<cat.agrisync.data.OficinaTitularCompartitDto>,
+    selectedOficinaId: String,
+    selectedScope: String,
+    isSaving: Boolean,
+    onSelectOficina: (String) -> Unit,
+    onSelectScope: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDeleteShare: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Compartir titular") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Titular: ${titular.nom_rao}")
+                Text(
+                    "Comparteix la part agricola, ramadera o comuna amb una altra oficina. Despres, el manager receptor podra assignar els seus tecnics.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (officeShares.isEmpty()) {
+                    Text("Encara no hi ha comparticions actives.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    officeShares.forEach { share ->
+                        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(share.oficina?.nom ?: share.oficina_id)
+                                    Text("Scope compartit: ${share.scope}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                TextButton(
+                                    onClick = { onDeleteShare(share.id) },
+                                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                ) { Text("Treure") }
+                            }
+                        }
+                    }
+                }
+
+                Text("Nova comparticio", style = MaterialTheme.typography.titleSmall)
+                if (oficines.isEmpty()) {
+                    Text("No hi ha mes oficines disponibles per compartir aquest titular.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    SearchableSelectionField(
+                        items = oficines,
+                        selectedItem = oficines.find { it.id == selectedOficinaId },
+                        onSelect = { oficina -> onSelectOficina(oficina?.id ?: "") },
+                        itemLabel = { it.nom },
+                        itemSearchText = { it.nom },
+                        label = "Oficina receptora",
+                        placeholder = "Cerca una oficina"
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("lectura", "agricola", "ramader", "comu").forEach { scope ->
+                            FilterChip(
+                                selected = selectedScope == scope,
+                                onClick = { onSelectScope(scope) },
+                                label = { Text(scope) }
+                            )
+                        }
+                    }
+                    if (isSaving) {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = !isSaving && oficines.isNotEmpty() && selectedOficinaId.isNotBlank()
+            ) { Text("Compartir") }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss, enabled = !isSaving) { Text("Tancar") }
+        }
+    )
 }
 
 @Composable

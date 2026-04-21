@@ -10,6 +10,10 @@ internal class TitularManagementRepository(private val restClient: RestClient) {
         return restClient.get("titular", "?select=id,nif,nom_rao,created_at,created_by,updated_at,updated_by&order=nom_rao")
     }
 
+    internal suspend fun listOficines(): List<OficinaDto> {
+        return restClient.get("oficina", "?select=id,nom&order=nom")
+    }
+
     internal suspend fun create(body: TitularCreateRequest): TitularDto {
         val result: List<TitularDto> = restClient.post("titular", body)
         return result.first()
@@ -23,6 +27,23 @@ internal class TitularManagementRepository(private val restClient: RestClient) {
 
     internal suspend fun delete(titularId: String) {
         restClient.delete("titular", "?id=eq.$titularId")
+    }
+
+    // ── Comparticio per oficina ──
+
+    internal suspend fun listOfficeShares(titularId: String): List<OficinaTitularCompartitDto> {
+        val q = "?select=id,oficina_id,titular_id,scope,created_at,updated_at,oficina:oficina_id(id,nom)&titular_id=eq.$titularId&order=created_at.desc"
+        return restClient.get("oficina_titular_compartit", q)
+    }
+
+    internal suspend fun createOfficeShare(body: OficinaTitularCompartitCreateRequest): OficinaTitularCompartitDto {
+        val q = "?select=id,oficina_id,titular_id,scope,created_at,updated_at,oficina:oficina_id(id,nom)"
+        val result: List<OficinaTitularCompartitDto> = restClient.post("oficina_titular_compartit", body, q)
+        return result.first()
+    }
+
+    internal suspend fun deleteOfficeShare(shareId: String) {
+        restClient.delete("oficina_titular_compartit", "?id=eq.$shareId")
     }
 
     // ── Terres ──
@@ -80,6 +101,24 @@ data class TitularRefDto(
     val id: String,
     val nom_rao: String? = null,
     val nif: String? = null
+)
+
+@Serializable
+data class OficinaTitularCompartitDto(
+    val id: String,
+    val oficina_id: String,
+    val titular_id: String,
+    val scope: String = "lectura",
+    val created_at: String? = null,
+    val updated_at: String? = null,
+    val oficina: OficinaDto? = null
+)
+
+@Serializable
+data class OficinaTitularCompartitCreateRequest(
+    val oficina_id: String,
+    val titular_id: String,
+    val scope: String
 )
 
 @Serializable

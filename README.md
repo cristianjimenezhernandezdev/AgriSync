@@ -83,6 +83,8 @@ Actualment el projecte ja disposa de:
 - Mòdul ramader
 - Pantalla `Preparar DAN` amb resum unificat per titular i campanya
 - Còpia ràpida al porta-retalls del resum DAN i de la checklist final
+- Compartició de titulars entre oficines per `scope` agrícola o ramader
+- Entregues de dejeccions cap a titulars o terres accessibles d'altres titulars
 - Pantalles de gestió per oficines, tècnics, titulars i terres
 - Alta i baixa de dades principals directament dins dels mòduls
 

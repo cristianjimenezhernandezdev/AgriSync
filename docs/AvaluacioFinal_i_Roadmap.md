@@ -42,6 +42,8 @@ Actualment el projecte ja resol bé aquests punts:
 - pantalla de resum per titular orientada a la preparació de la DAN real
 - càlculs derivats visibles per ajudar en la revisió abans de presentar
 - còpia ràpida al porta-retalls del resum DAN i de la checklist de revisió
+- compartició de titulars entre oficines per `scope`
+- entregues cap a terres accessibles d'altres titulars
 
 Per tant, el nucli del projecte, la part administrativa, la part operativa principal i la UX essencial ja estan assolits.
 

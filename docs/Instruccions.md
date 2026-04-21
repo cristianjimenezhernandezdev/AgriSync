@@ -61,6 +61,8 @@ Es la seed recomanada perque cobreix:
 - modul agricola
 - modul ramader
 - pantalla `Preparar DAN`
+- comparticio entre oficines per part agricola o ramadera
+- entregues a terres accessibles d'altres titulars
 
 `seed_complet.sql` nomes es recomana si vols una prova rapida amb menys dades.
 
@@ -257,14 +259,15 @@ Proves recomanades:
 - crear una granja
 - afegir bestiar i fase productiva
 - crear una entrega a titular
-- crear una entrega a terra
+- crear una entrega a terra del mateix titular
+- crear una entrega a terra d'un altre titular si tens acces a aquella terra
 - canviar de campanya i verificar el filtratge
 - eliminar granja, registre o entrega
 
 Limit actual a tenir en compte:
 
-- la UI d'entregues resol titular receptor actual o terra del mateix titular
-- els receptors externs arbitraris continuen fora del MVP actual
+- per enviar a terres externes cal tenir acces real a aquell titular o a la seva oficina compartida
+- la relacio entre entrega concreta i aplicacio concreta continua sense quedar modelada
 
 ### 8.5. Preparar DAN
 
@@ -301,8 +304,10 @@ Checklist recomanada:
 6. validar login amb `admin.demo@agrisync.com`
 7. validar login amb un tecnic agricola i un tecnic ramader
 8. comprovar canvi de campanya a `Modul Agricola`, `Modul Ramader` i `Preparar DAN`
-9. provar alta i baixa minima de terra, aplicacio, granja i entrega
-10. provar `Copiar resum` i `Copiar checklist` a `Preparar DAN`
+9. provar una comparticio de titular a una altra oficina des de `Gestio de Titulars`
+10. provar alta i baixa minima de terra, aplicacio, granja i entrega
+11. provar una entrega a terra externa si el titular esta compartit amb l'oficina corresponent
+12. provar `Copiar resum` i `Copiar checklist` a `Preparar DAN`
 
 ## 10. Errors habituals i com resoldre'ls
 

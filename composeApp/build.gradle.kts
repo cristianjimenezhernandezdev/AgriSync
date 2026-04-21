@@ -1,4 +1,5 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.gradle.api.tasks.JavaExec
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -48,5 +49,11 @@ compose.desktop {
             packageName = "cat.agrisync"
             packageVersion = "1.0.0"
         }
+    }
+}
+
+tasks.withType<JavaExec>().configureEach {
+    if (name == "jvmRun") {
+        mainClass.set("cat.agrisync.MainKt")
     }
 }

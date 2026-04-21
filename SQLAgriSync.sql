@@ -16,9 +16,12 @@ drop function if exists public.is_admin() cascade;
 drop function if exists public.is_oficina_manager() cascade;
 drop function if exists public.same_oficina(uuid) cascade;
 drop function if exists public.can_manage_office_titular(uuid) cascade;
+drop function if exists public.office_has_any_share(uuid, uuid) cascade;
+drop function if exists public.office_has_shared_scope(uuid, public.scope_titular, uuid) cascade;
 drop function if exists public.can_read_titular(uuid) cascade;
 drop function if exists public.can_write_agricola(uuid) cascade;
 drop function if exists public.can_write_ramader(uuid) cascade;
+drop function if exists public.can_reference_terra(uuid) cascade;
 
 do $$
 begin
@@ -54,6 +57,7 @@ drop table if exists public.granja cascade;
 drop table if exists public.aplicacions_fertilitzants cascade;
 drop table if exists public.terra cascade;
 drop table if exists public.dan_declaracio cascade;
+drop table if exists public.oficina_titular_compartit cascade;
 drop table if exists public.tecnic_titular cascade;
 drop table if exists public.titular cascade;
 drop table if exists public.tecnic cascade;
@@ -147,6 +151,18 @@ create table public.tecnic_titular (
   created_at timestamptz not null default now(),
   created_by uuid,
   unique (tecnic_id, titular_id, scope)
+);
+
+create table public.oficina_titular_compartit (
+  id uuid primary key default gen_random_uuid(),
+  oficina_id uuid not null references public.oficina(id) on delete cascade,
+  titular_id uuid not null references public.titular(id) on delete cascade,
+  scope public.scope_titular not null default 'lectura',
+  created_at timestamptz not null default now(),
+  created_by uuid,
+  updated_at timestamptz not null default now(),
+  updated_by uuid,
+  unique (oficina_id, titular_id, scope)
 );
 
 create table public.dan_declaracio (
@@ -266,6 +282,8 @@ create index idx_tecnic_oficina_id on public.tecnic(oficina_id);
 create index idx_tecnic_user_id on public.tecnic(user_id);
 create index idx_tecnic_titular_tecnic on public.tecnic_titular(tecnic_id);
 create index idx_tecnic_titular_titular on public.tecnic_titular(titular_id);
+create index idx_oficina_titular_compartit_oficina on public.oficina_titular_compartit(oficina_id);
+create index idx_oficina_titular_compartit_titular on public.oficina_titular_compartit(titular_id);
 create index idx_dan_titular on public.dan_declaracio(titular_id);
 create index idx_terra_titular on public.terra(titular_id);
 create index idx_aplicacions_dan on public.aplicacions_fertilitzants(dan_id);
@@ -284,6 +302,10 @@ for each row execute function public.audit_fill_actor();
 
 create trigger trg_titular_actor
 before insert or update on public.titular
+for each row execute function public.audit_fill_actor();
+
+create trigger trg_oficina_titular_compartit_actor
+before insert or update on public.oficina_titular_compartit
 for each row execute function public.audit_fill_actor();
 
 create trigger trg_dan_actor
@@ -434,7 +456,54 @@ as $$
             and tt.actiu = true
             and t.actiu = true
             and t.oficina_id = public.current_oficina_id()
+            and not exists (
+              select 1
+              from public.oficina_titular_compartit otc
+              where otc.titular_id = p_titular_id
+                and otc.oficina_id = public.current_oficina_id()
+            )
         )
+      )
+  );
+$$;
+
+create or replace function public.office_has_any_share(
+  p_titular_id uuid,
+  p_oficina_id uuid default public.current_oficina_id()
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.oficina_titular_compartit otc
+    where otc.titular_id = p_titular_id
+      and otc.oficina_id = p_oficina_id
+  );
+$$;
+
+create or replace function public.office_has_shared_scope(
+  p_titular_id uuid,
+  p_scope public.scope_titular,
+  p_oficina_id uuid default public.current_oficina_id()
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.oficina_titular_compartit otc
+    where otc.titular_id = p_titular_id
+      and otc.oficina_id = p_oficina_id
+      and (
+        otc.scope = 'comu'
+        or otc.scope = p_scope
       )
   );
 $$;
@@ -449,6 +518,7 @@ as $$
   select
     public.is_admin()
     or (public.is_oficina_manager() and public.can_manage_office_titular(p_titular_id))
+    or (public.is_oficina_manager() and public.office_has_any_share(p_titular_id))
     or exists (
       select 1
       from public.tecnic_titular tt
@@ -470,6 +540,7 @@ as $$
   select
     public.is_admin()
     or (public.is_oficina_manager() and public.can_manage_office_titular(p_titular_id))
+    or (public.is_oficina_manager() and public.office_has_shared_scope(p_titular_id, p_scope))
     or exists (
       select 1
       from public.tecnic_titular tt
@@ -502,6 +573,22 @@ as $$
   select public.can_write_scope(p_titular_id, 'ramader'::public.scope_titular);
 $$;
 
+create or replace function public.can_reference_terra(p_terra_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.terra te
+    where te.id = p_terra_id
+      and te.titular_id is not null
+      and public.can_read_titular(te.titular_id)
+  );
+$$;
+
 grant execute on function public.get_my_tecnic() to authenticated;
 grant execute on function public.can_self_update_tecnic(uuid, uuid, uuid, public.rol_global, boolean) to authenticated;
 
@@ -513,6 +600,7 @@ grant select, insert, update, delete on public.oficina to authenticated;
 grant select, insert, update, delete on public.tecnic to authenticated;
 grant select, insert, update, delete on public.titular to authenticated;
 grant select, insert, update, delete on public.tecnic_titular to authenticated;
+grant select, insert, update, delete on public.oficina_titular_compartit to authenticated;
 grant select, insert, update, delete on public.dan_declaracio to authenticated;
 grant select, insert, update, delete on public.terra to authenticated;
 grant select, insert, update, delete on public.aplicacions_fertilitzants to authenticated;
@@ -530,6 +618,7 @@ alter table public.oficina enable row level security;
 alter table public.tecnic enable row level security;
 alter table public.titular enable row level security;
 alter table public.tecnic_titular enable row level security;
+alter table public.oficina_titular_compartit enable row level security;
 alter table public.dan_declaracio enable row level security;
 alter table public.terra enable row level security;
 alter table public.aplicacions_fertilitzants enable row level security;
@@ -636,7 +725,10 @@ with check (
   or (
     public.is_oficina_manager()
     and public.same_oficina(tecnic_id)
-    and public.can_manage_office_titular(titular_id)
+    and (
+      public.can_manage_office_titular(titular_id)
+      or public.office_has_shared_scope(titular_id, scope)
+    )
   )
 );
 
@@ -647,7 +739,10 @@ using (
   or (
     public.is_oficina_manager()
     and public.same_oficina(tecnic_titular.tecnic_id)
-    and public.can_manage_office_titular(tecnic_titular.titular_id)
+    and (
+      public.can_manage_office_titular(tecnic_titular.titular_id)
+      or public.office_has_shared_scope(tecnic_titular.titular_id, tecnic_titular.scope)
+    )
   )
 )
 with check (
@@ -655,7 +750,10 @@ with check (
   or (
     public.is_oficina_manager()
     and public.same_oficina(tecnic_id)
-    and public.can_manage_office_titular(titular_id)
+    and (
+      public.can_manage_office_titular(titular_id)
+      or public.office_has_shared_scope(titular_id, scope)
+    )
   )
 );
 
@@ -666,7 +764,61 @@ using (
   or (
     public.is_oficina_manager()
     and public.same_oficina(tecnic_titular.tecnic_id)
-    and public.can_manage_office_titular(tecnic_titular.titular_id)
+    and (
+      public.can_manage_office_titular(tecnic_titular.titular_id)
+      or public.office_has_shared_scope(tecnic_titular.titular_id, tecnic_titular.scope)
+    )
+  )
+);
+
+-- OFICINA_TITULAR_COMPARTIT
+create policy oficina_titular_compartit_select on public.oficina_titular_compartit
+for select to authenticated
+using (
+  public.is_admin()
+  or (
+    public.is_oficina_manager()
+    and (
+      oficina_titular_compartit.oficina_id = public.current_oficina_id()
+      or public.can_manage_office_titular(oficina_titular_compartit.titular_id)
+    )
+  )
+);
+
+create policy oficina_titular_compartit_insert on public.oficina_titular_compartit
+for insert to authenticated
+with check (
+  public.is_admin()
+  or (
+    public.is_oficina_manager()
+    and public.can_manage_office_titular(titular_id)
+  )
+);
+
+create policy oficina_titular_compartit_update on public.oficina_titular_compartit
+for update to authenticated
+using (
+  public.is_admin()
+  or (
+    public.is_oficina_manager()
+    and public.can_manage_office_titular(oficina_titular_compartit.titular_id)
+  )
+)
+with check (
+  public.is_admin()
+  or (
+    public.is_oficina_manager()
+    and public.can_manage_office_titular(titular_id)
+  )
+);
+
+create policy oficina_titular_compartit_delete on public.oficina_titular_compartit
+for delete to authenticated
+using (
+  public.is_admin()
+  or (
+    public.is_oficina_manager()
+    and public.can_manage_office_titular(oficina_titular_compartit.titular_id)
   )
 );
 
@@ -934,6 +1086,17 @@ using (
     where d.id = entrega_dejeccions.dan_id
       and public.can_read_titular(d.titular_id)
   )
+  or (
+    entrega_dejeccions.receptor_titular_id is not null
+    and public.can_read_titular(entrega_dejeccions.receptor_titular_id)
+  )
+  or exists (
+    select 1
+    from public.terra te
+    where te.id = entrega_dejeccions.terra_desti_id
+      and te.titular_id is not null
+      and public.can_read_titular(te.titular_id)
+  )
 );
 
 create policy entrega_insert on public.entrega_dejeccions
@@ -946,6 +1109,8 @@ with check (
     where d.id = dan_id
       and public.can_write_ramader(d.titular_id)
   )
+  and (terra_desti_id is null or public.can_reference_terra(terra_desti_id))
+  and (receptor_titular_id is null or public.can_read_titular(receptor_titular_id))
 );
 
 create policy entrega_update on public.entrega_dejeccions
@@ -967,6 +1132,8 @@ with check (
     where d.id = dan_id
       and public.can_write_ramader(d.titular_id)
   )
+  and (terra_desti_id is null or public.can_reference_terra(terra_desti_id))
+  and (receptor_titular_id is null or public.can_read_titular(receptor_titular_id))
 );
 
 create policy entrega_delete on public.entrega_dejeccions

@@ -2,6 +2,9 @@ package cat.agrisync.viewmodel
 
 import cat.agrisync.data.TitularCreateRequest
 import cat.agrisync.data.TitularDto
+import cat.agrisync.data.OficinaDto
+import cat.agrisync.data.OficinaTitularCompartitCreateRequest
+import cat.agrisync.data.OficinaTitularCompartitDto
 import cat.agrisync.data.TitularManagementRepository
 import cat.agrisync.data.TitularUpdateRequest
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +33,14 @@ data class TitularManagementUiState(
     val editNom: String = "",
     val editNif: String = "",
     val isEditing: Boolean = false,
+    // Compartir
+    val oficines: List<OficinaDto> = emptyList(),
+    val shareTargetTitular: TitularDto? = null,
+    val officeShares: List<OficinaTitularCompartitDto> = emptyList(),
+    val showShareDialog: Boolean = false,
+    val newShareOficinaId: String = "",
+    val newShareScope: String = "lectura",
+    val isSharing: Boolean = false,
     // Paginació
     val currentPage: Int = 0,
     val pageSize: Int = 15
@@ -67,7 +78,8 @@ internal class TitularManagementViewModel(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val list = repository.listAll()
-                _uiState.update { it.copy(isLoading = false, titulars = list, currentPage = 0) }
+                val oficines = repository.listOficines()
+                _uiState.update { it.copy(isLoading = false, titulars = list, oficines = oficines, currentPage = 0) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error carregant titulars") }
             }
@@ -164,6 +176,91 @@ internal class TitularManagementViewModel(
                 load()
             } catch (e: Exception) {
                 _uiState.update { it.copy(message = "Error eliminant: ${e.message}") }
+            }
+        }
+    }
+
+    fun openShareDialog(titular: TitularDto) {
+        scope.launch {
+            try {
+                val shares = repository.listOfficeShares(titular.id)
+                val availableOfficeId = _uiState.value.oficines.firstOrNull()?.id ?: ""
+                _uiState.update {
+                    it.copy(
+                        shareTargetTitular = titular,
+                        officeShares = shares,
+                        newShareOficinaId = availableOfficeId,
+                        newShareScope = "lectura",
+                        showShareDialog = true
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(message = "Error carregant comparticions: ${e.message}") }
+            }
+        }
+    }
+
+    fun closeShareDialog() {
+        _uiState.update {
+            it.copy(
+                shareTargetTitular = null,
+                officeShares = emptyList(),
+                showShareDialog = false,
+                isSharing = false
+            )
+        }
+    }
+
+    fun onNewShareOficina(value: String) {
+        _uiState.update { it.copy(newShareOficinaId = value) }
+    }
+
+    fun onNewShareScope(value: String) {
+        _uiState.update { it.copy(newShareScope = value) }
+    }
+
+    fun createOfficeShare() {
+        val state = _uiState.value
+        val titular = state.shareTargetTitular ?: return
+        if (state.newShareOficinaId.isBlank()) {
+            _uiState.update { it.copy(message = "Has de seleccionar una oficina") }
+            return
+        }
+        scope.launch {
+            _uiState.update { it.copy(isSharing = true) }
+            try {
+                repository.createOfficeShare(
+                    OficinaTitularCompartitCreateRequest(
+                        oficina_id = state.newShareOficinaId,
+                        titular_id = titular.id,
+                        scope = state.newShareScope
+                    )
+                )
+                val shares = repository.listOfficeShares(titular.id)
+                val availableOfficeId = _uiState.value.oficines.firstOrNull()?.id ?: ""
+                _uiState.update {
+                    it.copy(
+                        officeShares = shares,
+                        newShareOficinaId = availableOfficeId,
+                        isSharing = false,
+                        message = "Comparticio creada"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isSharing = false, message = "Error: ${e.message}") }
+            }
+        }
+    }
+
+    fun deleteOfficeShare(shareId: String) {
+        val titular = _uiState.value.shareTargetTitular ?: return
+        scope.launch {
+            try {
+                repository.deleteOfficeShare(shareId)
+                val shares = repository.listOfficeShares(titular.id)
+                _uiState.update { it.copy(officeShares = shares, message = "Comparticio eliminada") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(message = "Error eliminant comparticio: ${e.message}") }
             }
         }
     }

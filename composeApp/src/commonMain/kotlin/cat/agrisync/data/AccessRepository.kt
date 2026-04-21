@@ -10,7 +10,7 @@ internal class AccessRepository(private val restClient: RestClient) {
      * Usa el token de l'usuari autenticat — les RLS policies controlen l'accés.
      */
     internal suspend fun listTitularAccessForTecnic(tecnic: TecnicDto): List<TitularAccessRow> {
-        val isAdmin = tecnic.rol == "admin" || tecnic.rol == "oficina_manager"
+        val isAdmin = tecnic.rol == "admin"
 
         if (isAdmin) {
             // Admin/Manager veu tots els titulars
@@ -30,6 +30,35 @@ internal class AccessRepository(private val restClient: RestClient) {
                 )
             }
         } else {
+            val isManager = tecnic.rol == "oficina_manager"
+            if (isManager) {
+                val titulars: List<TitularRawDto> = restClient.get(
+                    "titular",
+                    "?select=id,nif,nom_rao,updated_at,updated_by&order=nom_rao"
+                )
+                val sharedRows: List<OficinaTitularShareAccessDto> = restClient.get(
+                    "oficina_titular_compartit",
+                    "?select=titular_id,scope&oficina_id=eq.${tecnic.oficina_id}"
+                )
+                val sharedByTitular = sharedRows.groupBy { it.titular_id }
+
+                return titulars.map { titular ->
+                    val scopes = sharedByTitular[titular.id].orEmpty().map { it.scope }
+                    val isShared = scopes.isNotEmpty()
+                    val canAgricola = if (isShared) scopes.any { it == "comu" || it == "agricola" } else true
+                    val canRamader = if (isShared) scopes.any { it == "comu" || it == "ramader" } else true
+                    TitularAccessRow(
+                        titular_id = titular.id,
+                        nom = titular.nom_rao,
+                        nif = titular.nif,
+                        can_agricola = canAgricola,
+                        can_ramader = canRamader,
+                        last_update_at = titular.updated_at,
+                        last_update_by = titular.updated_by
+                    )
+                }
+            }
+
             // Tècnic normal: consulta les assignacions
             val assignacions: List<TecnicTitularAccessDto> = restClient.get(
                 "tecnic_titular",
@@ -73,4 +102,10 @@ internal data class TecnicTitularAccessDto(
     val scope: String,
     val actiu: Boolean = true,
     val titular: TitularRawDto? = null
+)
+
+@Serializable
+internal data class OficinaTitularShareAccessDto(
+    val titular_id: String,
+    val scope: String
 )

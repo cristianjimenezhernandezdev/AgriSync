@@ -218,9 +218,9 @@ internal fun TitularRamaderScreen(
 
         if (showCreateEntregaDialog) {
             CreateEntregaDialog(
-                titular = ui.titular,
                 granges = ui.granges,
-                terres = ui.terres,
+                titulars = ui.receptorTitulars,
+                terres = ui.receptorTerres,
                 selectedCampanya = ui.selectedCampanya,
                 onConfirm = { granjaId, data, quantitat, terraDestiId, receptorTitularId ->
                     if (viewModel.createEntrega(granjaId, data, quantitat, terraDestiId, receptorTitularId)) {
@@ -454,7 +454,7 @@ private fun EditableEntregaCard(
             if (editing) {
                 OutlinedTextField(value = data, onValueChange = { data = it }, label = { Text("Data (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = quantitat, onValueChange = { quantitat = it }, label = { Text("Quantitat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Text("Receptor: ${e.receptor_titular_id ?: "terra:${e.terra_desti_id ?: "-"}"}", style = MaterialTheme.typography.bodySmall)
+                Text("Receptor: ${formatEntregaReceptor(e)}", style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { if (onSave(data, quantitat)) editing = false }) { Text("Guardar") }
                     OutlinedButton(onClick = { data = e.data ?: ""; quantitat = (e.quantitat ?: 0.0).toString(); editing = false }) { Text("Cancel·lar") }
@@ -462,7 +462,11 @@ private fun EditableEntregaCard(
             } else {
                 Text("Data: ${e.data ?: "-"}")
                 Text("Quantitat: ${e.quantitat ?: 0.0}")
-                Text("Receptor: ${e.receptor_titular_id ?: "terra:${e.terra_desti_id ?: "-"}"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Receptor: ${formatEntregaReceptor(e)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 AuditInfoBlock(
                     updatedAt = e.updated_at,
                     updatedByLabel = actorLabel,
@@ -556,8 +560,8 @@ private fun CreateGranjaBestiarDialog(
 
 @Composable
 private fun CreateEntregaDialog(
-    titular: TitularDto?,
     granges: List<GranjaDto>,
+    titulars: List<TitularDto>,
     terres: List<TerraDto>,
     selectedCampanya: Int,
     onConfirm: (String, String, String, String?, String?) -> Unit,
@@ -565,10 +569,11 @@ private fun CreateEntregaDialog(
 ) {
     var selectedGranjaId by remember(granges) { mutableStateOf(granges.firstOrNull()?.id ?: "") }
     var receptorMode by remember { mutableStateOf("titular") }
+    var selectedTitularId by remember(titulars) { mutableStateOf(titulars.firstOrNull()?.id ?: "") }
     var selectedTerraId by remember(terres) { mutableStateOf(terres.firstOrNull()?.id ?: "") }
     var data by remember { mutableStateOf("") }
     var quantitat by remember { mutableStateOf("") }
-    val canCreate = granges.isNotEmpty() && titular != null
+    val canCreate = granges.isNotEmpty()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -577,7 +582,7 @@ private fun CreateEntregaDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (!canCreate) {
                     Text(
-                        "Per crear una entrega necessites almenys una granja d'origen i un titular carregat.",
+                        "Per crear una entrega necessites almenys una granja d'origen.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
@@ -608,13 +613,18 @@ private fun CreateEntregaDialog(
                     }
 
                     if (receptorMode == "titular") {
-                        Text(
-                            "Receptor: ${titular.nom_rao}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        if (titulars.isEmpty()) {
+                            Text("No tens cap titular accessible per seleccionar com a receptor.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            TitularDropdown(
+                                titulars = titulars,
+                                selectedId = selectedTitularId,
+                                onSelect = { selectedTitularId = it }
+                            )
+                        }
                     } else {
                         if (terres.isEmpty()) {
-                            Text("Aquest titular no te terres disponibles per seleccionar.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("No tens cap terra accessible per seleccionar.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             TerraDropdown(terres = terres, selectedId = selectedTerraId, onSelect = { selectedTerraId = it }, label = "Terra desti")
                         }
@@ -626,10 +636,13 @@ private fun CreateEntregaDialog(
             Button(
                 onClick = {
                     val terraId = if (receptorMode == "terra") selectedTerraId else null
-                    val receptorTitularId = if (receptorMode == "titular") titular?.id else null
+                    val receptorTitularId = if (receptorMode == "titular") selectedTitularId else null
                     onConfirm(selectedGranjaId, data, quantitat, terraId, receptorTitularId)
                 },
-                enabled = canCreate && (receptorMode == "titular" || terres.isNotEmpty())
+                enabled = canCreate && (
+                    (receptorMode == "titular" && titulars.isNotEmpty() && selectedTitularId.isNotBlank())
+                        || (receptorMode == "terra" && terres.isNotEmpty() && selectedTerraId.isNotBlank())
+                )
             ) { Text("Crear") }
         },
         dismissButton = {
@@ -717,11 +730,38 @@ private fun TerraDropdown(
         items = terres,
         selectedItem = terres.find { it.id == selectedId },
         onSelect = { terra -> onSelect(terra?.id ?: "") },
-        itemLabel = { it.codi_sigpac_complet ?: it.id },
-        itemSearchText = { it.codi_sigpac_complet ?: it.id },
+        itemLabel = { "${it.codi_sigpac_complet ?: it.id} · ${it.titular?.nom_rao ?: "-"}" },
+        itemSearchText = { "${it.codi_sigpac_complet ?: it.id} ${it.titular?.nom_rao ?: ""} ${it.titular?.nif ?: ""}" },
         label = label,
         placeholder = "Cerca per codi SIGPAC"
     )
+}
+
+@Composable
+private fun TitularDropdown(
+    titulars: List<TitularDto>,
+    selectedId: String,
+    onSelect: (String) -> Unit
+) {
+    SearchableSelectionField(
+        items = titulars,
+        selectedItem = titulars.find { it.id == selectedId },
+        onSelect = { titular -> onSelect(titular?.id ?: "") },
+        itemLabel = { "${it.nom_rao} (${it.nif ?: "-"})" },
+        itemSearchText = { "${it.nom_rao} ${it.nif ?: ""}" },
+        label = "Titular receptor",
+        placeholder = "Cerca per nom o NIF"
+    )
+}
+
+private fun formatEntregaReceptor(entrega: EntregaDejeccioDto): String {
+    entrega.receptor_titular?.let { return "${it.nom_rao} (${it.nif ?: "-"})" }
+    entrega.terra_desti?.let { terra ->
+        val codi = terra.codi_sigpac_complet ?: terra.id
+        val titular = terra.titular?.nom_rao ?: "-"
+        return "$codi · $titular"
+    }
+    return entrega.receptor_titular_id ?: "terra:${entrega.terra_desti_id ?: "-"}"
 }
 
 @Composable
