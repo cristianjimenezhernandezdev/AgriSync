@@ -51,7 +51,7 @@ internal fun TerraManagementScreen(
                 OutlinedTextField(
                     value = ui.searchQuery,
                     onValueChange = viewModel::onSearchChange,
-                    label = { Text("Cercar per SIGPAC, nom o NIF") },
+                    label = { Text("Cercar per SIGPAC, nom, NIF, telefon o CP") },
                     singleLine = true,
                     modifier = Modifier.weight(1f)
                 )
@@ -61,7 +61,7 @@ internal fun TerraManagementScreen(
                     selectedItem = ui.titulars.find { it.id == ui.filterTitularId },
                     onSelect = { titular -> viewModel.onFilterTitular(titular?.id) },
                     itemLabel = { "${it.nom_rao} (${it.nif ?: "-"})" },
-                    itemSearchText = { "${it.nom_rao} ${it.nif ?: ""}" },
+                    itemSearchText = { "${it.nom_rao} ${it.nif ?: ""} ${it.telefon ?: ""} ${it.email ?: ""} ${it.codi_postal ?: ""}" },
                     label = "Filtrar per titular",
                     placeholder = "Tots els titulars",
                     allowClearSelection = true,
@@ -201,9 +201,9 @@ private fun TerraManagementCard(
                     selectedItem = titulars.find { it.id == editTitularId },
                     onSelect = { titular -> onEditTitularId(titular?.id ?: "") },
                     itemLabel = { "${it.nom_rao} (${it.nif ?: "-"})" },
-                    itemSearchText = { "${it.nom_rao} ${it.nif ?: ""}" },
+                    itemSearchText = { "${it.nom_rao} ${it.nif ?: ""} ${it.telefon ?: ""} ${it.email ?: ""} ${it.codi_postal ?: ""}" },
                     label = "Titular",
-                    placeholder = "Cerca per nom o NIF",
+                    placeholder = "Cerca per nom, NIF, telefon o CP",
                     allowClearSelection = true,
                     clearSelectionLabel = "Sense titular"
                 )
@@ -344,9 +344,9 @@ private fun CreateTerraDialog(
                     selectedItem = titulars.find { it.id == titularId },
                     onSelect = { titular -> onTitularIdChange(titular?.id ?: "") },
                     itemLabel = { "${it.nom_rao} (${it.nif ?: "-"})" },
-                    itemSearchText = { "${it.nom_rao} ${it.nif ?: ""}" },
+                    itemSearchText = { "${it.nom_rao} ${it.nif ?: ""} ${it.telefon ?: ""} ${it.email ?: ""} ${it.codi_postal ?: ""}" },
                     label = "Titular",
-                    placeholder = "Cerca per nom o NIF",
+                    placeholder = "Cerca per nom, NIF, telefon o CP",
                     allowClearSelection = true,
                     clearSelectionLabel = "Sense titular"
                 )

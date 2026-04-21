@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 data class HomeUiState(
     val items: List<TitularAccessRow> = emptyList(),
     val actorLabels: Map<String, String> = emptyMap(),
-    val searchNif: String = "",
+    val searchText: String = "",
     val currentPage: Int = 0,
     val pageSize: Int = 12,
     val isLoading: Boolean = false,
@@ -25,9 +25,16 @@ data class HomeUiState(
 ) {
     val filtered: List<TitularAccessRow>
         get() {
-            val query = normalizeNif(searchNif)
+            val query = normalizeSearchKey(searchText)
             if (query.isBlank()) return items
-            return items.filter { normalizeNif(it.nif) .contains(query) || it.nom.contains(searchNif, ignoreCase = true) }
+            return items.filter {
+                normalizeSearchKey(it.nif).contains(query) ||
+                    normalizeSearchKey(it.telefon).contains(query) ||
+                    normalizeSearchKey(it.codi_postal).contains(query) ||
+                    it.nom.contains(searchText, ignoreCase = true) ||
+                    (it.email ?: "").contains(searchText, ignoreCase = true) ||
+                    (it.adreca ?: "").contains(searchText, ignoreCase = true)
+            }
         }
 
     val totalPages: Int
@@ -74,8 +81,8 @@ internal class HomeViewModel(
         }
     }
 
-    fun onSearchNifChange(value: String) {
-        _uiState.update { it.copy(searchNif = value, currentPage = 0) }
+    fun onSearchChange(value: String) {
+        _uiState.update { it.copy(searchText = value, currentPage = 0) }
     }
 
     fun nextPage() {
@@ -96,12 +103,13 @@ internal class HomeViewModel(
     }
 }
 
-private fun normalizeNif(value: String?): String {
+private fun normalizeSearchKey(value: String?): String {
     if (value.isNullOrBlank()) return ""
     return value
         .replace(" ", "")
         .replace(".", "")
         .replace("-", "")
+        .replace("/", "")
         .uppercase()
 }
 

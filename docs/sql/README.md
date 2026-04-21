@@ -4,8 +4,9 @@
 
 - `schema/agrisync_schema.sql`
   Esquema principal: enums, taules, auditoria, funcions helper, grants i RLS.
+  La taula `titular` inclou `nif`, `telefon`, `email`, `adreca` i `codi_postal`, amb indexos per facilitar cerques futures.
 - `seeds/agrisync_demo_seed.sql`
-  Seed principal de demo i proves.
+  Seed principal de demo i proves, amb dades de contacte completes als titulars.
 - `maintenance/reaplica_permisos.sql`
   Reaplica grants i execucions.
 - `maintenance/resincronitza_tecnic_user_ids.sql`

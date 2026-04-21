@@ -198,7 +198,11 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
 
                 is Screen.TitularAgricola -> {
                     val vm = remember(screen.titularId) {
-                        TitularAgricolaViewModel(services.agricolaRepository, services.auditRepository)
+                        TitularAgricolaViewModel(
+                            services.agricolaRepository,
+                            services.auditRepository,
+                            services.tecnicRepository
+                        )
                     }
                     DisposableEffect(screen.titularId) { onDispose { vm.clear() } }
                     LaunchedEffect(screen.titularId) { vm.load(screen.titularId) }
@@ -210,7 +214,11 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
 
                 is Screen.TitularRamader -> {
                     val vm = remember(screen.titularId) {
-                        TitularRamaderViewModel(services.ramaderRepository, services.auditRepository)
+                        TitularRamaderViewModel(
+                            services.ramaderRepository,
+                            services.auditRepository,
+                            services.tecnicRepository
+                        )
                     }
                     DisposableEffect(screen.titularId) { onDispose { vm.clear() } }
                     LaunchedEffect(screen.titularId) { vm.load(screen.titularId) }

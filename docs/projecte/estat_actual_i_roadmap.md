@@ -9,6 +9,7 @@ AgriSync esta en un punt de MVP funcional i demostrable. El nucli del projecte e
 - login real amb Supabase Auth
 - sessio persistent en desktop
 - model de dades centrat en titular, terres, granges i campanyes
+- titular amb dades de contacte estructurades: `telefon`, `email`, `adreca` i `codi_postal`
 - permisos reals amb RLS
 - gestio d'oficines, tecnics, titulars i terres
 - modul agricola i modul ramader operatius

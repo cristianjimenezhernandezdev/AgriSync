@@ -71,6 +71,13 @@ internal fun ProfileScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
+                        OutlinedTextField(
+                            value = ui.telefon,
+                            onValueChange = viewModel::onTelefonChange,
+                            label = { Text("Telefon") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                         // Camps no editables
                         ProfileRow("Rol", currentTecnic.rol ?: "tecnic")
                         ProfileRow("Oficina", oficina?.nom ?: currentTecnic.oficina_id)
@@ -97,6 +104,7 @@ internal fun ProfileScreen(
                         // Mode visualització
                         ProfileRow("Nom", currentTecnic.nom)
                         ProfileRow("Email", currentTecnic.email ?: "\u2014")
+                        ProfileRow("Telefon", currentTecnic.telefon ?: "\u2014")
                         ProfileRow("Rol", currentTecnic.rol ?: "tecnic")
                         ProfileRow("Oficina", oficina?.nom ?: currentTecnic.oficina_id)
                         ProfileRow("Actiu", if (currentTecnic.actiu) "Si" else "No")

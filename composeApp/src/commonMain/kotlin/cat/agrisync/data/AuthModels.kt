@@ -55,6 +55,7 @@ data class TecnicDto(
     val user_id: String? = null,
     val nom: String,
     val email: String? = null,
+    val telefon: String? = null,
     val rol: String? = null,
     val actiu: Boolean = true,
     val created_at: String? = null,

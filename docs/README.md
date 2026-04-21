@@ -14,6 +14,7 @@ Aquest directori concentra tota la documentacio funcional, tecnica i SQL del pro
 
 ## Documents principals
 
+- [Index complet de documentacio i estructura del projecte](index_complet_documentacio_i_projecte.md)
 - [Guia d'instalacio i demo](guies/instalacio_i_demo.md)
 - [Arquitectura i codi](arquitectura/arquitectura_i_codi.md)
 - [Permisos i seguretat](arquitectura/permisos_i_seguretat.md)

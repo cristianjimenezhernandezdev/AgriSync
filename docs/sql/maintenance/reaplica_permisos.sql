@@ -31,6 +31,8 @@ grant execute on function public.is_admin() to authenticated;
 grant execute on function public.is_oficina_manager() to authenticated;
 grant execute on function public.same_oficina(uuid) to authenticated;
 grant execute on function public.can_self_update_tecnic(uuid, uuid, uuid, public.rol_global, boolean) to authenticated;
+grant execute on function public.can_view_tecnic(uuid) to authenticated;
+grant execute on function public.can_view_oficina(uuid) to authenticated;
 grant execute on function public.can_manage_office_titular(uuid) to authenticated;
 grant execute on function public.office_has_any_share(uuid, uuid) to authenticated;
 grant execute on function public.office_has_shared_scope(uuid, public.scope_titular, uuid) to authenticated;

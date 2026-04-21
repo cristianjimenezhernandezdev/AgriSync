@@ -24,7 +24,7 @@ internal class TecnicRepository(
     internal suspend fun listAll(): List<TecnicDto> {
         return restClient.get(
             "tecnic",
-            "?select=id,oficina_id,user_id,nom,email,rol,actiu,created_at,created_by,updated_at,updated_by&order=nom"
+            "?select=id,oficina_id,user_id,nom,email,telefon,rol,actiu,created_at,created_by,updated_at,updated_by&order=nom"
         )
     }
 
@@ -71,13 +71,23 @@ internal class TecnicRepository(
 
     /** Llista assignacions tecnic_titular d'un tècnic */
     internal suspend fun listAssignacions(tecnicId: String): List<TecnicTitularWithTitular> {
-        val q = "?select=id,tecnic_id,titular_id,scope,actiu,titular:titular_id(id,nif,nom_rao)&tecnic_id=eq.$tecnicId&order=created_at.desc"
+        val q = "?select=id,tecnic_id,titular_id,scope,actiu,titular:titular_id(id,nif,nom_rao,telefon,email,adreca,codi_postal)&tecnic_id=eq.$tecnicId&order=created_at.desc"
         return restClient.get("tecnic_titular", q)
+    }
+
+    internal suspend fun listCollaboratingTecnicsByTitular(titularId: String): List<TitularCollaboratingTecnicDto> {
+        val q = "?select=id,scope,actiu,tecnic:tecnic_id(id,oficina_id,user_id,nom,email,telefon,rol,actiu,oficina:oficina_id(id,nom))&titular_id=eq.$titularId&actiu=eq.true&order=created_at.asc"
+        return restClient.get("tecnic_titular", q)
+    }
+
+    internal suspend fun listCollaboratingOficinesByTitular(titularId: String): List<TitularSharedOfficeDto> {
+        val q = "?select=id,scope,oficina:oficina_id(id,nom)&titular_id=eq.$titularId&order=created_at.asc"
+        return restClient.get("oficina_titular_compartit", q)
     }
 
     /** Llista tots els titulars (per poder assignar) */
     internal suspend fun listAllTitulars(): List<TitularDto> {
-        return restClient.get("titular", "?select=id,nif,nom_rao&order=nom_rao")
+        return restClient.get("titular", "?select=id,nif,nom_rao,telefon,email,adreca,codi_postal&order=nom_rao")
     }
 
     /** Crea una assignació tecnic_titular */
@@ -154,6 +164,7 @@ data class TecnicCreateRequest(
     val user_id: String? = null,
     val nom: String,
     val email: String? = null,
+    val telefon: String? = null,
     val rol: String = "tecnic",
     val actiu: Boolean = true
 )
@@ -162,6 +173,7 @@ data class TecnicCreateRequest(
 data class TecnicUpdateRequest(
     val nom: String? = null,
     val email: String? = null,
+    val telefon: String? = null,
     val rol: String? = null,
     val actiu: Boolean? = null,
     val oficina_id: String? = null
@@ -188,6 +200,40 @@ data class TecnicTitularWithTitular(
     val scope: String = "comu",
     val actiu: Boolean = true,
     val titular: TitularDto? = null
+)
+
+@Serializable
+data class OficinaEmbeddedDto(
+    val id: String,
+    val nom: String
+)
+
+@Serializable
+data class TecnicCollaborationDto(
+    val id: String,
+    val oficina_id: String,
+    val user_id: String? = null,
+    val nom: String,
+    val email: String? = null,
+    val telefon: String? = null,
+    val rol: String? = null,
+    val actiu: Boolean = true,
+    val oficina: OficinaEmbeddedDto? = null
+)
+
+@Serializable
+data class TitularCollaboratingTecnicDto(
+    val id: String,
+    val scope: String = "comu",
+    val actiu: Boolean = true,
+    val tecnic: TecnicCollaborationDto? = null
+)
+
+@Serializable
+data class TitularSharedOfficeDto(
+    val id: String,
+    val scope: String = "lectura",
+    val oficina: OficinaEmbeddedDto? = null
 )
 
 @Serializable

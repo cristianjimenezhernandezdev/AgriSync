@@ -40,7 +40,8 @@ El seed principal no esta a mitges. Despres de revisar-lo, cobreix totes les tau
 
 - oficines
 - tecnics
-- titulars i assignacions
+- titulars amb `nif`, `telefon`, `email`, `adreca` i `codi_postal`
+- assignacions
 - comparticions entre oficines
 - declaracions DAN 2024 i 2025
 - terres

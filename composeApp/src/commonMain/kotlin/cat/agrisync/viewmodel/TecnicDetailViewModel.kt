@@ -23,6 +23,7 @@ data class TecnicDetailUiState(
     // Edit fields
     val editNom: String = "",
     val editEmail: String = "",
+    val editTelefon: String = "",
     val editRol: String = "tecnic",
     val editOficinaId: String = "",
     // Add assignacio
@@ -60,6 +61,7 @@ internal class TecnicDetailViewModel(
                         updatedByLabel = updatedByLabel,
                         assignacions = assignacions, allTitulars = titulars,
                         editNom = tecnic.nom, editEmail = tecnic.email ?: "",
+                        editTelefon = tecnic.telefon ?: "",
                         editRol = tecnic.rol ?: "tecnic", editOficinaId = tecnic.oficina_id,
                         newTitularId = titulars.firstOrNull()?.id ?: ""
                     )
@@ -72,6 +74,7 @@ internal class TecnicDetailViewModel(
 
     fun onEditNom(v: String) { _uiState.update { it.copy(editNom = v) } }
     fun onEditEmail(v: String) { _uiState.update { it.copy(editEmail = v) } }
+    fun onEditTelefon(v: String) { _uiState.update { it.copy(editTelefon = v) } }
     fun onEditRol(v: String) { _uiState.update { it.copy(editRol = v) } }
     fun onEditOficina(v: String) { _uiState.update { it.copy(editOficinaId = v) } }
     fun onNewTitular(v: String) { _uiState.update { it.copy(newTitularId = v) } }
@@ -106,6 +109,7 @@ internal class TecnicDetailViewModel(
             try {
                 val updated = repository.updateTecnic(tecnicId, TecnicUpdateRequest(
                     nom = st.editNom.trim(), email = st.editEmail.trim(),
+                    telefon = st.editTelefon.trim().ifBlank { null },
                     rol = st.editRol, oficina_id = st.editOficinaId
                 ))
                 val updatedByLabel = repository.resolveActorLabel(updated.updated_by)

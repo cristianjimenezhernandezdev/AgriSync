@@ -23,6 +23,8 @@ La pantalla inicial operativa es `Titulars`. Mostra els titulars accessibles seg
 Permet:
 
 - editar dades del titular
+  Inclou `nif`, `telefon`, `email`, `adreca` i `codi_postal`
+- veure quines oficines i tecnics tenen acces al titular, amb scopes visibles
 - crear, editar i eliminar terres
 - crear, editar i eliminar aplicacions fertilitzants
 - treballar per campanya
@@ -33,6 +35,8 @@ Permet:
 Permet:
 
 - editar dades del titular
+  Inclou `nif`, `telefon`, `email`, `adreca` i `codi_postal`
+- veure quines oficines i tecnics tenen acces al titular, amb scopes visibles
 - crear, editar i eliminar granges
 - gestionar bestiar i fases productives
 - registrar entregues de dejeccions
@@ -43,6 +47,7 @@ Permet:
 
 La pantalla `Preparar DAN` agrega informacio per titular i campanya:
 
+- dades identificatives i de contacte del titular
 - terres
 - aplicacions fertilitzants
 - granges i censos
@@ -57,10 +62,10 @@ També permet copiar un resum estructurat i la checklist al porta-retalls.
 Segons rol, l'app ofereix:
 
 - `Tecnics`: alta, baixa, detall, assignacions i canvi de password
-- `Titulars`: alta, edicio, baixa i comparticio entre oficines
+- `Titulars`: alta, edicio, baixa, comparticio entre oficines i cerca ampliada per `nif`, `telefon`, `email`, `adreca` i `codi_postal`
 - `Terres`: manteniment transversal de terres
 - `Oficines`: alta, edicio i baixa
-- `Perfil`: dades del tecnic actual i canvi del propi password
+- `Perfil`: dades del tecnic actual amb `nom`, `oficina`, `email`, `telefon` i canvi del propi password
 
 ## Casos de prova que cobreix la seed
 

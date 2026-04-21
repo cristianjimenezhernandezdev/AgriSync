@@ -27,11 +27,19 @@ data class TitularManagementUiState(
     val showCreateDialog: Boolean = false,
     val newNom: String = "",
     val newNif: String = "",
+    val newTelefon: String = "",
+    val newEmail: String = "",
+    val newAdreca: String = "",
+    val newCodiPostal: String = "",
     val isCreating: Boolean = false,
     // Editar
     val editingTitular: TitularDto? = null,
     val editNom: String = "",
     val editNif: String = "",
+    val editTelefon: String = "",
+    val editEmail: String = "",
+    val editAdreca: String = "",
+    val editCodiPostal: String = "",
     val isEditing: Boolean = false,
     // Compartir
     val oficines: List<OficinaDto> = emptyList(),
@@ -51,7 +59,14 @@ data class TitularManagementUiState(
             val q = searchQuery.uppercase().replace(" ", "").replace(".", "").replace("-", "")
             return titulars.filter {
                 val nif = (it.nif ?: "").uppercase().replace(" ", "").replace(".", "").replace("-", "")
-                nif.contains(q) || it.nom_rao.contains(searchQuery, ignoreCase = true)
+                val telefon = (it.telefon ?: "").uppercase().replace(" ", "").replace(".", "").replace("-", "")
+                val codiPostal = (it.codi_postal ?: "").uppercase().replace(" ", "").replace(".", "").replace("-", "")
+                nif.contains(q) ||
+                    telefon.contains(q) ||
+                    codiPostal.contains(q) ||
+                    it.nom_rao.contains(searchQuery, ignoreCase = true) ||
+                    (it.email ?: "").contains(searchQuery, ignoreCase = true) ||
+                    (it.adreca ?: "").contains(searchQuery, ignoreCase = true)
             }
         }
 
@@ -100,7 +115,17 @@ internal class TitularManagementViewModel(
 
     // ── Crear ──
     fun showCreateDialog() {
-        _uiState.update { it.copy(showCreateDialog = true, newNom = "", newNif = "") }
+        _uiState.update {
+            it.copy(
+                showCreateDialog = true,
+                newNom = "",
+                newNif = "",
+                newTelefon = "",
+                newEmail = "",
+                newAdreca = "",
+                newCodiPostal = ""
+            )
+        }
     }
 
     fun hideCreateDialog() {
@@ -109,6 +134,10 @@ internal class TitularManagementViewModel(
 
     fun onNewNom(value: String) { _uiState.update { it.copy(newNom = value) } }
     fun onNewNif(value: String) { _uiState.update { it.copy(newNif = value) } }
+    fun onNewTelefon(value: String) { _uiState.update { it.copy(newTelefon = value) } }
+    fun onNewEmail(value: String) { _uiState.update { it.copy(newEmail = value) } }
+    fun onNewAdreca(value: String) { _uiState.update { it.copy(newAdreca = value) } }
+    fun onNewCodiPostal(value: String) { _uiState.update { it.copy(newCodiPostal = value) } }
 
     fun createTitular() {
         val state = _uiState.value
@@ -116,12 +145,21 @@ internal class TitularManagementViewModel(
             _uiState.update { it.copy(message = "El nom es obligatori") }
             return
         }
+        val newCodiPostal = state.newCodiPostal.trim()
+        if (newCodiPostal.isNotBlank() && !newCodiPostal.matches(Regex("^\\d{5}$"))) {
+            _uiState.update { it.copy(message = "El codi postal ha de tenir 5 digits") }
+            return
+        }
         scope.launch {
             _uiState.update { it.copy(isCreating = true) }
             try {
                 val body = TitularCreateRequest(
                     nif = state.newNif.ifBlank { null },
-                    nom_rao = state.newNom.trim()
+                    nom_rao = state.newNom.trim(),
+                    telefon = state.newTelefon.trim().ifBlank { null },
+                    email = state.newEmail.trim().ifBlank { null },
+                    adreca = state.newAdreca.trim().ifBlank { null },
+                    codi_postal = newCodiPostal.ifBlank { null }
                 )
                 repository.create(body)
                 _uiState.update { it.copy(isCreating = false, showCreateDialog = false, message = "Titular creat correctament") }
@@ -134,7 +172,17 @@ internal class TitularManagementViewModel(
 
     // ── Editar ──
     fun startEdit(titular: TitularDto) {
-        _uiState.update { it.copy(editingTitular = titular, editNom = titular.nom_rao, editNif = titular.nif ?: "") }
+        _uiState.update {
+            it.copy(
+                editingTitular = titular,
+                editNom = titular.nom_rao,
+                editNif = titular.nif ?: "",
+                editTelefon = titular.telefon ?: "",
+                editEmail = titular.email ?: "",
+                editAdreca = titular.adreca ?: "",
+                editCodiPostal = titular.codi_postal ?: ""
+            )
+        }
     }
 
     fun cancelEdit() {
@@ -143,6 +191,10 @@ internal class TitularManagementViewModel(
 
     fun onEditNom(value: String) { _uiState.update { it.copy(editNom = value) } }
     fun onEditNif(value: String) { _uiState.update { it.copy(editNif = value) } }
+    fun onEditTelefon(value: String) { _uiState.update { it.copy(editTelefon = value) } }
+    fun onEditEmail(value: String) { _uiState.update { it.copy(editEmail = value) } }
+    fun onEditAdreca(value: String) { _uiState.update { it.copy(editAdreca = value) } }
+    fun onEditCodiPostal(value: String) { _uiState.update { it.copy(editCodiPostal = value) } }
 
     fun saveEdit() {
         val state = _uiState.value
@@ -151,12 +203,21 @@ internal class TitularManagementViewModel(
             _uiState.update { it.copy(message = "El nom es obligatori") }
             return
         }
+        val editCodiPostal = state.editCodiPostal.trim()
+        if (editCodiPostal.isNotBlank() && !editCodiPostal.matches(Regex("^\\d{5}$"))) {
+            _uiState.update { it.copy(message = "El codi postal ha de tenir 5 digits") }
+            return
+        }
         scope.launch {
             _uiState.update { it.copy(isEditing = true) }
             try {
                 val body = TitularUpdateRequest(
                     nif = state.editNif.ifBlank { null },
-                    nom_rao = state.editNom.trim()
+                    nom_rao = state.editNom.trim(),
+                    telefon = state.editTelefon.trim().ifBlank { null },
+                    email = state.editEmail.trim().ifBlank { null },
+                    adreca = state.editAdreca.trim().ifBlank { null },
+                    codi_postal = editCodiPostal.ifBlank { null }
                 )
                 repository.update(titular.id, body)
                 _uiState.update { it.copy(isEditing = false, editingTitular = null, message = "Titular actualitzat") }

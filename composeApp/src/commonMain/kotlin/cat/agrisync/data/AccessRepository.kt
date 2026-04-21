@@ -16,13 +16,17 @@ internal class AccessRepository(private val restClient: RestClient) {
             // Admin/Manager veu tots els titulars
             val titulars: List<TitularRawDto> = restClient.get(
                 "titular",
-                "?select=id,nif,nom_rao,updated_at,updated_by&order=nom_rao"
+                "?select=id,nif,nom_rao,telefon,email,adreca,codi_postal,updated_at,updated_by&order=nom_rao"
             )
             return titulars.map { t ->
                 TitularAccessRow(
                     titular_id = t.id,
                     nom = t.nom_rao,
                     nif = t.nif,
+                    telefon = t.telefon,
+                    email = t.email,
+                    adreca = t.adreca,
+                    codi_postal = t.codi_postal,
                     can_agricola = true,
                     can_ramader = true,
                     last_update_at = t.updated_at,
@@ -34,7 +38,7 @@ internal class AccessRepository(private val restClient: RestClient) {
             if (isManager) {
                 val titulars: List<TitularRawDto> = restClient.get(
                     "titular",
-                    "?select=id,nif,nom_rao,updated_at,updated_by&order=nom_rao"
+                    "?select=id,nif,nom_rao,telefon,email,adreca,codi_postal,updated_at,updated_by&order=nom_rao"
                 )
                 val sharedRows: List<OficinaTitularShareAccessDto> = restClient.get(
                     "oficina_titular_compartit",
@@ -51,6 +55,10 @@ internal class AccessRepository(private val restClient: RestClient) {
                         titular_id = titular.id,
                         nom = titular.nom_rao,
                         nif = titular.nif,
+                        telefon = titular.telefon,
+                        email = titular.email,
+                        adreca = titular.adreca,
+                        codi_postal = titular.codi_postal,
                         can_agricola = canAgricola,
                         can_ramader = canRamader,
                         last_update_at = titular.updated_at,
@@ -62,7 +70,7 @@ internal class AccessRepository(private val restClient: RestClient) {
             // Tècnic normal: consulta les assignacions
             val assignacions: List<TecnicTitularAccessDto> = restClient.get(
                 "tecnic_titular",
-                "?select=titular_id,scope,actiu,titular:titular_id(id,nif,nom_rao,updated_at,updated_by)&tecnic_id=eq.${tecnic.id}&actiu=eq.true"
+                "?select=titular_id,scope,actiu,titular:titular_id(id,nif,nom_rao,telefon,email,adreca,codi_postal,updated_at,updated_by)&tecnic_id=eq.${tecnic.id}&actiu=eq.true"
             )
 
             // Agrupa per titular
@@ -77,6 +85,10 @@ internal class AccessRepository(private val restClient: RestClient) {
                     titular_id = titularId,
                     nom = titular.nom_rao,
                     nif = titular.nif,
+                    telefon = titular.telefon,
+                    email = titular.email,
+                    adreca = titular.adreca,
+                    codi_postal = titular.codi_postal,
                     can_agricola = canAgricola,
                     can_ramader = canRamader,
                     last_update_at = titular.updated_at,
@@ -92,6 +104,10 @@ internal data class TitularRawDto(
     val id: String,
     val nif: String? = null,
     val nom_rao: String,
+    val telefon: String? = null,
+    val email: String? = null,
+    val adreca: String? = null,
+    val codi_postal: String? = null,
     val updated_at: String? = null,
     val updated_by: String? = null
 )

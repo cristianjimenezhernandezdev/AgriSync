@@ -92,10 +92,17 @@ internal fun TitularRamaderScreen(
                             EditableRamaderTitularCard(
                                 titular = titular,
                                 actorLabel = ui.actorLabels[titular.updated_by]
-                            ) { nif, nom ->
-                                viewModel.updateTitular(nif, nom)
+                            ) { nif, nom, telefon, email, adreca, codiPostal ->
+                                viewModel.updateTitular(nif, nom, telefon, email, adreca, codiPostal)
                             }
                         }
+                    }
+
+                    item {
+                        TitularCollaborationCard(
+                            oficines = ui.collaboratingOficines,
+                            tecnics = ui.collaboratingTecnics
+                        )
                     }
 
                     item {
@@ -334,11 +341,15 @@ private fun EmptySectionCard(title: String, message: String) {
 private fun EditableRamaderTitularCard(
     titular: TitularDto,
     actorLabel: String?,
-    onSave: (String, String) -> Boolean
+    onSave: (String, String, String, String, String, String) -> Boolean
 ) {
     var editing by remember { mutableStateOf(false) }
     var nif by remember(titular.id) { mutableStateOf(titular.nif ?: "") }
     var nom by remember(titular.id) { mutableStateOf(titular.nom_rao) }
+    var telefon by remember(titular.id) { mutableStateOf(titular.telefon ?: "") }
+    var email by remember(titular.id) { mutableStateOf(titular.email ?: "") }
+    var adreca by remember(titular.id) { mutableStateOf(titular.adreca ?: "") }
+    var codiPostal by remember(titular.id) { mutableStateOf(titular.codi_postal ?: "") }
 
     Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -346,13 +357,29 @@ private fun EditableRamaderTitularCard(
             if (editing) {
                 OutlinedTextField(value = nom, onValueChange = { nom = it }, label = { Text("Nom / Rao social") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = nif, onValueChange = { nif = it }, label = { Text("NIF") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = telefon, onValueChange = { telefon = it }, label = { Text("Telefon") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = adreca, onValueChange = { adreca = it }, label = { Text("Adreca") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = codiPostal, onValueChange = { codiPostal = it }, label = { Text("Codi postal") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { if (onSave(nif, nom)) editing = false }) { Text("Guardar") }
-                    OutlinedButton(onClick = { nif = titular.nif ?: ""; nom = titular.nom_rao; editing = false }) { Text("Cancel·lar") }
+                    Button(onClick = { if (onSave(nif, nom, telefon, email, adreca, codiPostal)) editing = false }) { Text("Guardar") }
+                    OutlinedButton(onClick = {
+                        nif = titular.nif ?: ""
+                        nom = titular.nom_rao
+                        telefon = titular.telefon ?: ""
+                        email = titular.email ?: ""
+                        adreca = titular.adreca ?: ""
+                        codiPostal = titular.codi_postal ?: ""
+                        editing = false
+                    }) { Text("Cancel·lar") }
                 }
             } else {
                 Text(nom, style = MaterialTheme.typography.titleMedium)
                 Text("NIF: $nif")
+                Text("Telefon: ${telefon.ifBlank { "-" }}")
+                Text("Email: ${email.ifBlank { "-" }}")
+                Text("Adreca: ${adreca.ifBlank { "-" }}")
+                Text("CP: ${codiPostal.ifBlank { "-" }}")
                 AuditInfoBlock(
                     updatedAt = titular.updated_at,
                     updatedByLabel = actorLabel,
@@ -731,7 +758,7 @@ private fun TerraDropdown(
         selectedItem = terres.find { it.id == selectedId },
         onSelect = { terra -> onSelect(terra?.id ?: "") },
         itemLabel = { "${it.codi_sigpac_complet ?: it.id} · ${it.titular?.nom_rao ?: "-"}" },
-        itemSearchText = { "${it.codi_sigpac_complet ?: it.id} ${it.titular?.nom_rao ?: ""} ${it.titular?.nif ?: ""}" },
+        itemSearchText = { "${it.codi_sigpac_complet ?: it.id} ${it.titular?.nom_rao ?: ""} ${it.titular?.nif ?: ""} ${it.titular?.telefon ?: ""} ${it.titular?.codi_postal ?: ""}" },
         label = label,
         placeholder = "Cerca per codi SIGPAC"
     )
@@ -748,9 +775,9 @@ private fun TitularDropdown(
         selectedItem = titulars.find { it.id == selectedId },
         onSelect = { titular -> onSelect(titular?.id ?: "") },
         itemLabel = { "${it.nom_rao} (${it.nif ?: "-"})" },
-        itemSearchText = { "${it.nom_rao} ${it.nif ?: ""}" },
+        itemSearchText = { "${it.nom_rao} ${it.nif ?: ""} ${it.telefon ?: ""} ${it.email ?: ""} ${it.codi_postal ?: ""}" },
         label = "Titular receptor",
-        placeholder = "Cerca per nom o NIF"
+        placeholder = "Cerca per nom, NIF, telefon o CP"
     )
 }
 

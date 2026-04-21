@@ -45,15 +45,19 @@ Les pantalles de gestio queden reservades a `admin` i `oficina_manager`.
 
 El centre del model es el `titular`. Al seu voltant hi ha:
 
+- dades identificatives i de contacte del titular: `nif`, `telefon`, `email`, `adreca` i `codi_postal`
 - `terra` i `aplicacions_fertilitzants` per la part agricola
 - `granja`, `granja_bestiar` i `entrega_dejeccions` per la part ramadera
 - `dan_declaracio` per separar treball per campanya
 - `tecnic_titular` i `oficina_titular_compartit` per permisos i comparticions
 
+Els moduls de titular consumeixen aquestes relacions per mostrar al tecnic quines oficines i quins altres tecnics tenen abast sobre aquell titular, agregant scopes i comparticions visibles via RLS.
+
 ## Decisions importants
 
 - el client no implementa permisos de negoci com a font de veritat
 - la BDD te auditoria basica amb `created_*` i `updated_*`
+- el `codi_postal` del titular es desa separat de l'adreca per facilitar cerques i filtratges futurs
 - el `service_role` es necessari per crear usuaris Auth, canviar passwords des de gestio i resoldre etiquetes d'auditoria
 - la sessio es persisteix en local per a desktop
 

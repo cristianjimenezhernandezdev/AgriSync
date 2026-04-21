@@ -2,13 +2,13 @@ package cat.agrisync.data
 
 internal class AgricolaRepository(private val restClient: RestClient) {
     internal suspend fun getTitular(titularId: String): TitularDto? {
-        val q = "?select=id,nif,nom_rao,updated_at,updated_by&id=eq.$titularId&limit=1"
+        val q = "?select=id,nif,nom_rao,telefon,email,adreca,codi_postal,updated_at,updated_by&id=eq.$titularId&limit=1"
         val result: List<TitularDto> = restClient.get("titular", q)
         return result.firstOrNull()
     }
 
     internal suspend fun updateTitular(titularId: String, body: TitularUpdateRequest): TitularDto {
-        val q = "?id=eq.$titularId&select=id,nif,nom_rao,updated_at,updated_by"
+        val q = "?id=eq.$titularId&select=id,nif,nom_rao,telefon,email,adreca,codi_postal,updated_at,updated_by"
         val result: List<TitularDto> = restClient.patch("titular", body, q)
         return result.first()
     }

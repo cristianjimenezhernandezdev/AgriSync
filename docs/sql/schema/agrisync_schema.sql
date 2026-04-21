@@ -124,6 +124,7 @@ create table public.tecnic (
   user_id uuid unique,
   nom text not null,
   email text,
+  telefon text,
   rol public.rol_global not null default 'tecnic',
   actiu boolean not null default true,
   created_at timestamptz not null default now(),
@@ -136,6 +137,10 @@ create table public.titular (
   id uuid primary key default gen_random_uuid(),
   nif text,
   nom_rao text not null,
+  telefon text,
+  email text,
+  adreca text,
+  codi_postal text check (codi_postal is null or codi_postal ~ '^[0-9]{5}$'),
   created_at timestamptz not null default now(),
   created_by uuid,
   updated_at timestamptz not null default now(),
@@ -279,8 +284,14 @@ create table public.entrega_dejeccions (
 
 create index idx_tecnic_oficina_id on public.tecnic(oficina_id);
 create index idx_tecnic_user_id on public.tecnic(user_id);
+create index idx_tecnic_email on public.tecnic(email);
+create index idx_tecnic_telefon on public.tecnic(telefon);
 create index idx_tecnic_titular_tecnic on public.tecnic_titular(tecnic_id);
 create index idx_tecnic_titular_titular on public.tecnic_titular(titular_id);
+create index idx_titular_nif on public.titular(nif);
+create index idx_titular_telefon on public.titular(telefon);
+create index idx_titular_email on public.titular(email);
+create index idx_titular_codi_postal on public.titular(codi_postal);
 create index idx_oficina_titular_compartit_oficina on public.oficina_titular_compartit(oficina_id);
 create index idx_oficina_titular_compartit_titular on public.oficina_titular_compartit(titular_id);
 create index idx_dan_titular on public.dan_declaracio(titular_id);
@@ -407,6 +418,58 @@ as $$
     where t.id = p_tecnic_id
       and t.oficina_id = public.current_oficina_id()
   );
+$$;
+
+create or replace function public.can_view_tecnic(p_tecnic_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.is_admin()
+    or (public.is_oficina_manager() and public.same_oficina(p_tecnic_id))
+    or exists (
+      select 1
+      from public.tecnic t
+      where t.id = p_tecnic_id
+        and t.user_id = auth.uid()
+    )
+    or exists (
+      select 1
+      from public.tecnic_titular tt
+      where tt.tecnic_id = p_tecnic_id
+        and tt.actiu = true
+        and public.can_read_titular(tt.titular_id)
+    );
+$$;
+
+create or replace function public.can_view_oficina(p_oficina_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.is_admin()
+    or p_oficina_id = public.current_oficina_id()
+    or exists (
+      select 1
+      from public.tecnic t
+      join public.tecnic_titular tt on tt.tecnic_id = t.id
+      where t.oficina_id = p_oficina_id
+        and t.actiu = true
+        and tt.actiu = true
+        and public.can_read_titular(tt.titular_id)
+    )
+    or exists (
+      select 1
+      from public.oficina_titular_compartit otc
+      where otc.oficina_id = p_oficina_id
+        and public.can_read_titular(otc.titular_id)
+    );
 $$;
 
 create or replace function public.can_self_update_tecnic(
@@ -590,6 +653,8 @@ $$;
 
 grant execute on function public.get_my_tecnic() to authenticated;
 grant execute on function public.can_self_update_tecnic(uuid, uuid, uuid, public.rol_global, boolean) to authenticated;
+grant execute on function public.can_view_tecnic(uuid) to authenticated;
+grant execute on function public.can_view_oficina(uuid) to authenticated;
 
 -- =========================================================
 -- 6) GRANTS
@@ -630,7 +695,7 @@ alter table public.entrega_dejeccions enable row level security;
 -- OFICINA
 create policy oficina_select on public.oficina
 for select to authenticated
-using (public.is_admin() or public.is_oficina_manager());
+using (public.can_view_oficina(oficina.id));
 
 create policy oficina_insert on public.oficina
 for insert to authenticated
@@ -648,11 +713,7 @@ using (public.is_admin());
 -- TECNIC
 create policy tecnic_select on public.tecnic
 for select to authenticated
-using (
-  public.is_admin()
-  or (public.is_oficina_manager() and public.same_oficina(tecnic.id))
-  or tecnic.user_id = auth.uid()
-);
+using (public.can_view_tecnic(tecnic.id));
 
 create policy tecnic_insert on public.tecnic
 for insert to authenticated
@@ -708,6 +769,7 @@ for select to authenticated
 using (
   public.is_admin()
   or (public.is_oficina_manager() and public.same_oficina(tecnic_titular.tecnic_id))
+  or public.can_read_titular(tecnic_titular.titular_id)
   or exists (
     select 1
     from public.tecnic t
@@ -775,6 +837,7 @@ create policy oficina_titular_compartit_select on public.oficina_titular_compart
 for select to authenticated
 using (
   public.is_admin()
+  or public.can_read_titular(oficina_titular_compartit.titular_id)
   or (
     public.is_oficina_manager()
     and (

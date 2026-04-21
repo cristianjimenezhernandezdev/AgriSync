@@ -57,6 +57,7 @@ internal fun TecnicDetailScreen(
 
                                 OutlinedTextField(value = ui.editNom, onValueChange = viewModel::onEditNom, label = { Text("Nom") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                                 OutlinedTextField(value = ui.editEmail, onValueChange = viewModel::onEditEmail, label = { Text("Email") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                                OutlinedTextField(value = ui.editTelefon, onValueChange = viewModel::onEditTelefon, label = { Text("Telefon") }, singleLine = true, modifier = Modifier.fillMaxWidth())
 
                                 // Selector d'oficina
                                 Text("Oficina:", style = MaterialTheme.typography.labelMedium)
@@ -86,6 +87,7 @@ internal fun TecnicDetailScreen(
                                     Text("ID: ${t.id}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text("User ID: ${t.user_id ?: "Sense login"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text("Actiu: ${if (t.actiu) "Si" else "No"}", style = MaterialTheme.typography.bodySmall)
+                                    Text("Telefon: ${t.telefon ?: "-"}", style = MaterialTheme.typography.bodySmall)
                                     Text("Ultima actualitzacio: ${formatTimestamp(t.updated_at)}", style = MaterialTheme.typography.bodySmall)
                                     Text(
                                         "Ultim editor: ${formatActorLabel(ui.updatedByLabel, t.updated_by)}",
@@ -169,9 +171,9 @@ internal fun TecnicDetailScreen(
                                     selectedItem = ui.allTitulars.find { it.id == ui.newTitularId },
                                     onSelect = { titular -> viewModel.onNewTitular(titular?.id ?: "") },
                                     itemLabel = { "${it.nom_rao} (${it.nif ?: "-"})" },
-                                    itemSearchText = { "${it.nom_rao} ${it.nif ?: ""}" },
+                                    itemSearchText = { "${it.nom_rao} ${it.nif ?: ""} ${it.telefon ?: ""} ${it.email ?: ""} ${it.codi_postal ?: ""}" },
                                     label = "Titular",
-                                    placeholder = "Cerca per nom o NIF"
+                                    placeholder = "Cerca per nom, NIF, telefon o CP"
                                 )
 
                                 // Selector scope

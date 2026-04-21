@@ -123,6 +123,10 @@ internal data class DanPreparationUiState(
         appendLine("AgriSync - Resum DAN")
         appendLine("Titular: ${titular?.nom_rao ?: "-"}")
         appendLine("NIF: ${titular?.nif ?: "-"}")
+        appendLine("Telefon: ${titular?.telefon ?: "-"}")
+        appendLine("Email: ${titular?.email ?: "-"}")
+        appendLine("Adreca: ${titular?.adreca ?: "-"}")
+        appendLine("Codi postal: ${titular?.codi_postal ?: "-"}")
         appendLine("Campanya: ${selectedCampanyaLabel()}")
         appendLine()
         appendLine("Totals")
@@ -205,6 +209,9 @@ internal data class DanPreparationUiState(
     fun buildClipboardChecklist(): String = buildString {
         appendLine("AgriSync - Checklist DAN")
         appendLine("Titular: ${titular?.nom_rao ?: "-"}")
+        appendLine("NIF: ${titular?.nif ?: "-"}")
+        appendLine("Telefon: ${titular?.telefon ?: "-"}")
+        appendLine("Codi postal: ${titular?.codi_postal ?: "-"}")
         appendLine("Campanya: ${selectedCampanyaLabel()}")
         appendLine()
         automaticChecklistItems().forEach { item ->

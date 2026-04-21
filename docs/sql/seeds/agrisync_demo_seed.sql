@@ -79,7 +79,7 @@ on conflict (id) do update set
 -- 2) TECNICS
 -- =========================================================
 
-insert into public.tecnic (id, oficina_id, user_id, nom, email, rol, actiu)
+insert into public.tecnic (id, oficina_id, user_id, nom, email, telefon, rol, actiu)
 values
   (
     'c1000000-0000-0000-0000-000000000001',
@@ -87,6 +87,7 @@ values
     (select id from auth.users where email = 'admin.demo@agrisync.com'),
     'Administrador Demo',
     'admin.demo@agrisync.com',
+    '600200001',
     'admin',
     true
   ),
@@ -96,6 +97,7 @@ values
     (select id from auth.users where email = 'manager.lleida.demo@agrisync.com'),
     'Marta Puig Manager',
     'manager.lleida.demo@agrisync.com',
+    '600200002',
     'oficina_manager',
     true
   ),
@@ -105,6 +107,7 @@ values
     (select id from auth.users where email = 'manager.girona.demo@agrisync.com'),
     'Arnau Serra Manager',
     'manager.girona.demo@agrisync.com',
+    '600200003',
     'oficina_manager',
     true
   ),
@@ -114,6 +117,7 @@ values
     (select id from auth.users where email = 'sergi.agri.demo@agrisync.com'),
     'Sergi Camps',
     'sergi.agri.demo@agrisync.com',
+    '600200004',
     'tecnic',
     true
   ),
@@ -123,6 +127,7 @@ values
     (select id from auth.users where email = 'marta.ram.demo@agrisync.com'),
     'Marta Soler',
     'marta.ram.demo@agrisync.com',
+    '600200005',
     'tecnic',
     true
   ),
@@ -132,6 +137,7 @@ values
     (select id from auth.users where email = 'laia.comu.demo@agrisync.com'),
     'Laia Roca',
     'laia.comu.demo@agrisync.com',
+    '600200006',
     'tecnic',
     true
   ),
@@ -141,6 +147,7 @@ values
     (select id from auth.users where email = 'nil.shared.demo@agrisync.com'),
     'Nil Pujol',
     'nil.shared.demo@agrisync.com',
+    '600200007',
     'tecnic',
     true
   ),
@@ -150,6 +157,7 @@ values
     (select id from auth.users where email = 'joan.agri.demo@agrisync.com'),
     'Joan Vives',
     'joan.agri.demo@agrisync.com',
+    '600200008',
     'tecnic',
     true
   ),
@@ -159,6 +167,7 @@ values
     (select id from auth.users where email = 'anna.ram.demo@agrisync.com'),
     'Anna Bosch',
     'anna.ram.demo@agrisync.com',
+    '600200009',
     'tecnic',
     true
   ),
@@ -168,6 +177,7 @@ values
     (select id from auth.users where email = 'lectura.demo@agrisync.com'),
     'Usuari Lectura Demo',
     'lectura.demo@agrisync.com',
+    '600200010',
     'lectura',
     true
   )
@@ -176,6 +186,7 @@ on conflict (id) do update set
   user_id = excluded.user_id,
   nom = excluded.nom,
   email = excluded.email,
+  telefon = excluded.telefon,
   rol = excluded.rol,
   actiu = excluded.actiu;
 
@@ -183,21 +194,25 @@ on conflict (id) do update set
 -- 3) TITULARS
 -- =========================================================
 
-insert into public.titular (id, nif, nom_rao)
+insert into public.titular (id, nif, nom_rao, telefon, email, adreca, codi_postal)
 values
-  ('b1000000-0000-0000-0000-000000000001', '40325245N', 'Agro Boix Jorda'),
-  ('b1000000-0000-0000-0000-000000000002', '40334852M', 'Ramadera Mas Padrosa'),
-  ('b1000000-0000-0000-0000-000000000003', '40303198E', 'SAT Plans de la Vall'),
-  ('b1000000-0000-0000-0000-000000000004', 'B17598616', 'Cooperativa Segria i Ter'),
-  ('b1000000-0000-0000-0000-000000000005', 'B17888991', 'Granges del Ter SL'),
-  ('b1000000-0000-0000-0000-000000000006', '40876543K', 'Agroforestal Ponent'),
-  ('b1000000-0000-0000-0000-000000000007', '40999111H', 'Explotacio Can Roca'),
-  ('b1000000-0000-0000-0000-000000000008', '41000222J', 'Serveis Agraris del Pla'),
-  ('b1000000-0000-0000-0000-000000000009', 'B17123456', 'Granja Les Comes'),
-  ('b1000000-0000-0000-0000-000000000010', '41111333L', 'Masia Puigventos')
+  ('b1000000-0000-0000-0000-000000000001', '40325245N', 'Agro Boix Jorda', '600123101', 'contacte@agroboix.cat', 'Carrer Major 12', '25001'),
+  ('b1000000-0000-0000-0000-000000000002', '40334852M', 'Ramadera Mas Padrosa', '600123102', 'info@maspadrosa.cat', 'Camí de la Serra 8', '17181'),
+  ('b1000000-0000-0000-0000-000000000003', '40303198E', 'SAT Plans de la Vall', '600123103', 'sat@plansvall.cat', 'Avinguda del Rec 21', '17190'),
+  ('b1000000-0000-0000-0000-000000000004', 'B17598616', 'Cooperativa Segria i Ter', '600123104', 'oficina@segriater.cat', 'Plaça Cooperativa 4', '25110'),
+  ('b1000000-0000-0000-0000-000000000005', 'B17888991', 'Granges del Ter SL', '600123105', 'gestio@grangesdelter.cat', 'Carrer de la Granja 33', '17003'),
+  ('b1000000-0000-0000-0000-000000000006', '40876543K', 'Agroforestal Ponent', '600123106', 'administracio@agroforestalponent.cat', 'Ronda del Bosc 19', '25310'),
+  ('b1000000-0000-0000-0000-000000000007', '40999111H', 'Explotacio Can Roca', '600123107', 'canroca@explotacio.cat', 'Mas Can Roca s/n', '08503'),
+  ('b1000000-0000-0000-0000-000000000008', '41000222J', 'Serveis Agraris del Pla', '600123108', 'serveis@agrarispla.cat', 'Passeig del Pla 7', '17600'),
+  ('b1000000-0000-0000-0000-000000000009', 'B17123456', 'Granja Les Comes', '600123109', 'lescomes@granja.cat', 'Camí de les Comes 14', '17430'),
+  ('b1000000-0000-0000-0000-000000000010', '41111333L', 'Masia Puigventos', '600123110', 'puigventos@masia.cat', 'Veïnat del Molí 2', '08233')
 on conflict (id) do update set
   nif = excluded.nif,
-  nom_rao = excluded.nom_rao;
+  nom_rao = excluded.nom_rao,
+  telefon = excluded.telefon,
+  email = excluded.email,
+  adreca = excluded.adreca,
+  codi_postal = excluded.codi_postal;
 
 -- =========================================================
 -- 4) ASSIGNACIONS I TITULARS COMPARTITS

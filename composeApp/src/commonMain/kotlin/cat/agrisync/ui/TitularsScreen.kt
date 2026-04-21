@@ -36,14 +36,14 @@ internal fun TitularsScreen(
     onOpenRamader: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val isFiltered = uiState.searchNif.isNotBlank()
+    val isFiltered = uiState.searchText.isNotBlank()
 
     Column(modifier = Modifier.fillMaxSize()) {
         OutlinedTextField(
-            value = uiState.searchNif,
-            onValueChange = viewModel::onSearchNifChange,
-            label = { Text("Cercar per NIF o nom") },
-            placeholder = { Text("Exemple: 40325245N o Jordi") },
+            value = uiState.searchText,
+            onValueChange = viewModel::onSearchChange,
+            label = { Text("Cercar per NIF, telefon, CP o nom") },
+            placeholder = { Text("Exemple: 40325245N, 25001 o 600123101") },
             supportingText = {
                 Text("La cerca es fa sobre els titulars als quals tens accés")
             },
@@ -161,6 +161,10 @@ private fun TitularCard(
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(row.nom, style = MaterialTheme.typography.titleMedium)
             Text("NIF: ${row.nif ?: "-"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Telefon: ${row.telefon ?: "-"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Email: ${row.email ?: "-"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Adreca: ${row.adreca ?: "-"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("CP: ${row.codi_postal ?: "-"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
             AuditInfoBlock(
                 updatedAt = row.last_update_at,
                 updatedByLabel = actorLabel,

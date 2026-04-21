@@ -223,6 +223,10 @@ private fun TitularSummaryCard(ui: DanPreparationUiState) {
         ) {
             Text(ui.titular?.nom_rao ?: "Titular", style = MaterialTheme.typography.titleMedium)
             Text("NIF: ${ui.titular?.nif ?: "-"}")
+            Text("Telefon: ${ui.titular?.telefon ?: "-"}")
+            Text("Email: ${ui.titular?.email ?: "-"}")
+            Text("Adreca: ${ui.titular?.adreca ?: "-"}")
+            Text("CP: ${ui.titular?.codi_postal ?: "-"}")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AssistChip(onClick = {}, label = { Text("${ui.availableCampanyes.size} campanyes detectades") })
                 AssistChip(

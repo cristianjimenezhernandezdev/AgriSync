@@ -13,6 +13,8 @@ import kotlinx.coroutines.launch
 
 data class TitularAgricolaUiState(
     val titular: TitularDto? = null,
+    val collaboratingTecnics: List<TitularCollaboratingTecnicSummary> = emptyList(),
+    val collaboratingOficines: List<TitularCollaboratingOficinaSummary> = emptyList(),
     val terres: List<TerraDto> = emptyList(),
     val aplicacions: List<AplicacioFertilitzantDto> = emptyList(),
     val availableCampanyes: List<Int> = emptyList(),
@@ -31,7 +33,8 @@ data class TitularAgricolaUiState(
 
 internal class TitularAgricolaViewModel(
     private val repository: AgricolaRepository,
-    private val auditRepository: AuditRepository
+    private val auditRepository: AuditRepository,
+    private val tecnicRepository: TecnicRepository
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _uiState = MutableStateFlow(TitularAgricolaUiState())
@@ -44,6 +47,8 @@ internal class TitularAgricolaViewModel(
             _uiState.update { it.copy(isLoading = true, error = null, saveMessage = null) }
             try {
                 val titular = repository.getTitular(titularId)
+                val collaboratingTecnicsRaw = tecnicRepository.listCollaboratingTecnicsByTitular(titularId)
+                val collaboratingOficinesRaw = tecnicRepository.listCollaboratingOficinesByTitular(titularId)
                 val terres = repository.listTerres(titularId)
                 val existingCampanyes = repository.listCampanyesByTitular(titularId)
                 val selectedCampanya = resolveSelectedCampanya(existingCampanyes, preferredCampanya)
@@ -53,6 +58,11 @@ internal class TitularAgricolaViewModel(
                     it.copy(
                         isLoading = false,
                         titular = titular,
+                        collaboratingTecnics = collaboratingTecnicsRaw.toTitularCollaboratingTecnicSummaries(),
+                        collaboratingOficines = buildTitularCollaboratingOficinaSummaries(
+                            collaboratingTecnicsRaw,
+                            collaboratingOficinesRaw
+                        ),
                         terres = terres,
                         aplicacions = aplicacions,
                         availableCampanyes = normalizedCampanyes(existingCampanyes),
@@ -71,9 +81,14 @@ internal class TitularAgricolaViewModel(
         load(currentTitularId, campanya)
     }
 
-    fun updateTitular(nif: String, nom: String): Boolean {
+    fun updateTitular(nif: String, nom: String, telefon: String, email: String, adreca: String, codiPostal: String): Boolean {
         if (nom.isBlank()) {
             _uiState.update { it.copy(saveMessage = "El nom del titular es obligatori") }
+            return false
+        }
+        val cleanCodiPostal = codiPostal.trim()
+        if (cleanCodiPostal.isNotBlank() && !cleanCodiPostal.matches(Regex("^\\d{5}$"))) {
+            _uiState.update { it.copy(saveMessage = "El codi postal ha de tenir 5 digits") }
             return false
         }
         scope.launch {
@@ -82,7 +97,11 @@ internal class TitularAgricolaViewModel(
                     currentTitularId,
                     TitularUpdateRequest(
                         nif = nif.trim().ifBlank { null },
-                        nom_rao = nom.trim()
+                        nom_rao = nom.trim(),
+                        telefon = telefon.trim().ifBlank { null },
+                        email = email.trim().ifBlank { null },
+                        adreca = adreca.trim().ifBlank { null },
+                        codi_postal = cleanCodiPostal.ifBlank { null }
                     )
                 )
                 val actorLabels = updateActorLabels(_uiState.value.actorLabels, updated.updated_by)

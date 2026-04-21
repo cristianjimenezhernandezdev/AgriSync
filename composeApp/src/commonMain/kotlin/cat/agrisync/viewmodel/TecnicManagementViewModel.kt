@@ -21,6 +21,7 @@ data class TecnicManagementUiState(
     val showCreateDialog: Boolean = false,
     val newNom: String = "",
     val newEmail: String = "",
+    val newTelefon: String = "",
     val newPassword: String = "",
     val newOficinaId: String = "",
     val newRol: String = "tecnic",
@@ -61,7 +62,7 @@ internal class TecnicManagementViewModel(
     }
 
     fun showCreateDialog() {
-        _uiState.update { it.copy(showCreateDialog = true, newNom = "", newEmail = "", newPassword = "", newRol = "tecnic") }
+        _uiState.update { it.copy(showCreateDialog = true, newNom = "", newEmail = "", newTelefon = "", newPassword = "", newRol = "tecnic") }
     }
 
     fun hideCreateDialog() {
@@ -70,6 +71,7 @@ internal class TecnicManagementViewModel(
 
     fun onNewNom(v: String) { _uiState.update { it.copy(newNom = v) } }
     fun onNewEmail(v: String) { _uiState.update { it.copy(newEmail = v) } }
+    fun onNewTelefon(v: String) { _uiState.update { it.copy(newTelefon = v) } }
     fun onNewPassword(v: String) { _uiState.update { it.copy(newPassword = v) } }
     fun onNewOficina(v: String) { _uiState.update { it.copy(newOficinaId = v) } }
     fun onNewRol(v: String) { _uiState.update { it.copy(newRol = v) } }
@@ -98,6 +100,7 @@ internal class TecnicManagementViewModel(
                     user_id = userId,
                     nom = st.newNom.trim(),
                     email = st.newEmail.trim(),
+                    telefon = st.newTelefon.trim().ifBlank { null },
                     rol = st.newRol,
                     actiu = true
                 ))
@@ -138,11 +141,11 @@ internal class TecnicManagementViewModel(
         }
     }
 
-    fun updateTecnic(tecnicId: String, nom: String, email: String, rol: String, oficinaId: String) {
+    fun updateTecnic(tecnicId: String, nom: String, email: String, telefon: String, rol: String, oficinaId: String) {
         scope.launch {
             try {
                 val updated = repository.updateTecnic(tecnicId, TecnicUpdateRequest(
-                    nom = nom, email = email, rol = rol, oficina_id = oficinaId
+                    nom = nom, email = email, telefon = telefon.ifBlank { null }, rol = rol, oficina_id = oficinaId
                 ))
                 _uiState.update { st ->
                     st.copy(

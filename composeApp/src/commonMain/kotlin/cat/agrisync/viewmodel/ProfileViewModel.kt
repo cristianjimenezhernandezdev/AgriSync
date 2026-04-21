@@ -18,6 +18,7 @@ data class ProfileUiState(
     val currentTecnic: TecnicDto,
     val nom: String = "",
     val email: String = "",
+    val telefon: String = "",
     val updatedByLabel: String? = null,
     val isEditing: Boolean = false,
     val isSaving: Boolean = false,
@@ -41,7 +42,8 @@ internal class ProfileViewModel(
         ProfileUiState(
             currentTecnic = tecnic,
             nom = tecnic.nom,
-            email = tecnic.email ?: ""
+            email = tecnic.email ?: "",
+            telefon = tecnic.telefon ?: ""
         )
     )
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
@@ -58,7 +60,8 @@ internal class ProfileViewModel(
             it.copy(
                 isEditing = true,
                 nom = currentTecnic.nom,
-                email = currentTecnic.email ?: ""
+                email = currentTecnic.email ?: "",
+                telefon = currentTecnic.telefon ?: ""
             )
         }
     }
@@ -69,13 +72,15 @@ internal class ProfileViewModel(
             it.copy(
                 isEditing = false,
                 nom = currentTecnic.nom,
-                email = currentTecnic.email ?: ""
+                email = currentTecnic.email ?: "",
+                telefon = currentTecnic.telefon ?: ""
             )
         }
     }
 
     fun onNomChange(value: String) { _uiState.update { it.copy(nom = value) } }
     fun onEmailChange(value: String) { _uiState.update { it.copy(email = value) } }
+    fun onTelefonChange(value: String) { _uiState.update { it.copy(telefon = value) } }
 
     fun saveProfile() {
         val state = _uiState.value
@@ -88,7 +93,8 @@ internal class ProfileViewModel(
             try {
                 val body = TecnicUpdateRequest(
                     nom = state.nom.trim(),
-                    email = state.email.trim().ifBlank { null }
+                    email = state.email.trim().ifBlank { null },
+                    telefon = state.telefon.trim().ifBlank { null }
                 )
                 val updated = tecnicRepository.updateTecnic(state.currentTecnic.id, body)
                 // Recarregar les dades al AuthService perquè es reflecteixin a tota l'app
@@ -99,6 +105,7 @@ internal class ProfileViewModel(
                         currentTecnic = updated,
                         nom = updated.nom,
                         email = updated.email ?: "",
+                        telefon = updated.telefon ?: "",
                         updatedByLabel = actorLabel,
                         isSaving = false,
                         isEditing = false,

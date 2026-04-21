@@ -7,6 +7,10 @@ data class TitularAccessRow(
     val titular_id: String,
     val nom: String,
     val nif: String? = null,
+    val telefon: String? = null,
+    val email: String? = null,
+    val adreca: String? = null,
+    val codi_postal: String? = null,
     val can_agricola: Boolean = false,
     val can_ramader: Boolean = false,
     val last_update_at: String? = null,
@@ -101,6 +105,90 @@ data class EntregaDejeccioDto(
     val receptor_titular: TitularDto? = null,
     val terra_desti: TerraDto? = null
 )
+
+data class TitularCollaboratingTecnicSummary(
+    val id: String,
+    val nom: String,
+    val oficinaNom: String,
+    val email: String? = null,
+    val telefon: String? = null,
+    val rol: String? = null,
+    val scopes: List<String> = emptyList()
+)
+
+data class TitularCollaboratingOficinaSummary(
+    val id: String,
+    val nom: String,
+    val scopes: List<String> = emptyList(),
+    val hasDirectTecnics: Boolean = false,
+    val hasSharedAccess: Boolean = false
+)
+
+internal fun List<TitularCollaboratingTecnicDto>.toTitularCollaboratingTecnicSummaries(): List<TitularCollaboratingTecnicSummary> {
+    return this
+        .mapNotNull { row ->
+            val tecnic = row.tecnic ?: return@mapNotNull null
+            TitularCollaboratingTecnicSummary(
+                id = tecnic.id,
+                nom = tecnic.nom,
+                oficinaNom = tecnic.oficina?.nom ?: tecnic.oficina_id,
+                email = tecnic.email,
+                telefon = tecnic.telefon,
+                rol = tecnic.rol,
+                scopes = listOf(row.scope)
+            )
+        }
+        .groupBy { it.id }
+        .values
+        .map { rows ->
+            val first = rows.first()
+            first.copy(scopes = sortTitularScopes(rows.flatMap { it.scopes }))
+        }
+        .sortedWith(compareBy({ it.oficinaNom.lowercase() }, { it.nom.lowercase() }))
+}
+
+internal fun buildTitularCollaboratingOficinaSummaries(
+    tecnics: List<TitularCollaboratingTecnicDto>,
+    sharedOficines: List<TitularSharedOfficeDto>
+): List<TitularCollaboratingOficinaSummary> {
+    val byOffice = linkedMapOf<String, TitularCollaboratingOficinaSummary>()
+
+    tecnics.forEach { row ->
+        val tecnic = row.tecnic ?: return@forEach
+        val officeId = tecnic.oficina?.id ?: tecnic.oficina_id
+        val current = byOffice[officeId]
+        byOffice[officeId] = TitularCollaboratingOficinaSummary(
+            id = officeId,
+            nom = tecnic.oficina?.nom ?: tecnic.oficina_id,
+            scopes = sortTitularScopes((current?.scopes ?: emptyList()) + row.scope),
+            hasDirectTecnics = true,
+            hasSharedAccess = current?.hasSharedAccess == true
+        )
+    }
+
+    sharedOficines.forEach { row ->
+        val office = row.oficina ?: return@forEach
+        val current = byOffice[office.id]
+        byOffice[office.id] = TitularCollaboratingOficinaSummary(
+            id = office.id,
+            nom = office.nom,
+            scopes = sortTitularScopes((current?.scopes ?: emptyList()) + row.scope),
+            hasDirectTecnics = current?.hasDirectTecnics == true,
+            hasSharedAccess = true
+        )
+    }
+
+    return byOffice.values.sortedBy { it.nom.lowercase() }
+}
+
+private fun sortTitularScopes(scopes: Collection<String>): List<String> {
+    val order = listOf("comu", "agricola", "ramader", "lectura")
+    return scopes
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .distinct()
+        .sortedWith(compareBy({ scope -> order.indexOf(scope).takeIf { it >= 0 } ?: Int.MAX_VALUE }, { it }))
+}
 
 @Serializable
 data class TerraUpdateRequest(

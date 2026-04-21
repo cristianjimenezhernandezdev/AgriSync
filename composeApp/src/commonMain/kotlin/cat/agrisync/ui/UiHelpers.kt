@@ -1,9 +1,10 @@
 package cat.agrisync.ui
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -13,6 +14,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import cat.agrisync.data.TitularCollaboratingOficinaSummary
+import cat.agrisync.data.TitularCollaboratingTecnicSummary
 
 internal fun formatTimestamp(ts: String?): String {
     if (ts.isNullOrBlank()) return "-"
@@ -41,6 +44,92 @@ internal fun AuditInfoBlock(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+@Composable
+internal fun TitularCollaborationCard(
+    oficines: List<TitularCollaboratingOficinaSummary>,
+    tecnics: List<TitularCollaboratingTecnicSummary>
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("Col·laboracio", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "Mostra quines oficines i quins tecnics tenen abast sobre aquest titular segons assignacions i comparticions.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Text("Oficines amb acces", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            if (oficines.isEmpty()) {
+                Text(
+                    "No s'han trobat oficines addicionals amb acces visible per aquest titular.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                oficines.forEach { oficina ->
+                    val details = buildList {
+                        add("scopes: ${formatScopes(oficina.scopes)}")
+                        if (oficina.hasDirectTecnics) add("tecnics assignats")
+                        if (oficina.hasSharedAccess) add("oficina compartida")
+                    }
+                    CollaborationLine(
+                        title = oficina.nom,
+                        subtitle = details.joinToString(" · ")
+                    )
+                }
+            }
+
+            HorizontalDivider()
+
+            Text("Tecnics que hi treballen", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            if (tecnics.isEmpty()) {
+                Text(
+                    "No s'han trobat tecnics visibles per aquest titular.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                tecnics.forEach { tecnic ->
+                    val details = buildList {
+                        add(tecnic.oficinaNom)
+                        tecnic.rol?.takeIf { it.isNotBlank() }?.let { add("rol: $it") }
+                        add("scopes: ${formatScopes(tecnic.scopes)}")
+                        tecnic.email?.takeIf { it.isNotBlank() }?.let { add(it) }
+                        tecnic.telefon?.takeIf { it.isNotBlank() }?.let { add(it) }
+                    }
+                    CollaborationLine(
+                        title = tecnic.nom,
+                        subtitle = details.joinToString(" · ")
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CollaborationLine(title: String, subtitle: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(title, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+private fun formatScopes(scopes: List<String>): String {
+    if (scopes.isEmpty()) return "-"
+    return scopes.joinToString(", ")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -69,6 +69,7 @@ internal fun TecnicManagementScreen(
             CreateTecnicDialog(
                 nom = ui.newNom,
                 email = ui.newEmail,
+                telefon = ui.newTelefon,
                 password = ui.newPassword,
                 rol = ui.newRol,
                 oficinaId = ui.newOficinaId,
@@ -76,6 +77,7 @@ internal fun TecnicManagementScreen(
                 isCreating = ui.isCreating,
                 onNomChange = viewModel::onNewNom,
                 onEmailChange = viewModel::onNewEmail,
+                onTelefonChange = viewModel::onNewTelefon,
                 onPasswordChange = viewModel::onNewPassword,
                 onRolChange = viewModel::onNewRol,
                 onOficinaChange = viewModel::onNewOficina,
@@ -132,6 +134,7 @@ private fun TecnicCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(tecnic.nom, style = MaterialTheme.typography.titleMedium)
                 Text(tecnic.email ?: "-", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tecnic.telefon ?: "-", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AssistChip(onClick = {}, label = { Text(tecnic.rol ?: "tecnic") })
                     AssistChip(onClick = {}, label = { Text(oficinaNom) })
@@ -157,9 +160,10 @@ private fun TecnicCard(
 
 @Composable
 private fun CreateTecnicDialog(
-    nom: String, email: String, password: String, rol: String, oficinaId: String,
+    nom: String, email: String, telefon: String, password: String, rol: String, oficinaId: String,
     oficines: List<OficinaDto>, isCreating: Boolean,
     onNomChange: (String) -> Unit, onEmailChange: (String) -> Unit,
+    onTelefonChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit, onRolChange: (String) -> Unit,
     onOficinaChange: (String) -> Unit,
     onConfirm: () -> Unit, onDismiss: () -> Unit
@@ -171,6 +175,7 @@ private fun CreateTecnicDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = nom, onValueChange = onNomChange, label = { Text("Nom complet") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = email, onValueChange = onEmailChange, label = { Text("Email (sera el login)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = telefon, onValueChange = onTelefonChange, label = { Text("Telefon") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = password, onValueChange = onPasswordChange, label = { Text("Password") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
 
                 // Selector d'oficina

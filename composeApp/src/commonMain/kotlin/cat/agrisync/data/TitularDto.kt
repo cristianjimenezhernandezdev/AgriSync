@@ -7,6 +7,10 @@ data class TitularDto(
     val id: String,
     val nif: String? = null,
     val nom_rao: String,
+    val telefon: String? = null,
+    val email: String? = null,
+    val adreca: String? = null,
+    val codi_postal: String? = null,
     val created_at: String? = null,
     val created_by: String? = null,
     val updated_at: String? = null,
@@ -16,13 +20,21 @@ data class TitularDto(
 @Serializable
 data class TitularCreateRequest(
     val nif: String? = null,
-    val nom_rao: String
+    val nom_rao: String,
+    val telefon: String? = null,
+    val email: String? = null,
+    val adreca: String? = null,
+    val codi_postal: String? = null
 )
 
 @Serializable
 data class TitularUpdateRequest(
     val nif: String? = null,
-    val nom_rao: String
+    val nom_rao: String,
+    val telefon: String? = null,
+    val email: String? = null,
+    val adreca: String? = null,
+    val codi_postal: String? = null
 )
 
 /** Wrapper per la resposta anidada de tecnic_titular amb select=titular:titular_id(...) */

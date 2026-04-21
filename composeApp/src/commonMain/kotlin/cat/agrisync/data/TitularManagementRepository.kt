@@ -7,7 +7,7 @@ internal class TitularManagementRepository(private val restClient: RestClient) {
     // ── Titulars ──
 
     internal suspend fun listAll(): List<TitularDto> {
-        return restClient.get("titular", "?select=id,nif,nom_rao,created_at,created_by,updated_at,updated_by&order=nom_rao")
+        return restClient.get("titular", "?select=id,nif,nom_rao,telefon,email,adreca,codi_postal,created_at,created_by,updated_at,updated_by&order=nom_rao")
     }
 
     internal suspend fun listOficines(): List<OficinaDto> {
@@ -50,7 +50,7 @@ internal class TitularManagementRepository(private val restClient: RestClient) {
 
     internal suspend fun listTerres(titularId: String? = null): List<TerraFullDto> {
         val filter = if (titularId != null) "&titular_id=eq.$titularId" else ""
-        val q = "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,created_at,updated_at,titular:titular_id(id,nom_rao,nif)&order=codi_sigpac_complet$filter"
+        val q = "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,created_at,updated_at,titular:titular_id(id,nom_rao,nif,telefon,email,adreca,codi_postal)&order=codi_sigpac_complet$filter"
         return restClient.get("terra", q)
     }
 
@@ -58,13 +58,13 @@ internal class TitularManagementRepository(private val restClient: RestClient) {
         val result: List<TerraFullDto> = restClient.post(
             "terra",
             body,
-            "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,created_at,updated_at,titular:titular_id(id,nom_rao,nif)"
+            "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,created_at,updated_at,titular:titular_id(id,nom_rao,nif,telefon,email,adreca,codi_postal)"
         )
         return result.first()
     }
 
     internal suspend fun updateTerra(terraId: String, body: TerraUpdateFullRequest): TerraFullDto {
-        val q = "?id=eq.$terraId&select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,created_at,updated_at,titular:titular_id(id,nom_rao,nif)"
+        val q = "?id=eq.$terraId&select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,created_at,updated_at,titular:titular_id(id,nom_rao,nif,telefon,email,adreca,codi_postal)"
         val result: List<TerraFullDto> = restClient.patch("terra", body, q)
         return result.first()
     }
@@ -100,7 +100,11 @@ data class TerraFullDto(
 data class TitularRefDto(
     val id: String,
     val nom_rao: String? = null,
-    val nif: String? = null
+    val nif: String? = null,
+    val telefon: String? = null,
+    val email: String? = null,
+    val adreca: String? = null,
+    val codi_postal: String? = null
 )
 
 @Serializable

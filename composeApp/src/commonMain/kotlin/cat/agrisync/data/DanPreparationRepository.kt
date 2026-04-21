@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 internal class DanPreparationRepository(private val restClient: RestClient) {
 
     internal suspend fun getTitular(titularId: String): TitularDto? {
-        val q = "?select=id,nif,nom_rao,updated_at,updated_by&id=eq.$titularId&limit=1"
+        val q = "?select=id,nif,nom_rao,telefon,email,adreca,codi_postal,updated_at,updated_by&id=eq.$titularId&limit=1"
         val result: List<TitularDto> = restClient.get("titular", q)
         return result.firstOrNull()
     }
@@ -44,7 +44,7 @@ internal class DanPreparationRepository(private val restClient: RestClient) {
 
     internal suspend fun listEntreguesByTitular(titularId: String, campanya: Int): List<DanPreparationEntregaDto> {
         val dan = findDanByCampanya(titularId, campanya) ?: return emptyList()
-        val q = "?select=id,data,quantitat,granja_origen:granja_origen_id(id,titular_id,marca_oficial,nom),receptor_titular:receptor_titular_id(id,nif,nom_rao),terra_desti:terra_desti_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha),dan:dan_id(id,titular_id,campanya)&dan_id=eq.${dan.id}&order=data.desc"
+        val q = "?select=id,data,quantitat,granja_origen:granja_origen_id(id,titular_id,marca_oficial,nom),receptor_titular:receptor_titular_id(id,nif,nom_rao,telefon,email,adreca,codi_postal),terra_desti:terra_desti_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha),dan:dan_id(id,titular_id,campanya)&dan_id=eq.${dan.id}&order=data.desc"
         return restClient.get("entrega_dejeccions", q)
     }
 

@@ -49,7 +49,7 @@ internal fun TitularManagementScreen(
             OutlinedTextField(
                 value = ui.searchQuery,
                 onValueChange = viewModel::onSearchChange,
-                label = { Text("Cercar per NIF o nom") },
+                label = { Text("Cercar per NIF, telefon, CP o nom") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -77,11 +77,19 @@ internal fun TitularManagementScreen(
                                 isEditingThis = ui.editingTitular?.id == titular.id,
                                 editNom = ui.editNom,
                                 editNif = ui.editNif,
+                                editTelefon = ui.editTelefon,
+                                editEmail = ui.editEmail,
+                                editAdreca = ui.editAdreca,
+                                editCodiPostal = ui.editCodiPostal,
                                 isEditing = ui.isEditing,
                                 onStartEdit = { viewModel.startEdit(titular) },
                                 onCancelEdit = viewModel::cancelEdit,
                                 onEditNom = viewModel::onEditNom,
                                 onEditNif = viewModel::onEditNif,
+                                onEditTelefon = viewModel::onEditTelefon,
+                                onEditEmail = viewModel::onEditEmail,
+                                onEditAdreca = viewModel::onEditAdreca,
+                                onEditCodiPostal = viewModel::onEditCodiPostal,
                                 onSave = viewModel::saveEdit,
                                 onDelete = { viewModel.deleteTitular(titular.id) },
                                 onShare = { viewModel.openShareDialog(titular) }
@@ -111,9 +119,17 @@ internal fun TitularManagementScreen(
             CreateTitularDialog(
                 nom = ui.newNom,
                 nif = ui.newNif,
+                telefon = ui.newTelefon,
+                email = ui.newEmail,
+                adreca = ui.newAdreca,
+                codiPostal = ui.newCodiPostal,
                 isCreating = ui.isCreating,
                 onNomChange = viewModel::onNewNom,
                 onNifChange = viewModel::onNewNif,
+                onTelefonChange = viewModel::onNewTelefon,
+                onEmailChange = viewModel::onNewEmail,
+                onAdrecaChange = viewModel::onNewAdreca,
+                onCodiPostalChange = viewModel::onNewCodiPostal,
                 onConfirm = viewModel::createTitular,
                 onDismiss = viewModel::hideCreateDialog
             )
@@ -144,11 +160,19 @@ private fun TitularManagementCard(
     isEditingThis: Boolean,
     editNom: String,
     editNif: String,
+    editTelefon: String,
+    editEmail: String,
+    editAdreca: String,
+    editCodiPostal: String,
     isEditing: Boolean,
     onStartEdit: () -> Unit,
     onCancelEdit: () -> Unit,
     onEditNom: (String) -> Unit,
     onEditNif: (String) -> Unit,
+    onEditTelefon: (String) -> Unit,
+    onEditEmail: (String) -> Unit,
+    onEditAdreca: (String) -> Unit,
+    onEditCodiPostal: (String) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
     onShare: () -> Unit
@@ -173,6 +197,34 @@ private fun TitularManagementCard(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                OutlinedTextField(
+                    value = editTelefon,
+                    onValueChange = onEditTelefon,
+                    label = { Text("Telefon") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = editEmail,
+                    onValueChange = onEditEmail,
+                    label = { Text("Email") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = editAdreca,
+                    onValueChange = onEditAdreca,
+                    label = { Text("Adreca") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = editCodiPostal,
+                    onValueChange = onEditCodiPostal,
+                    label = { Text("Codi postal") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = onSave, enabled = !isEditing) { Text("Guardar") }
                     OutlinedButton(onClick = onCancelEdit, enabled = !isEditing) { Text("Cancel·lar") }
@@ -189,6 +241,10 @@ private fun TitularManagementCard(
                     Column(Modifier.weight(1f)) {
                         Text(titular.nom_rao, style = MaterialTheme.typography.titleMedium)
                         Text("NIF: ${titular.nif ?: "-"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Telefon: ${titular.telefon ?: "-"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Email: ${titular.email ?: "-"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Adreca: ${titular.adreca ?: "-"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("CP: ${titular.codi_postal ?: "-"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (titular.updated_at != null) {
                             Text(
                                 "Ultima edicio: ${titular.updated_at.replace("T", " ").take(16)}",
@@ -321,9 +377,17 @@ private fun ShareTitularDialog(
 private fun CreateTitularDialog(
     nom: String,
     nif: String,
+    telefon: String,
+    email: String,
+    adreca: String,
+    codiPostal: String,
     isCreating: Boolean,
     onNomChange: (String) -> Unit,
     onNifChange: (String) -> Unit,
+    onTelefonChange: (String) -> Unit,
+    onEmailChange: (String) -> Unit,
+    onAdrecaChange: (String) -> Unit,
+    onCodiPostalChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -343,6 +407,34 @@ private fun CreateTitularDialog(
                     value = nif,
                     onValueChange = onNifChange,
                     label = { Text("NIF (opcional)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = telefon,
+                    onValueChange = onTelefonChange,
+                    label = { Text("Telefon") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = onEmailChange,
+                    label = { Text("Email") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = adreca,
+                    onValueChange = onAdrecaChange,
+                    label = { Text("Adreca") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = codiPostal,
+                    onValueChange = onCodiPostalChange,
+                    label = { Text("Codi postal") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
