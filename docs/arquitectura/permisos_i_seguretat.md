@@ -4,6 +4,11 @@
 
 AgriSync delega la seguretat real a Supabase/PostgreSQL. La UI ajuda, pero la decisio final sobre lectura i escriptura la pren la base de dades.
 
+Aquest document es un resum especialitzat. Per al detall complet del model i de la BDD, consulta:
+
+- `docs/sql/model_de_dades_i_bdd.md`
+- `docs/arquitectura/arquitectura_i_codi.md`
+
 ## Peces del model
 
 - `auth.users`

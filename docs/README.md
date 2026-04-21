@@ -1,31 +1,68 @@
 # Documentacio d'AgriSync
 
-Aquest directori concentra tota la documentacio funcional, tecnica i SQL del projecte.
+Aquest directori es la font de veritat documental del projecte. L'objectiu no es nomes descriure que fa l'app, sino deixar clar com s'engega, com esta construida, com parla amb Supabase i com funciona la base de dades a nivell real.
 
-## Estructura
+## Com llegir aquesta documentacio
 
-- `guies/`: instalacio, reconstruccio i demo
-- `arquitectura/`: estructura de l'app, model de dades i seguretat
-- `funcional/`: flux de treball i moduls de l'aplicacio
-- `projecte/`: estat actual i roadmap
-- `presentacio/`: material per a defensa o explicacio del projecte
-- `sql/`: esquema, seed i scripts de manteniment
-- `exemples/`: PDFs de referencia de la DAN
+Si una persona no coneix gens el projecte, l'ordre recomanat es aquest:
+
+1. `guies/instalacio_i_demo.md`
+   Per entendre que cal tenir preparat, com aixecar el projecte i quins problemes son normals en la primera execucio.
+2. `arquitectura/arquitectura_i_codi.md`
+   Per entendre l'estructura del programa, les capes, els fitxers principals, el flux d'execucio i les pantalles.
+3. `api/api_i_integracio.md`
+   Per entendre quina API fa servir l'app, que hi ha de Supabase pur, que hi ha de personalitzat i com es podria evolucionar cap a una API propia o externa.
+4. `sql/model_de_dades_i_bdd.md`
+   Per entendre el model relacional, les funcions helper, els triggers, les policies RLS i el flux de dades a la base de dades.
+5. `arquitectura/permisos_i_seguretat.md`
+   Per llegir el resum de seguretat i control d'acces un cop ja es coneix el model general.
+
+## Estructura de `docs/`
+
+- `api/`
+  Documentacio de la capa d'integracio HTTP i del paper de Supabase com a API real del projecte.
+- `arquitectura/`
+  Explicacio de l'estructura del codi, flux de l'app, permisos i decisions tecniques.
+- `exemples/`
+  PDFs de referencia de DAN.
+- `funcional/`
+  Resum funcional dels moduls i del flux operatiu d'usuari.
+- `guies/`
+  Posada en marxa, demo i resolucio de problemes habituals.
+- `presentacio/`
+  Material de suport per defensa o explicacio oral del projecte.
+- `projecte/`
+  Estat actual del MVP i roadmap curt.
+- `sql/`
+  Esquema, seed, manteniment i documentacio detallada de la BDD.
 
 ## Documents principals
 
 - [Index complet de documentacio i estructura del projecte](index_complet_documentacio_i_projecte.md)
-- [Guia d'instalacio i demo](guies/instalacio_i_demo.md)
-- [Arquitectura i codi](arquitectura/arquitectura_i_codi.md)
+- [Guia detallada de posada en marxa, demo i troubleshooting](guies/instalacio_i_demo.md)
+- [Arquitectura, estructura del programa i explicacio del codi](arquitectura/arquitectura_i_codi.md)
+- [API i integracio amb Supabase](api/api_i_integracio.md)
+- [Model de dades i funcionament de la BDD](sql/model_de_dades_i_bdd.md)
 - [Permisos i seguretat](arquitectura/permisos_i_seguretat.md)
 - [Flux operatiu i moduls](funcional/flux_operatiu_i_moduls.md)
-- [Estat actual i roadmap](projecte/estat_actual_i_roadmap.md)
-- [Guia de defensa](presentacio/guia_defensa.md)
-- [Scripts SQL](sql/README.md)
+- [Index del paquet SQL](sql/README.md)
 
-## Criteri de reorganitzacio
+## Quina pregunta respon cada document
 
-- s'han eliminat documents antics o molt solapats
-- s'han corregit noms de fitxer que ja no coincidien amb l'estat real del projecte
-- els SQL han quedat agrupats per tipus: esquema, seed i manteniment
-- el seed principal revisat del projecte es `sql/seeds/agrisync_demo_seed.sql`
+- `guies/instalacio_i_demo.md`
+  "Com poso en marxa el projecte des de zero, quines claus necessito i que faig si alguna cosa falla?"
+- `arquitectura/arquitectura_i_codi.md`
+  "Com esta organitzat el programa, quins fitxers hi ha, quines pantalles i viewmodels existeixen, i com flueixen les dades?"
+- `api/api_i_integracio.md`
+  "Quina API consumeix el client, on es troba el codi d'integracio i fins a quin punt l'app esta lligada a Supabase?"
+- `sql/model_de_dades_i_bdd.md`
+  "Com esta modelada la BDD, quines taules intervenen, com s'aplica la seguretat i com es relaciona tot amb la UI?"
+- `arquitectura/permisos_i_seguretat.md`
+  "Com es combina Auth, `public.tecnic`, scopes i RLS per decidir qui pot veure o modificar cada dada?"
+
+## Criteri editorial
+
+- La documentacio descriu l'estat real del repositori actual.
+- Quan un comportament depen directament d'un fitxer concret del codi o SQL, es referencia explicitament.
+- Les decisions importants queden explicades amb el motiu tecnic i amb les limitacions conegudes.
+- La documentacio no assumeix coneixement previ del projecte.
