@@ -420,58 +420,6 @@ as $$
   );
 $$;
 
-create or replace function public.can_view_tecnic(p_tecnic_id uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select
-    public.is_admin()
-    or (public.is_oficina_manager() and public.same_oficina(p_tecnic_id))
-    or exists (
-      select 1
-      from public.tecnic t
-      where t.id = p_tecnic_id
-        and t.user_id = auth.uid()
-    )
-    or exists (
-      select 1
-      from public.tecnic_titular tt
-      where tt.tecnic_id = p_tecnic_id
-        and tt.actiu = true
-        and public.can_read_titular(tt.titular_id)
-    );
-$$;
-
-create or replace function public.can_view_oficina(p_oficina_id uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select
-    public.is_admin()
-    or p_oficina_id = public.current_oficina_id()
-    or exists (
-      select 1
-      from public.tecnic t
-      join public.tecnic_titular tt on tt.tecnic_id = t.id
-      where t.oficina_id = p_oficina_id
-        and t.actiu = true
-        and tt.actiu = true
-        and public.can_read_titular(tt.titular_id)
-    )
-    or exists (
-      select 1
-      from public.oficina_titular_compartit otc
-      where otc.oficina_id = p_oficina_id
-        and public.can_read_titular(otc.titular_id)
-    );
-$$;
-
 create or replace function public.can_self_update_tecnic(
   p_tecnic_id uuid,
   p_user_id uuid,
@@ -589,6 +537,58 @@ as $$
         and t.actiu = true
         and tt.titular_id = p_titular_id
         and tt.actiu = true
+    );
+$$;
+
+create or replace function public.can_view_tecnic(p_tecnic_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.is_admin()
+    or (public.is_oficina_manager() and public.same_oficina(p_tecnic_id))
+    or exists (
+      select 1
+      from public.tecnic t
+      where t.id = p_tecnic_id
+        and t.user_id = auth.uid()
+    )
+    or exists (
+      select 1
+      from public.tecnic_titular tt
+      where tt.tecnic_id = p_tecnic_id
+        and tt.actiu = true
+        and public.can_read_titular(tt.titular_id)
+    );
+$$;
+
+create or replace function public.can_view_oficina(p_oficina_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.is_admin()
+    or p_oficina_id = public.current_oficina_id()
+    or exists (
+      select 1
+      from public.tecnic t
+      join public.tecnic_titular tt on tt.tecnic_id = t.id
+      where t.oficina_id = p_oficina_id
+        and t.actiu = true
+        and tt.actiu = true
+        and public.can_read_titular(tt.titular_id)
+    )
+    or exists (
+      select 1
+      from public.oficina_titular_compartit otc
+      where otc.oficina_id = p_oficina_id
+        and public.can_read_titular(otc.titular_id)
     );
 $$;
 
