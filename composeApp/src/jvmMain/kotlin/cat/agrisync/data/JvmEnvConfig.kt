@@ -6,6 +6,7 @@ import java.util.Properties
 class JvmEnvConfig : EnvConfig {
 
     private val propertiesFileNames = listOf("agrisync.properties", "config/agrisync.properties")
+    private data class LoadedProperties(val file: File, val props: Properties)
 
     private fun addIfDirectory(target: MutableSet<File>, directory: File?) {
         val normalized = runCatching { directory?.canonicalFile }.getOrNull() ?: return
@@ -42,7 +43,7 @@ class JvmEnvConfig : EnvConfig {
         return directories.toList()
     }
 
-    private fun loadPropertiesFile(): Properties? {
+    private fun loadPropertiesFile(): LoadedProperties? {
         val candidates = buildList {
             candidateDirectories().forEach { directory ->
                 propertiesFileNames.forEach { add(File(directory, it)) }
@@ -50,9 +51,10 @@ class JvmEnvConfig : EnvConfig {
         }
 
         val file = candidates.firstOrNull { it.exists() && it.isFile } ?: return null
-        return Properties().apply {
+        val props = Properties().apply {
             file.inputStream().use { load(it) }
         }
+        return LoadedProperties(file, props)
     }
 
     private fun resolve(envName: String, props: Properties?): String? {
@@ -63,10 +65,13 @@ class JvmEnvConfig : EnvConfig {
     }
 
     override fun load(): SupabaseConfig? {
-        val props = loadPropertiesFile()
+        val loaded = loadPropertiesFile()
+        val props = loaded?.props
         val url = resolve("SUPABASE_URL", props) ?: return null
         val anonKey = resolve("SUPABASE_ANON_KEY", props) ?: return null
         val serviceRoleKey = resolve("SUPABASE_SERVICE_ROLE_KEY", props) ?: return null
+        println("[CONFIG] SUPABASE_URL=$url")
+        println("[CONFIG] Properties file=${loaded?.file?.absolutePath ?: "(cap)"}")
         return SupabaseConfig(
             url = url,
             anonKey = anonKey,
@@ -75,7 +80,7 @@ class JvmEnvConfig : EnvConfig {
     }
 
     override fun missingMessage(): String {
-        val props = loadPropertiesFile()
+        val props = loadPropertiesFile()?.props
         val missing = buildList {
             if (resolve("SUPABASE_URL", props) == null) add("SUPABASE_URL")
             if (resolve("SUPABASE_ANON_KEY", props) == null) add("SUPABASE_ANON_KEY")

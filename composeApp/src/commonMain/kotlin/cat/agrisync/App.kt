@@ -59,6 +59,12 @@ fun App(envConfig: EnvConfig) {
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             val config = remember { envConfig.load() }
+            val serverInfo = remember(config?.url) {
+                config?.url
+                    ?.removePrefix("https://")
+                    ?.removePrefix("http://")
+                    ?.trimEnd('/')
+            }
             if (config == null) {
                 MissingConfigScreen(envConfig.missingMessage())
                 return@Surface
@@ -102,12 +108,12 @@ fun App(envConfig: EnvConfig) {
                     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
                         Text(err.message, color = MaterialTheme.colorScheme.error)
                         Spacer(Modifier.height(16.dp))
-                        LoginScreen(loginVm)
+                        LoginScreen(loginVm, serverInfo = serverInfo)
                     }
                 }
 
                 AuthState.Unauthenticated -> {
-                    LoginScreen(loginVm)
+                    LoginScreen(loginVm, serverInfo = serverInfo)
                 }
             }
         }

@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import cat.agrisync.viewmodel.LoginViewModel
 
 @Composable
-internal fun LoginScreen(viewModel: LoginViewModel) {
+internal fun LoginScreen(viewModel: LoginViewModel, serverInfo: String? = null) {
     val uiState by viewModel.uiState.collectAsState()
     val showEmailError = !uiState.error.isNullOrBlank() && uiState.email.isBlank()
     val showPasswordError = !uiState.error.isNullOrBlank() && uiState.password.isBlank()
@@ -122,6 +122,14 @@ internal fun LoginScreen(viewModel: LoginViewModel) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                if (!serverInfo.isNullOrBlank()) {
+                    Text(
+                        "Servidor: $serverInfo",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

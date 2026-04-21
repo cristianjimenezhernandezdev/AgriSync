@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 data class LoginUiState(
     val email: String = "",
@@ -62,7 +63,7 @@ internal class LoginViewModel(
                 println("[LOGIN] Exception: ${ex::class.simpleName} — ${ex.message}")
                 ex.printStackTrace()
                 authService.signOut()
-                _uiState.update { it.copy(isLoading = false, error = ex.message ?: "Error de xarxa") }
+                _uiState.update { it.copy(isLoading = false, error = ex.toUserLoginMessage()) }
             }
         }
     }
@@ -81,5 +82,44 @@ internal class LoginViewModel(
                 "Error intern de Supabase Auth. Recrea els usuaris a Authentication i torna a executar el seed."
             else -> message?.ifBlank { null } ?: "Error (HTTP $statusCode)"
         }
+    }
+
+    private fun Throwable.toUserLoginMessage(): String {
+        if (this is CancellationException) throw this
+
+        val rawMessage = debugMessage()
+        return when {
+            rawMessage.contains("getsockopt", ignoreCase = true) ||
+                rawMessage.contains("connection refused", ignoreCase = true) ->
+                "No s'ha pogut connectar amb Supabase. Revisa connexio, firewall o proxy, i confirma que SUPABASE_URL sigui accessible."
+            rawMessage.contains("timed out", ignoreCase = true) ->
+                "Temps d'espera esgotat connectant amb Supabase. Revisa la connexio o torna-ho a provar."
+            rawMessage.contains("unknown host", ignoreCase = true) ||
+                rawMessage.contains("unresolved", ignoreCase = true) ->
+                "No s'ha pogut resoldre l'adreca de Supabase. Revisa internet i SUPABASE_URL."
+            rawMessage.contains("ssl", ignoreCase = true) ||
+                rawMessage.contains("handshake", ignoreCase = true) ->
+                "Error SSL connectant amb Supabase. Revisa certificats, antivirus o inspeccio HTTPS."
+            else -> "Error de xarxa: ${rawMessage.ifBlank { this::class.simpleName ?: "desconegut" }}"
+        }
+    }
+
+    private fun Throwable.debugMessage(): String {
+        val chain = generateSequence(this) { it.cause }
+            .take(5)
+            .mapNotNull { throwable ->
+                val name = throwable::class.simpleName
+                val msg = throwable.message?.trim().orEmpty()
+                when {
+                    msg.isNotEmpty() && !name.isNullOrBlank() -> "$name: $msg"
+                    msg.isNotEmpty() -> msg
+                    !name.isNullOrBlank() -> name
+                    else -> null
+                }
+            }
+            .distinct()
+            .toList()
+
+        return chain.joinToString(" | ")
     }
 }
