@@ -1,6 +1,7 @@
 package cat.agrisync.viewmodel
 
 import cat.agrisync.data.*
+import cat.agrisync.util.parseEnteredDateToIso
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -287,10 +288,10 @@ internal class TitularRamaderViewModel(
     }
 
     fun updateEntrega(id: String, data: String, quantitatText: String): Boolean {
-        val cleanData = data.trim()
+        val cleanData = parseEnteredDateToIso(data)
         val quantitat = quantitatText.toDoubleOrNull()
-        if (!isValidIsoDate(cleanData)) {
-            _uiState.update { it.copy(saveMessage = "La data ha de tenir format YYYY-MM-DD") }
+        if (cleanData == null) {
+            _uiState.update { it.copy(saveMessage = "La data ha de tenir format dd/MM/YYYY") }
             return false
         }
         if (quantitat == null) {
@@ -329,14 +330,14 @@ internal class TitularRamaderViewModel(
         terraDestiId: String?,
         receptorTitularId: String?
     ): Boolean {
-        val cleanData = data.trim()
+        val cleanData = parseEnteredDateToIso(data)
         val quantitat = quantitatText.toDoubleOrNull()
         if (granjaOrigenId.isBlank()) {
             _uiState.update { it.copy(saveMessage = "Has de seleccionar una granja d'origen") }
             return false
         }
-        if (!isValidIsoDate(cleanData)) {
-            _uiState.update { it.copy(saveMessage = "La data ha de tenir format YYYY-MM-DD") }
+        if (cleanData == null) {
+            _uiState.update { it.copy(saveMessage = "La data ha de tenir format dd/MM/YYYY") }
             return false
         }
         if (quantitat == null) {
@@ -440,8 +441,4 @@ internal class TitularRamaderViewModel(
         val label = auditRepository.resolveActorLabel(cleanUserId) ?: return current
         return current + (cleanUserId to label)
     }
-}
-
-private fun isValidIsoDate(value: String): Boolean {
-    return value.matches(Regex("^\\d{4}-\\d{2}-\\d{2}$"))
 }

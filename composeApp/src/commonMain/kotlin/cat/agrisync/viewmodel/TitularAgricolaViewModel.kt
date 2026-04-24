@@ -1,6 +1,7 @@
 package cat.agrisync.viewmodel
 
 import cat.agrisync.data.*
+import cat.agrisync.util.parseEnteredDateToIso
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -265,12 +266,12 @@ internal class TitularAgricolaViewModel(
         volumText: String,
         kgNM3Text: String
     ): Boolean {
-        val cleanData = data.trim()
+        val cleanData = parseEnteredDateToIso(data)
         val kgN = kgNText.toDoubleOrNull()
         val volum = volumText.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
         val kgNM3 = kgNM3Text.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
-        if (!isValidIsoDate(cleanData)) {
-            _uiState.update { it.copy(saveMessage = "La data ha de tenir format YYYY-MM-DD") }
+        if (cleanData == null) {
+            _uiState.update { it.copy(saveMessage = "La data ha de tenir format dd/MM/YYYY") }
             return false
         }
         if (kgN == null) {
@@ -332,7 +333,7 @@ internal class TitularAgricolaViewModel(
         volumText: String,
         kgNM3Text: String
     ): Boolean {
-        val cleanData = data.trim()
+        val cleanData = parseEnteredDateToIso(data)
         val kgN = kgNText.toDoubleOrNull()
         val volum = volumText.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
         val kgNM3 = kgNM3Text.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
@@ -340,8 +341,8 @@ internal class TitularAgricolaViewModel(
             _uiState.update { it.copy(saveMessage = "Has de seleccionar una terra") }
             return false
         }
-        if (!isValidIsoDate(cleanData)) {
-            _uiState.update { it.copy(saveMessage = "La data ha de tenir format YYYY-MM-DD") }
+        if (cleanData == null) {
+            _uiState.update { it.copy(saveMessage = "La data ha de tenir format dd/MM/YYYY") }
             return false
         }
         if (kgN == null) {
@@ -477,8 +478,4 @@ private fun mapHttpError(message: String?): String {
         msg.contains("403") -> "No tens permis per aquest titular (403)."
         else -> msg
     }
-}
-
-private fun isValidIsoDate(value: String): Boolean {
-    return value.matches(Regex("^\\d{4}-\\d{2}-\\d{2}$"))
 }

@@ -37,6 +37,7 @@ import cat.agrisync.data.DanPreparationEntregaDto
 import cat.agrisync.data.DanPreparationTerraDto
 import cat.agrisync.data.GranjaBestiarDto
 import cat.agrisync.data.GranjaDto
+import cat.agrisync.util.formatStoredDateForDisplay
 import cat.agrisync.viewmodel.DanPreparationViewModel
 import cat.agrisync.viewmodel.DanPreparationUiState
 import kotlinx.coroutines.launch
@@ -467,7 +468,7 @@ private fun AplicacioPreparationCard(
             PreparationFieldRow("Par.", terra?.parcela?.toString() ?: "-")
             PreparationFieldRow("Rec.", terra?.recinte?.toString() ?: "-")
             PreparationFieldRow("ha", formatDecimal(terra?.superficie))
-            PreparationFieldRow("Data", aplicacio.data ?: "-")
+            PreparationFieldRow("Data", formatStoredDateForDisplay(aplicacio.data))
             PreparationFieldRow("Dia", dayFromDate(aplicacio.data))
             PreparationFieldRow("Mes", monthName(aplicacio.data))
             PreparationFieldRow("Tipus fertilitzant", aplicacio.tipus_fertilitzant ?: "-")
@@ -521,7 +522,7 @@ private fun EntregaPreparationCard(entrega: DanPreparationEntregaDto) {
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text("Entrega ${entrega.dan?.campanya ?: "-"}", style = MaterialTheme.typography.titleSmall)
-            PreparationFieldRow("Data", entrega.data ?: "-")
+            PreparationFieldRow("Data", formatStoredDateForDisplay(entrega.data))
             PreparationFieldRow("Dia", dayFromDate(entrega.data))
             PreparationFieldRow("Mes", monthName(entrega.data))
             PreparationFieldRow("Quantitat", formatDecimal(entrega.quantitat))

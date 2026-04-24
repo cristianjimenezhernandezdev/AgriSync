@@ -48,6 +48,8 @@ import cat.agrisync.data.GranjaBestiarDto
 import cat.agrisync.data.GranjaDto
 import cat.agrisync.data.TerraDto
 import cat.agrisync.data.TitularDto
+import cat.agrisync.util.formatStoredDateForDisplay
+import cat.agrisync.util.formatStoredDateForInput
 import cat.agrisync.viewmodel.TitularRamaderViewModel
 
 @Composable
@@ -268,7 +270,7 @@ internal fun TitularRamaderScreen(
         if (entregaToDelete != null) {
             ConfirmDeleteDialog(
                 title = "Eliminar entrega",
-                message = "S'eliminara l'entrega del dia '${entregaToDelete.data ?: "-"}'. Aquesta accio es destructiva.",
+                message = "S'eliminara l'entrega del dia '${formatStoredDateForDisplay(entregaToDelete.data)}'. Aquesta accio es destructiva.",
                 onConfirm = {
                     viewModel.deleteEntrega(entregaToDelete.id)
                     pendingDeleteEntregaId = null
@@ -473,21 +475,30 @@ private fun EditableEntregaCard(
     onDelete: () -> Unit
 ) {
     var editing by remember { mutableStateOf(false) }
-    var data by remember(e.id, e.data) { mutableStateOf(e.data ?: "") }
+    var data by remember(e.id, e.data) { mutableStateOf(formatStoredDateForInput(e.data)) }
     var quantitat by remember(e.id, e.quantitat) { mutableStateOf((e.quantitat ?: 0.0).toString()) }
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (editing) {
-                OutlinedTextField(value = data, onValueChange = { data = it }, label = { Text("Data (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                DateInputField(
+                    value = data,
+                    onValueChange = { data = it },
+                    label = "Data (dd/MM/YYYY)",
+                    modifier = Modifier.fillMaxWidth()
+                )
                 OutlinedTextField(value = quantitat, onValueChange = { quantitat = it }, label = { Text("Quantitat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Text("Receptor: ${formatEntregaReceptor(e)}", style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { if (onSave(data, quantitat)) editing = false }) { Text("Guardar") }
-                    OutlinedButton(onClick = { data = e.data ?: ""; quantitat = (e.quantitat ?: 0.0).toString(); editing = false }) { Text("Cancel·lar") }
+                    OutlinedButton(onClick = {
+                        data = formatStoredDateForInput(e.data)
+                        quantitat = (e.quantitat ?: 0.0).toString()
+                        editing = false
+                    }) { Text("Cancel·lar") }
                 }
             } else {
-                Text("Data: ${e.data ?: "-"}")
+                Text("Data: ${formatStoredDateForDisplay(e.data)}")
                 Text("Quantitat: ${e.quantitat ?: 0.0}")
                 Text(
                     "Receptor: ${formatEntregaReceptor(e)}",
@@ -624,7 +635,12 @@ private fun CreateEntregaDialog(
                         color = MaterialTheme.colorScheme.primary
                     )
                     GranjaDropdown(granges = granges, selectedId = selectedGranjaId, onSelect = { selectedGranjaId = it }, label = "Granja d'origen")
-                    OutlinedTextField(value = data, onValueChange = { data = it }, label = { Text("Data (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    DateInputField(
+                        value = data,
+                        onValueChange = { data = it },
+                        label = "Data (dd/MM/YYYY)",
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     OutlinedTextField(value = quantitat, onValueChange = { quantitat = it }, label = { Text("Quantitat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
 
                     Text("Tipus de receptor", style = MaterialTheme.typography.labelMedium)

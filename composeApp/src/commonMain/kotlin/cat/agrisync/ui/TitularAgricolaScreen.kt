@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.dp
 import cat.agrisync.data.AplicacioFertilitzantDto
 import cat.agrisync.data.TerraDto
 import cat.agrisync.data.TitularDto
+import cat.agrisync.util.formatStoredDateForDisplay
+import cat.agrisync.util.formatStoredDateForInput
 import cat.agrisync.viewmodel.TitularAgricolaViewModel
 
 @Composable
@@ -215,7 +217,7 @@ internal fun TitularAgricolaScreen(
         if (aplicacioToDelete != null) {
             ConfirmDeleteDialog(
                 title = "Eliminar aplicacio",
-                message = "S'eliminara l'aplicacio del dia '${aplicacioToDelete.data ?: "-"}'. Aquesta accio es destructiva.",
+                message = "S'eliminara l'aplicacio del dia '${formatStoredDateForDisplay(aplicacioToDelete.data)}'. Aquesta accio es destructiva.",
                 onConfirm = {
                     viewModel.deleteAplicacio(aplicacioToDelete.id)
                     pendingDeleteAplicacioId = null
@@ -419,7 +421,7 @@ private fun EditableAplicacioCard(
     onDelete: () -> Unit
 ) {
     var editing by remember { mutableStateOf(false) }
-    var data by remember(app.id, app.data) { mutableStateOf(app.data ?: "") }
+    var data by remember(app.id, app.data) { mutableStateOf(formatStoredDateForInput(app.data)) }
     var kgN by remember(app.id, app.kg_n) { mutableStateOf((app.kg_n ?: 0.0).toString()) }
     var tipusFertilitzant by remember(app.id, app.tipus_fertilitzant) { mutableStateOf(app.tipus_fertilitzant ?: "") }
     var procedencia by remember(app.id, app.procedencia) { mutableStateOf(app.procedencia ?: "") }
@@ -436,7 +438,12 @@ private fun EditableAplicacioCard(
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Campanya: ${app.dan?.campanya ?: "-"}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             if (editing) {
-                OutlinedTextField(value = data, onValueChange = { data = it }, label = { Text("Data (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                DateInputField(
+                    value = data,
+                    onValueChange = { data = it },
+                    label = "Data (dd/MM/YYYY)",
+                    modifier = Modifier.fillMaxWidth()
+                )
                 OutlinedTextField(value = tipusFertilitzant, onValueChange = { tipusFertilitzant = it }, label = { Text("Tipus fertilitzant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = procedencia, onValueChange = { procedencia = it }, label = { Text("Procedencia") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -456,7 +463,7 @@ private fun EditableAplicacioCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { if (onSave(data, kgN, tipusFertilitzant, procedencia, volumM3, kgNM3)) editing = false }) { Text("Guardar") }
                     OutlinedButton(onClick = {
-                        data = app.data ?: ""
+                        data = formatStoredDateForInput(app.data)
                         kgN = (app.kg_n ?: 0.0).toString()
                         tipusFertilitzant = app.tipus_fertilitzant ?: ""
                         procedencia = app.procedencia ?: ""
@@ -466,7 +473,7 @@ private fun EditableAplicacioCard(
                     }) { Text("Cancel·lar") }
                 }
             } else {
-                Text("Data: ${app.data ?: "-"}")
+                Text("Data: ${formatStoredDateForDisplay(app.data)}")
                 Text("Kg N: ${app.kg_n ?: 0.0} · Volum m3: ${app.volum_m3 ?: "-"}")
                 Text("Tipus: ${app.tipus_fertilitzant ?: "-"} · Procedencia: ${app.procedencia ?: "-"}")
                 Text("Kg N/m3: ${app.kg_n_m3 ?: "-"}")
@@ -611,7 +618,12 @@ private fun CreateAplicacioDialog(
                         selectedId = selectedTerraId,
                         onSelect = { selectedTerraId = it }
                     )
-                    OutlinedTextField(value = data, onValueChange = { data = it }, label = { Text("Data (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    DateInputField(
+                        value = data,
+                        onValueChange = { data = it },
+                        label = "Data (dd/MM/YYYY)",
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     OutlinedTextField(value = tipusFertilitzant, onValueChange = { tipusFertilitzant = it }, label = { Text("Tipus fertilitzant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = procedencia, onValueChange = { procedencia = it }, label = { Text("Procedencia") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = kgN, onValueChange = { kgN = it }, label = { Text("Kg N") }, singleLine = true, modifier = Modifier.fillMaxWidth())

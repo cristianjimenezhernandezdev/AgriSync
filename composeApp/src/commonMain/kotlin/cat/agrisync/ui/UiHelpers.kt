@@ -1,7 +1,9 @@
 package cat.agrisync.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -16,6 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cat.agrisync.data.TitularCollaboratingOficinaSummary
 import cat.agrisync.data.TitularCollaboratingTecnicSummary
+import cat.agrisync.util.enteredDateToPickerMillis
+import cat.agrisync.util.normalizeDateInput
+import cat.agrisync.util.pickerMillisToEnteredDate
 
 internal fun formatTimestamp(ts: String?): String {
     if (ts.isNullOrBlank()) return "-"
@@ -24,6 +29,82 @@ internal fun formatTimestamp(ts: String?): String {
 
 internal fun formatActorLabel(label: String?, fallbackUserId: String?): String {
     return label?.takeIf { it.isNotBlank() } ?: fallbackUserId?.takeIf { it.isNotBlank() } ?: "-"
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun DateInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    placeholder: String = "dd/MM/YYYY"
+) {
+    var calendarExpanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = { onValueChange(normalizeDateInput(it)) },
+                modifier = Modifier.weight(1f),
+                label = { Text(label) },
+                placeholder = { Text(placeholder) },
+                singleLine = true
+            )
+            OutlinedButton(onClick = { calendarExpanded = true }) {
+                Text("Calendari")
+            }
+        }
+
+        if (calendarExpanded) {
+            val datePickerState = rememberDatePickerState(
+                initialSelectedDateMillis = enteredDateToPickerMillis(value)
+            )
+
+            DropdownMenu(
+                expanded = true,
+                onDismissRequest = { calendarExpanded = false }
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    DatePicker(
+                        state = datePickerState,
+                        title = null,
+                        headline = null,
+                        showModeToggle = false
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TextButton(onClick = {
+                            onValueChange("")
+                            calendarExpanded = false
+                        }) {
+                            Text("Netejar")
+                        }
+                        TextButton(onClick = { calendarExpanded = false }) {
+                            Text("Tancar")
+                        }
+                        Button(
+                            onClick = {
+                                datePickerState.selectedDateMillis?.let {
+                                    onValueChange(pickerMillisToEnteredDate(it))
+                                }
+                                calendarExpanded = false
+                            },
+                            enabled = datePickerState.selectedDateMillis != null
+                        ) {
+                            Text("Aplicar")
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
