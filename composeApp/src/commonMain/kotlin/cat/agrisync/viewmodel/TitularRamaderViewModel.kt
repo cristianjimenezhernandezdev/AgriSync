@@ -1,7 +1,9 @@
 package cat.agrisync.viewmodel
 
 import cat.agrisync.data.*
+import cat.agrisync.util.parseDecimalInput
 import cat.agrisync.util.parseEnteredDateToIso
+import cat.agrisync.util.validateAndResolveNitrogenTriplet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,6 +20,7 @@ data class TitularRamaderUiState(
     val collaboratingOficines: List<TitularCollaboratingOficinaSummary> = emptyList(),
     val granges: List<GranjaDto> = emptyList(),
     val granjaBestiar: List<GranjaBestiarDto> = emptyList(),
+    val granjaCampanyaBalances: List<GranjaCampanyaBalanceDto> = emptyList(),
     val entregues: List<EntregaDejeccioDto> = emptyList(),
     val terres: List<TerraDto> = emptyList(),
     val receptorTitulars: List<TitularDto> = emptyList(),
@@ -54,13 +57,14 @@ internal class TitularRamaderViewModel(
                 val gb = repository.listGranjaBestiar(titularId)
                 val existingCampanyes = repository.listCampanyesByTitular(titularId)
                 val selectedCampanya = resolveSelectedCampanya(existingCampanyes, preferredCampanya)
+                val balances = repository.listGranjaCampanyaBalances(titularId, selectedCampanya)
                 val entregues = repository.listEntreguesByTitular(titularId, selectedCampanya)
                 val terres = repository.listTerres(titularId)
                 val receptorTitulars = repository.listAccessibleTitulars()
                 val receptorTerres = repository.listAccessibleTerres()
                 val bestiars = repository.listBestiarCatalog()
                 val fases = repository.listFaseProductivaCatalog()
-                val actorLabels = resolveActorLabels(titular, granges, gb, entregues, terres)
+                val actorLabels = resolveActorLabels(titular, granges, gb, balances, entregues, terres)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -72,6 +76,7 @@ internal class TitularRamaderViewModel(
                         ),
                         granges = granges,
                         granjaBestiar = gb,
+                        granjaCampanyaBalances = balances,
                         entregues = entregues,
                         terres = terres,
                         receptorTitulars = receptorTitulars,
@@ -186,6 +191,7 @@ internal class TitularRamaderViewModel(
                     st.copy(
                         granges = st.granges.filterNot { it.id == granjaId },
                         granjaBestiar = st.granjaBestiar.filterNot { it.granja?.id == granjaId },
+                        granjaCampanyaBalances = st.granjaCampanyaBalances.filterNot { it.granja_id == granjaId },
                         entregues = st.entregues.filterNot { it.granja_origen_id == granjaId },
                         saveMessage = "Granja eliminada"
                     )
@@ -287,24 +293,47 @@ internal class TitularRamaderViewModel(
         }
     }
 
-    fun updateEntrega(id: String, data: String, quantitatText: String): Boolean {
+    fun updateEntrega(
+        id: String,
+        data: String,
+        terraDestiId: String,
+        tipusFertilitzant: String,
+        volumText: String,
+        kgNM3Text: String,
+        kgNText: String
+    ): Boolean {
         val cleanData = parseEnteredDateToIso(data)
-        val quantitat = quantitatText.toDoubleOrNull()
         if (cleanData == null) {
             _uiState.update { it.copy(saveMessage = "La data ha de tenir format dd/MM/YYYY") }
             return false
         }
-        if (quantitat == null) {
-            _uiState.update { it.copy(saveMessage = "La quantitat ha de ser un nombre valid") }
+        if (terraDestiId.isBlank()) {
+            _uiState.update { it.copy(saveMessage = "Has de seleccionar una terra de desti") }
             return false
         }
-        if (quantitat < 0) {
-            _uiState.update { it.copy(saveMessage = "La quantitat no pot ser negativa") }
+        val nutrients = validateAndResolveNitrogenTriplet(
+            kgNText = kgNText,
+            volumM3Text = volumText,
+            kgNPerM3Text = kgNM3Text
+        )
+        if (nutrients.errorMessage != null) {
+            _uiState.update { it.copy(saveMessage = nutrients.errorMessage) }
             return false
         }
+        val resolved = nutrients.values ?: return false
         scope.launch {
             try {
-                val result = repository.updateEntrega(id, EntregaUpdateRequest(data = cleanData, quantitat = quantitat))
+                val result = repository.updateEntrega(
+                    id,
+                    EntregaUpdateRequest(
+                        data = cleanData,
+                        terra_desti_id = terraDestiId,
+                        tipus_fertilitzant = tipusFertilitzant.trim().ifBlank { null },
+                        volum_m3 = resolved.volumM3,
+                        kg_n_m3 = resolved.kgNPerM3,
+                        kg_n = resolved.kgN
+                    )
+                )
                 if (result.isNotEmpty()) {
                     val updated = result.first()
                     val actorLabels = updateActorLabels(_uiState.value.actorLabels, updated.updated_by)
@@ -326,12 +355,13 @@ internal class TitularRamaderViewModel(
     fun createEntrega(
         granjaOrigenId: String,
         data: String,
-        quantitatText: String,
-        terraDestiId: String?,
-        receptorTitularId: String?
+        terraDestiId: String,
+        tipusFertilitzant: String,
+        volumText: String,
+        kgNM3Text: String,
+        kgNText: String
     ): Boolean {
         val cleanData = parseEnteredDateToIso(data)
-        val quantitat = quantitatText.toDoubleOrNull()
         if (granjaOrigenId.isBlank()) {
             _uiState.update { it.copy(saveMessage = "Has de seleccionar una granja d'origen") }
             return false
@@ -340,20 +370,20 @@ internal class TitularRamaderViewModel(
             _uiState.update { it.copy(saveMessage = "La data ha de tenir format dd/MM/YYYY") }
             return false
         }
-        if (quantitat == null) {
-            _uiState.update { it.copy(saveMessage = "La quantitat ha de ser un nombre valid") }
+        if (terraDestiId.isBlank()) {
+            _uiState.update { it.copy(saveMessage = "Has de seleccionar una terra de desti") }
             return false
         }
-        if (quantitat < 0) {
-            _uiState.update { it.copy(saveMessage = "La quantitat no pot ser negativa") }
+        val nutrients = validateAndResolveNitrogenTriplet(
+            kgNText = kgNText,
+            volumM3Text = volumText,
+            kgNPerM3Text = kgNM3Text
+        )
+        if (nutrients.errorMessage != null) {
+            _uiState.update { it.copy(saveMessage = nutrients.errorMessage) }
             return false
         }
-        val hasTerra = !terraDestiId.isNullOrBlank()
-        val hasTitular = !receptorTitularId.isNullOrBlank()
-        if (hasTerra == hasTitular) {
-            _uiState.update { it.copy(saveMessage = "Has d'escollir exactament un tipus de receptor") }
-            return false
-        }
+        val resolved = nutrients.values ?: return false
 
         scope.launch {
             try {
@@ -362,9 +392,11 @@ internal class TitularRamaderViewModel(
                     campanya = _uiState.value.selectedCampanya,
                     granjaOrigenId = granjaOrigenId,
                     data = cleanData,
-                    quantitat = quantitat,
                     terraDestiId = terraDestiId,
-                    receptorTitularId = receptorTitularId
+                    tipusFertilitzant = tipusFertilitzant.trim().ifBlank { null },
+                    volumM3 = resolved.volumM3,
+                    kgNM3 = resolved.kgNPerM3,
+                    kgN = resolved.kgN
                 )
                 val actorLabels = updateActorLabels(_uiState.value.actorLabels, created.updated_by)
                 _uiState.update { st ->
@@ -372,6 +404,66 @@ internal class TitularRamaderViewModel(
                         entregues = listOf(created) + st.entregues,
                         actorLabels = actorLabels,
                         saveMessage = "Entrega creada correctament"
+                    )
+                }
+            } catch (ex: Exception) {
+                _uiState.update { it.copy(saveMessage = "Error: ${ex.message}") }
+            }
+        }
+        return true
+    }
+
+    fun saveGranjaCampanyaBalance(
+        granjaId: String,
+        balanceId: String?,
+        estocInicialText: String,
+        kgNGeneratText: String,
+        estocFinalText: String
+    ): Boolean {
+        if (granjaId.isBlank()) {
+            _uiState.update { it.copy(saveMessage = "Has de seleccionar una granja") }
+            return false
+        }
+
+        val estocInicialResult = parseOptionalKgN(estocInicialText, "L'estoc inicial")
+        if (!estocInicialResult.isValid) return false
+        val kgNGeneratResult = parseOptionalKgN(kgNGeneratText, "El nitrogen generat")
+        if (!kgNGeneratResult.isValid) return false
+        val estocFinalResult = parseOptionalKgN(estocFinalText, "L'estoc final declarat")
+        if (!estocFinalResult.isValid) return false
+
+        scope.launch {
+            try {
+                val saved = if (balanceId.isNullOrBlank()) {
+                    repository.createGranjaCampanyaBalance(
+                        titularId = currentTitularId,
+                        campanya = _uiState.value.selectedCampanya,
+                        granjaId = granjaId,
+                        estocInicialKgN = estocInicialResult.value,
+                        kgNGenerat = kgNGeneratResult.value,
+                        estocFinalDeclaratKgN = estocFinalResult.value
+                    )
+                } else {
+                    repository.updateGranjaCampanyaBalance(
+                        balanceId,
+                        GranjaCampanyaBalanceUpdateRequest(
+                            estoc_inicial_kg_n = estocInicialResult.value,
+                            kg_n_generat = kgNGeneratResult.value,
+                            estoc_final_declarat_kg_n = estocFinalResult.value
+                        )
+                    )
+                }
+                val actorLabels = updateActorLabels(_uiState.value.actorLabels, saved.updated_by)
+                _uiState.update { st ->
+                    val updatedBalances = if (balanceId.isNullOrBlank()) {
+                        listOf(saved) + st.granjaCampanyaBalances.filterNot { it.granja_id == granjaId }
+                    } else {
+                        st.granjaCampanyaBalances.map { if (it.id == balanceId) saved else it }
+                    }
+                    st.copy(
+                        granjaCampanyaBalances = updatedBalances,
+                        actorLabels = actorLabels,
+                        saveMessage = "Balanç de granja guardat"
                     )
                 }
             } catch (ex: Exception) {
@@ -418,6 +510,7 @@ internal class TitularRamaderViewModel(
         titular: TitularDto?,
         granges: List<GranjaDto>,
         granjaBestiar: List<GranjaBestiarDto>,
+        granjaCampanyaBalances: List<GranjaCampanyaBalanceDto>,
         entregues: List<EntregaDejeccioDto>,
         terres: List<TerraDto>
     ): Map<String, String> {
@@ -426,6 +519,7 @@ internal class TitularRamaderViewModel(
                 add(titular?.updated_by)
                 granges.forEach { add(it.updated_by) }
                 granjaBestiar.forEach { add(it.updated_by) }
+                granjaCampanyaBalances.forEach { add(it.updated_by) }
                 entregues.forEach { add(it.updated_by) }
                 terres.forEach { add(it.updated_by) }
             }
@@ -441,4 +535,23 @@ internal class TitularRamaderViewModel(
         val label = auditRepository.resolveActorLabel(cleanUserId) ?: return current
         return current + (cleanUserId to label)
     }
+
+    private fun parseOptionalKgN(value: String, fieldName: String): OptionalNumberParseResult {
+        if (value.isBlank()) return OptionalNumberParseResult(isValid = true, value = null)
+        val parsed = parseDecimalInput(value)
+        if (parsed == null) {
+            _uiState.update { it.copy(saveMessage = "$fieldName ha de ser un nombre valid") }
+            return OptionalNumberParseResult(isValid = false, value = null)
+        }
+        if (parsed < 0.0) {
+            _uiState.update { it.copy(saveMessage = "$fieldName no pot ser negatiu") }
+            return OptionalNumberParseResult(isValid = false, value = null)
+        }
+        return OptionalNumberParseResult(isValid = true, value = parsed)
+    }
 }
+
+private data class OptionalNumberParseResult(
+    val isValid: Boolean,
+    val value: Double?
+)

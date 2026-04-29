@@ -34,6 +34,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import cat.agrisync.data.DanPreparationAplicacioDto
 import cat.agrisync.data.DanPreparationEntregaDto
+import cat.agrisync.data.DanPreparationGranjaBalanceDto
 import cat.agrisync.data.DanPreparationTerraDto
 import cat.agrisync.data.GranjaBestiarDto
 import cat.agrisync.data.GranjaDto
@@ -178,6 +179,19 @@ internal fun DanPreparationScreen(
                             item { SubsectionTitle("Granges") }
                             items(ui.granges, key = { it.id }) { granja ->
                                 GranjaPreparationCard(granja)
+                            }
+                        }
+
+                        if (ui.granges.isNotEmpty()) {
+                            item { SubsectionTitle("Balanç nitrogen per granja") }
+                            items(ui.granges, key = { "balance-${it.id}" }) { granja ->
+                                GranjaBalancePreparationCard(
+                                    granja = granja,
+                                    balance = ui.balanceByGranja(granja.id),
+                                    justifiedKgN = ui.justifiedKgNByGranja(granja.id),
+                                    calculatedFinalKgN = ui.calculatedFinalKgNByGranja(granja.id),
+                                    deviationKgN = ui.deviationKgNByGranja(granja.id)
+                                )
                             }
                         }
 
@@ -334,8 +348,14 @@ private fun SummaryMetrics(ui: DanPreparationUiState) {
         MetricsRow(
             leftLabel = "Entregues",
             leftValue = ui.entregues.size.toString(),
-            rightLabel = "Total entregat",
-            rightValue = formatDecimal(ui.totalQuantitatEntregada)
+            rightLabel = "Kg N entregat",
+            rightValue = formatDecimal(ui.totalKgNEntregat)
+        )
+        MetricsRow(
+            leftLabel = "Volum entregat",
+            leftValue = formatDecimal(ui.totalVolumEntregat),
+            rightLabel = "Granges amb balanç",
+            rightValue = ui.granjaBalances.size.toString()
         )
         MetricsRow(leftLabel = "Checklist", leftValue = "1 bloc final", rightLabel = "Campanya", rightValue = ui.selectedCampanya.toString())
     }
@@ -473,6 +493,7 @@ private fun AplicacioPreparationCard(
             PreparationFieldRow("Mes", monthName(aplicacio.data))
             PreparationFieldRow("Tipus fertilitzant", aplicacio.tipus_fertilitzant ?: "-")
             PreparationFieldRow("Procedencia", aplicacio.procedencia ?: "-")
+            PreparationFieldRow("Origen granja", aplicacio.entrega?.granja_origen?.marca_oficial ?: "-")
             PreparationFieldRow("Volum m3", formatDecimal(aplicacio.volum_m3))
             PreparationFieldRow("Kg N/m3", formatDecimal(aplicacio.kg_n_m3))
             PreparationFieldRow("kg N", formatDecimal(aplicacio.kg_n))
@@ -492,6 +513,31 @@ private fun GranjaPreparationCard(granja: GranjaDto) {
             Text(granja.nom ?: granja.marca_oficial, style = MaterialTheme.typography.titleSmall)
             PreparationFieldRow("Marca oficial", granja.marca_oficial)
             PreparationFieldRow("Nom granja", granja.nom ?: "-")
+        }
+    }
+}
+
+@Composable
+private fun GranjaBalancePreparationCard(
+    granja: GranjaDto,
+    balance: DanPreparationGranjaBalanceDto?,
+    justifiedKgN: Double,
+    calculatedFinalKgN: Double?,
+    deviationKgN: Double?
+) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text("Balanç ${granja.marca_oficial}", style = MaterialTheme.typography.titleSmall)
+            PreparationFieldRow("Granja", granja.nom ?: granja.marca_oficial)
+            PreparationFieldRow("Estoc inicial Kg N", formatDecimal(balance?.estoc_inicial_kg_n))
+            PreparationFieldRow("Kg N generat", formatDecimal(balance?.kg_n_generat))
+            PreparationFieldRow("Kg N justificat", formatDecimal(justifiedKgN))
+            PreparationFieldRow("Estoc final declarat", formatDecimal(balance?.estoc_final_declarat_kg_n))
+            PreparationFieldRow("Estoc final calculat", formatDecimal(calculatedFinalKgN))
+            PreparationFieldRow("Desviacio", formatDecimal(deviationKgN))
         }
     }
 }
@@ -525,11 +571,12 @@ private fun EntregaPreparationCard(entrega: DanPreparationEntregaDto) {
             PreparationFieldRow("Data", formatStoredDateForDisplay(entrega.data))
             PreparationFieldRow("Dia", dayFromDate(entrega.data))
             PreparationFieldRow("Mes", monthName(entrega.data))
-            PreparationFieldRow("Quantitat", formatDecimal(entrega.quantitat))
+            PreparationFieldRow("Tipus fertilitzant", entrega.tipus_fertilitzant ?: "-")
+            PreparationFieldRow("Volum m3", formatDecimal(entrega.volum_m3))
+            PreparationFieldRow("Kg N/m3", formatDecimal(entrega.kg_n_m3))
+            PreparationFieldRow("Kg N", formatDecimal(entrega.kg_n))
             PreparationFieldRow("Granja origen", entrega.granja_origen?.marca_oficial ?: "-")
             PreparationFieldRow("Nom origen", entrega.granja_origen?.nom ?: "-")
-            PreparationFieldRow("Receptor titular", entrega.receptor_titular?.nom_rao ?: "-")
-            PreparationFieldRow("NIF receptor", entrega.receptor_titular?.nif ?: "-")
             PreparationFieldRow("Terra desti", entrega.terra_desti?.codi_sigpac_complet ?: "-")
             PreparationFieldRow("Campanya", entrega.dan?.campanya?.toString() ?: "-")
         }
@@ -548,7 +595,7 @@ private fun ManualReviewCard() {
         ) {
             Text("Comprovacions finals", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
             Text("Agricola: revisar S/R i qualsevol camp normatiu extern que encara no estigui modelat al sistema.", color = MaterialTheme.colorScheme.onSecondaryContainer)
-            Text("Ramadera: revisar estat de lliurament, persona que presenta, nitrogen total a gestionar, balanc i estoc final.", color = MaterialTheme.colorScheme.onSecondaryContainer)
+            Text("Ramadera: revisar que el balanç de cada granja quadri entre estoc inicial, generat, justificat per entregues i estoc final declarat.", color = MaterialTheme.colorScheme.onSecondaryContainer)
             Text("Si algun d'aquests camps es necessita de manera recurrent, ja tenim una base clara per una iteracio posterior mes orientada a la DAN final.", color = MaterialTheme.colorScheme.onSecondaryContainer)
         }
     }

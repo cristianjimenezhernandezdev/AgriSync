@@ -228,8 +228,8 @@ Has de poder:
 Has de poder:
 
 - entrar al modul ramader dels titulars compatibles
-- gestionar granges, cens i entregues
-- seleccionar receptors accessibles
+- gestionar granges, cens, balanç nitrogen i entregues
+- seleccionar terres accessibles com a destí de cada entrega
 
 ### Com a lectura
 

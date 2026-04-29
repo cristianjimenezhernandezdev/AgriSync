@@ -2,6 +2,7 @@ package cat.agrisync.viewmodel
 
 import cat.agrisync.data.DanPreparationAplicacioDto
 import cat.agrisync.data.DanPreparationEntregaDto
+import cat.agrisync.data.DanPreparationGranjaBalanceDto
 import cat.agrisync.data.DanPreparationRepository
 import cat.agrisync.data.DanPreparationTerraDto
 import cat.agrisync.data.GranjaBestiarDto
@@ -23,6 +24,7 @@ internal data class DanPreparationUiState(
     val aplicacions: List<DanPreparationAplicacioDto> = emptyList(),
     val granges: List<GranjaDto> = emptyList(),
     val granjaBestiar: List<GranjaBestiarDto> = emptyList(),
+    val granjaBalances: List<DanPreparationGranjaBalanceDto> = emptyList(),
     val entregues: List<DanPreparationEntregaDto> = emptyList(),
     val availableCampanyes: List<Int> = emptyList(),
     val selectedCampanya: Int = 0,
@@ -41,8 +43,11 @@ internal data class DanPreparationUiState(
     val totalCens: Double
         get() = granjaBestiar.sumOf { it.cens ?: 0.0 }
 
-    val totalQuantitatEntregada: Double
-        get() = entregues.sumOf { it.quantitat ?: 0.0 }
+    val totalVolumEntregat: Double
+        get() = entregues.sumOf { it.volum_m3 ?: 0.0 }
+
+    val totalKgNEntregat: Double
+        get() = entregues.sumOf { it.kg_n ?: 0.0 }
 
     val kgNPerHa: Double?
         get() = totalHectares.takeIf { it > 0 }?.let { totalKgN / it }
@@ -70,6 +75,26 @@ internal data class DanPreparationUiState(
         val applied = totalKgNByTerra(terraId)
         val excess = applied - allowed
         return excess.takeIf { it > 0.0 }
+    }
+
+    fun justifiedKgNByGranja(granjaId: String): Double {
+        return entregues.filter { it.granja_origen?.id == granjaId }.sumOf { it.kg_n ?: 0.0 }
+    }
+
+    fun balanceByGranja(granjaId: String): DanPreparationGranjaBalanceDto? {
+        return granjaBalances.firstOrNull { it.granja_id == granjaId }
+    }
+
+    fun calculatedFinalKgNByGranja(granjaId: String): Double? {
+        val balance = balanceByGranja(granjaId) ?: return null
+        return (balance.estoc_inicial_kg_n ?: 0.0) + (balance.kg_n_generat ?: 0.0) - justifiedKgNByGranja(granjaId)
+    }
+
+    fun deviationKgNByGranja(granjaId: String): Double? {
+        val balance = balanceByGranja(granjaId) ?: return null
+        val calculatedFinal = calculatedFinalKgNByGranja(granjaId) ?: return null
+        val declaredFinal = balance.estoc_final_declarat_kg_n ?: return null
+        return calculatedFinal - declaredFinal
     }
 
     fun automaticChecklistItems(): List<String> {
@@ -103,12 +128,22 @@ internal data class DanPreparationUiState(
             items += "Hi ha granges registrades pero no hi ha cens carregat per bestiar i fase."
         }
 
+        val grangesSenseBalanc = granges.count { balanceByGranja(it.id) == null }
+        if (grangesSenseBalanc > 0) {
+            items += "$grangesSenseBalanc granges sense balanc de nitrogen de campanya."
+        }
+
         if (granges.isNotEmpty() && entregues.isEmpty()) {
             items += "Hi ha granges registrades pero no hi ha entregues de dejeccions a la campanya ${selectedCampanyaLabel()}."
         }
 
-        if (entregues.any { it.receptor_titular == null && it.terra_desti == null }) {
-            items += "Hi ha entregues sense receptor resolt."
+        if (entregues.any { it.terra_desti == null }) {
+            items += "Hi ha entregues sense terra de desti resolta."
+        }
+
+        val balancesWithDeviation = granges.count { (deviationKgNByGranja(it.id) ?: 0.0).let { deviation -> kotlin.math.abs(deviation) > 0.01 } }
+        if (balancesWithDeviation > 0) {
+            items += "$balancesWithDeviation granges amb desviacio entre estoc final declarat i estoc final calculat."
         }
 
         if (items.isEmpty()) {
@@ -139,7 +174,8 @@ internal data class DanPreparationUiState(
         appendLine("- Granges: ${granges.size}")
         appendLine("- Cens total: ${formatForExport(totalCens)}")
         appendLine("- Entregues: ${entregues.size}")
-        appendLine("- Total entregat: ${formatForExport(totalQuantitatEntregada)}")
+        appendLine("- Volum total entregat: ${formatForExport(totalVolumEntregat)}")
+        appendLine("- Kg N total entregat: ${formatForExport(totalKgNEntregat)}")
         appendLine()
 
         appendLine("Terres")
@@ -176,6 +212,19 @@ internal data class DanPreparationUiState(
         }
         appendLine()
 
+        appendLine("Balanc nitrogen per granja")
+        if (granges.isEmpty()) {
+            appendLine("- Sense granges registrades")
+        } else {
+            granges.forEach { granja ->
+                val balance = balanceByGranja(granja.id)
+                appendLine(
+                    "- ${granja.marca_oficial} | inicial=${formatForExport(balance?.estoc_inicial_kg_n)} | generat=${formatForExport(balance?.kg_n_generat)} | justificat=${formatForExport(justifiedKgNByGranja(granja.id))} | final declarat=${formatForExport(balance?.estoc_final_declarat_kg_n)} | final calculat=${formatForExport(calculatedFinalKgNByGranja(granja.id))} | desviacio=${formatForExport(deviationKgNByGranja(granja.id))}"
+                )
+            }
+        }
+        appendLine()
+
         appendLine("Cens per bestiar i fase")
         if (granjaBestiar.isEmpty()) {
             appendLine("- Sense cens registrat")
@@ -194,7 +243,7 @@ internal data class DanPreparationUiState(
         } else {
             entregues.forEach { entrega ->
                 appendLine(
-                    "- ${entrega.data ?: "-"} | origen=${entrega.granja_origen?.marca_oficial ?: "-"} | quantitat=${formatForExport(entrega.quantitat)} | titular desti=${entrega.receptor_titular?.nom_rao ?: "-"} | terra desti=${entrega.terra_desti?.codi_sigpac_complet ?: "-"}"
+                    "- ${entrega.data ?: "-"} | origen=${entrega.granja_origen?.marca_oficial ?: "-"} | tipus=${entrega.tipus_fertilitzant ?: "-"} | volum m3=${formatForExport(entrega.volum_m3)} | kg N/m3=${formatForExport(entrega.kg_n_m3)} | kg N=${formatForExport(entrega.kg_n)} | terra desti=${entrega.terra_desti?.codi_sigpac_complet ?: "-"}"
                 )
             }
         }
@@ -247,6 +296,7 @@ internal class DanPreparationViewModel(
                 val aplicacions = repository.listAplicacionsByTitular(titularId, selectedCampanya)
                 val granges = repository.listGranges(titularId)
                 val granjaBestiar = repository.listGranjaBestiar(titularId)
+                val granjaBalances = repository.listGranjaCampanyaBalances(titularId, selectedCampanya)
                 val entregues = repository.listEntreguesByTitular(titularId, selectedCampanya)
                 _uiState.update {
                     it.copy(
@@ -256,6 +306,7 @@ internal class DanPreparationViewModel(
                         aplicacions = aplicacions,
                         granges = granges,
                         granjaBestiar = granjaBestiar,
+                        granjaBalances = granjaBalances,
                         entregues = entregues,
                         availableCampanyes = normalizedCampanyes(existingCampanyes),
                         selectedCampanya = selectedCampanya

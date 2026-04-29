@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import cat.agrisync.data.BestiarDto
 import cat.agrisync.data.EntregaDejeccioDto
 import cat.agrisync.data.FaseProductivaDto
+import cat.agrisync.data.GranjaCampanyaBalanceDto
 import cat.agrisync.data.GranjaBestiarDto
 import cat.agrisync.data.GranjaDto
 import cat.agrisync.data.TerraDto
@@ -172,9 +173,42 @@ internal fun TitularRamaderScreen(
                     item { Spacer(Modifier.height(8.dp)) }
 
                     item {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Balanç nitrogen campanya", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Per cada granja informa estoc inicial, nitrogen generat i estoc final declarat. El programa calcula el nitrogen justificat per entregues.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (ui.granges.isEmpty()) {
+                        item {
+                            EmptySectionCard(
+                                title = "Sense balanç ramader",
+                                message = "Primer cal crear una granja per poder portar el balanç de nitrogen de campanya."
+                            )
+                        }
+                    } else {
+                        items(ui.granges, key = { "balance-${it.id}" }) { granja ->
+                            EditableGranjaCampanyaBalanceCard(
+                                granja = granja,
+                                balance = ui.granjaCampanyaBalances.find { it.granja_id == granja.id },
+                                justifiedKgN = ui.entregues.filter { it.granja_origen_id == granja.id }.sumOf { it.kg_n ?: 0.0 },
+                                actorLabel = ui.granjaCampanyaBalances.find { it.granja_id == granja.id }?.updated_by?.let { ui.actorLabels[it] },
+                                onSave = { balanceId, estocInicial, generat, estocFinal ->
+                                    viewModel.saveGranjaCampanyaBalance(granja.id, balanceId, estocInicial, generat, estocFinal)
+                                }
+                            )
+                        }
+                    }
+
+                    item { Spacer(Modifier.height(8.dp)) }
+
+                    item {
                         SectionHeader(
-                            title = "Entrega dejeccions",
-                            description = "Sortides de dejeccions amb receptor titular o terra.",
+                            title = "Entregues a terra",
+                            description = "Cada entrega justifica automàticament una aplicació agrícola sobre la terra de destí.",
                             actionLabel = "+ Nova Entrega",
                             onAction = { showCreateEntregaDialog = true }
                         )
@@ -183,15 +217,18 @@ internal fun TitularRamaderScreen(
                         item {
                             EmptySectionCard(
                                 title = "Encara no hi ha entregues",
-                                message = "Des d'aquí pots registrar noves entregues quan ja hi hagi una granja d'origen disponible."
+                                message = "Des d'aquí pots justificar on va cada purí o fertilitzant orgànic de les granges."
                             )
                         }
                     } else {
                         items(ui.entregues, key = { it.id }) { e ->
                             EditableEntregaCard(
                                 e = e,
+                                terres = ui.receptorTerres,
                                 actorLabel = ui.actorLabels[e.updated_by],
-                                onSave = { data, quantitat -> viewModel.updateEntrega(e.id, data, quantitat) },
+                                onSave = { data, terraDestiId, tipusFertilitzant, volum, kgNM3, kgN ->
+                                    viewModel.updateEntrega(e.id, data, terraDestiId, tipusFertilitzant, volum, kgNM3, kgN)
+                                },
                                 onDelete = { pendingDeleteEntregaId = e.id }
                             )
                         }
@@ -228,11 +265,10 @@ internal fun TitularRamaderScreen(
         if (showCreateEntregaDialog) {
             CreateEntregaDialog(
                 granges = ui.granges,
-                titulars = ui.receptorTitulars,
                 terres = ui.receptorTerres,
                 selectedCampanya = ui.selectedCampanya,
-                onConfirm = { granjaId, data, quantitat, terraDestiId, receptorTitularId ->
-                    if (viewModel.createEntrega(granjaId, data, quantitat, terraDestiId, receptorTitularId)) {
+                onConfirm = { granjaId, data, terraDestiId, tipusFertilitzant, volum, kgNM3, kgN ->
+                    if (viewModel.createEntrega(granjaId, data, terraDestiId, tipusFertilitzant, volum, kgNM3, kgN)) {
                         showCreateEntregaDialog = false
                     }
                 },
@@ -468,15 +504,81 @@ private fun EditableGranjaBestiarCard(
 }
 
 @Composable
+private fun EditableGranjaCampanyaBalanceCard(
+    granja: GranjaDto,
+    balance: GranjaCampanyaBalanceDto?,
+    justifiedKgN: Double,
+    actorLabel: String?,
+    onSave: (String?, String, String, String) -> Boolean
+) {
+    var editing by remember(balance?.id, granja.id) { mutableStateOf(balance == null) }
+    var estocInicial by remember(balance?.id, balance?.estoc_inicial_kg_n) { mutableStateOf(balance?.estoc_inicial_kg_n?.toString() ?: "") }
+    var kgNGenerat by remember(balance?.id, balance?.kg_n_generat) { mutableStateOf(balance?.kg_n_generat?.toString() ?: "") }
+    var estocFinal by remember(balance?.id, balance?.estoc_final_declarat_kg_n) { mutableStateOf(balance?.estoc_final_declarat_kg_n?.toString() ?: "") }
+
+    val initialValue = balance?.estoc_inicial_kg_n ?: estocInicial.replace(',', '.').toDoubleOrNull() ?: 0.0
+    val generatedValue = balance?.kg_n_generat ?: kgNGenerat.replace(',', '.').toDoubleOrNull() ?: 0.0
+    val declaredFinalValue = balance?.estoc_final_declarat_kg_n ?: estocFinal.replace(',', '.').toDoubleOrNull() ?: 0.0
+    val calculatedFinal = initialValue + generatedValue - justifiedKgN
+    val deviation = calculatedFinal - declaredFinalValue
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(granja.nom ?: granja.marca_oficial, style = MaterialTheme.typography.bodyLarge)
+            Text("Marca oficial: ${granja.marca_oficial}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+            if (editing) {
+                OutlinedTextField(value = estocInicial, onValueChange = { estocInicial = it }, label = { Text("Estoc inicial Kg N") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = kgNGenerat, onValueChange = { kgNGenerat = it }, label = { Text("Kg N generat campanya") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = estocFinal, onValueChange = { estocFinal = it }, label = { Text("Estoc final declarat Kg N") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Text("Kg N justificat per entregues: ${formatBalanceNumber(justifiedKgN)}")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { if (onSave(balance?.id, estocInicial, kgNGenerat, estocFinal)) editing = false }) { Text("Guardar") }
+                    if (balance != null) {
+                        OutlinedButton(onClick = {
+                            estocInicial = balance.estoc_inicial_kg_n?.toString() ?: ""
+                            kgNGenerat = balance.kg_n_generat?.toString() ?: ""
+                            estocFinal = balance.estoc_final_declarat_kg_n?.toString() ?: ""
+                            editing = false
+                        }) { Text("Cancel·lar") }
+                    }
+                }
+            } else {
+                Text("Estoc inicial Kg N: ${formatBalanceNumber(balance?.estoc_inicial_kg_n)}")
+                Text("Kg N generat campanya: ${formatBalanceNumber(balance?.kg_n_generat)}")
+                Text("Kg N justificat per entregues: ${formatBalanceNumber(justifiedKgN)}")
+                Text("Estoc final declarat Kg N: ${formatBalanceNumber(balance?.estoc_final_declarat_kg_n)}")
+                Text("Estoc final calculat Kg N: ${formatBalanceNumber(calculatedFinal)}")
+                Text(
+                    "Desviacio balanc: ${formatBalanceNumber(deviation)}",
+                    color = if (kotlin.math.abs(deviation) > 0.01) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                )
+                AuditInfoBlock(
+                    updatedAt = balance?.updated_at,
+                    updatedByLabel = actorLabel,
+                    fallbackUserId = balance?.updated_by
+                )
+                TextButton(onClick = { editing = true }) { Text(if (balance == null) "Configurar" else "Editar") }
+            }
+        }
+    }
+}
+
+@Composable
 private fun EditableEntregaCard(
     e: EntregaDejeccioDto,
+    terres: List<TerraDto>,
     actorLabel: String?,
-    onSave: (String, String) -> Boolean,
+    onSave: (String, String, String, String, String, String) -> Boolean,
     onDelete: () -> Unit
 ) {
     var editing by remember { mutableStateOf(false) }
     var data by remember(e.id, e.data) { mutableStateOf(formatStoredDateForInput(e.data)) }
-    var quantitat by remember(e.id, e.quantitat) { mutableStateOf((e.quantitat ?: 0.0).toString()) }
+    var selectedTerraId by remember(e.id, e.terra_desti_id) { mutableStateOf(e.terra_desti_id ?: "") }
+    var tipusFertilitzant by remember(e.id, e.tipus_fertilitzant) { mutableStateOf(e.tipus_fertilitzant ?: "Puri") }
+    var volumM3 by remember(e.id, e.volum_m3) { mutableStateOf(e.volum_m3?.toString() ?: "") }
+    var kgNM3 by remember(e.id, e.kg_n_m3) { mutableStateOf(e.kg_n_m3?.toString() ?: "") }
+    var kgN by remember(e.id, e.kg_n) { mutableStateOf(e.kg_n?.toString() ?: "") }
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -487,23 +589,43 @@ private fun EditableEntregaCard(
                     label = "Data (dd/MM/YYYY)",
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(value = quantitat, onValueChange = { quantitat = it }, label = { Text("Quantitat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Text("Receptor: ${formatEntregaReceptor(e)}", style = MaterialTheme.typography.bodySmall)
+                TerraDropdown(terres = terres, selectedId = selectedTerraId, onSelect = { selectedTerraId = it }, label = "Terra desti")
+                OutlinedTextField(value = tipusFertilitzant, onValueChange = { tipusFertilitzant = it }, label = { Text("Tipus fertilitzant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                NitrogenTripletFieldGroup(
+                    kgN = kgN,
+                    onKgNChange = { kgN = it },
+                    volumM3 = volumM3,
+                    onVolumM3Change = { volumM3 = it },
+                    kgNPerM3 = kgNM3,
+                    onKgNPerM3Change = { kgNM3 = it }
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { if (onSave(data, quantitat)) editing = false }) { Text("Guardar") }
+                    Button(onClick = {
+                        if (onSave(data, selectedTerraId, tipusFertilitzant, volumM3, kgNM3, kgN)) editing = false
+                    }) { Text("Guardar") }
                     OutlinedButton(onClick = {
                         data = formatStoredDateForInput(e.data)
-                        quantitat = (e.quantitat ?: 0.0).toString()
+                        selectedTerraId = e.terra_desti_id ?: ""
+                        tipusFertilitzant = e.tipus_fertilitzant ?: "Puri"
+                        volumM3 = e.volum_m3?.toString() ?: ""
+                        kgNM3 = e.kg_n_m3?.toString() ?: ""
+                        kgN = e.kg_n?.toString() ?: ""
                         editing = false
                     }) { Text("Cancel·lar") }
                 }
             } else {
                 Text("Data: ${formatStoredDateForDisplay(e.data)}")
-                Text("Quantitat: ${e.quantitat ?: 0.0}")
+                Text("Tipus: ${e.tipus_fertilitzant ?: "-"}")
+                Text("Kg N: ${e.kg_n ?: 0.0} · Volum m3: ${e.volum_m3 ?: "-"} · Kg N/m3: ${e.kg_n_m3 ?: "-"}")
                 Text(
-                    "Receptor: ${formatEntregaReceptor(e)}",
+                    "Terra desti: ${formatEntregaReceptor(e)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Justifica automàticament una aplicacio agrícola sobre aquesta terra.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 AuditInfoBlock(
                     updatedAt = e.updated_at,
@@ -599,18 +721,18 @@ private fun CreateGranjaBestiarDialog(
 @Composable
 private fun CreateEntregaDialog(
     granges: List<GranjaDto>,
-    titulars: List<TitularDto>,
     terres: List<TerraDto>,
     selectedCampanya: Int,
-    onConfirm: (String, String, String, String?, String?) -> Unit,
+    onConfirm: (String, String, String, String, String, String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var selectedGranjaId by remember(granges) { mutableStateOf(granges.firstOrNull()?.id ?: "") }
-    var receptorMode by remember { mutableStateOf("titular") }
-    var selectedTitularId by remember(titulars) { mutableStateOf(titulars.firstOrNull()?.id ?: "") }
     var selectedTerraId by remember(terres) { mutableStateOf(terres.firstOrNull()?.id ?: "") }
     var data by remember { mutableStateOf("") }
-    var quantitat by remember { mutableStateOf("") }
+    var tipusFertilitzant by remember { mutableStateOf("Puri") }
+    var volumM3 by remember { mutableStateOf("") }
+    var kgNM3 by remember { mutableStateOf("") }
+    var kgN by remember { mutableStateOf("") }
     val canCreate = granges.isNotEmpty()
 
     AlertDialog(
@@ -625,7 +747,7 @@ private fun CreateEntregaDialog(
                     )
                 } else {
                     Text(
-                        "Registra la sortida de dejeccions indicant origen, data, quantitat i receptor.",
+                        "Registra la sortida de dejeccions indicant origen, terra de destí i càlcul de nitrogen.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -641,51 +763,27 @@ private fun CreateEntregaDialog(
                         label = "Data (dd/MM/YYYY)",
                         modifier = Modifier.fillMaxWidth()
                     )
-                    OutlinedTextField(value = quantitat, onValueChange = { quantitat = it }, label = { Text("Quantitat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-
-                    Text("Tipus de receptor", style = MaterialTheme.typography.labelMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(selected = receptorMode == "titular", onClick = { receptorMode = "titular" })
-                            Text("Titular")
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(selected = receptorMode == "terra", onClick = { receptorMode = "terra" })
-                            Text("Terra")
-                        }
-                    }
-
-                    if (receptorMode == "titular") {
-                        if (titulars.isEmpty()) {
-                            Text("No tens cap titular accessible per seleccionar com a receptor.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        } else {
-                            TitularDropdown(
-                                titulars = titulars,
-                                selectedId = selectedTitularId,
-                                onSelect = { selectedTitularId = it }
-                            )
-                        }
+                    if (terres.isEmpty()) {
+                        Text("No tens cap terra accessible per seleccionar.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
-                        if (terres.isEmpty()) {
-                            Text("No tens cap terra accessible per seleccionar.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        } else {
-                            TerraDropdown(terres = terres, selectedId = selectedTerraId, onSelect = { selectedTerraId = it }, label = "Terra desti")
-                        }
+                        TerraDropdown(terres = terres, selectedId = selectedTerraId, onSelect = { selectedTerraId = it }, label = "Terra desti")
                     }
+                    OutlinedTextField(value = tipusFertilitzant, onValueChange = { tipusFertilitzant = it }, label = { Text("Tipus fertilitzant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    NitrogenTripletFieldGroup(
+                        kgN = kgN,
+                        onKgNChange = { kgN = it },
+                        volumM3 = volumM3,
+                        onVolumM3Change = { volumM3 = it },
+                        kgNPerM3 = kgNM3,
+                        onKgNPerM3Change = { kgNM3 = it }
+                    )
                 }
             }
         },
         confirmButton = {
             Button(
-                onClick = {
-                    val terraId = if (receptorMode == "terra") selectedTerraId else null
-                    val receptorTitularId = if (receptorMode == "titular") selectedTitularId else null
-                    onConfirm(selectedGranjaId, data, quantitat, terraId, receptorTitularId)
-                },
-                enabled = canCreate && (
-                    (receptorMode == "titular" && titulars.isNotEmpty() && selectedTitularId.isNotBlank())
-                        || (receptorMode == "terra" && terres.isNotEmpty() && selectedTerraId.isNotBlank())
-                )
+                onClick = { onConfirm(selectedGranjaId, data, selectedTerraId, tipusFertilitzant, volumM3, kgNM3, kgN) },
+                enabled = canCreate && terres.isNotEmpty() && selectedTerraId.isNotBlank()
             ) { Text("Crear") }
         },
         dismissButton = {
@@ -780,31 +878,19 @@ private fun TerraDropdown(
     )
 }
 
-@Composable
-private fun TitularDropdown(
-    titulars: List<TitularDto>,
-    selectedId: String,
-    onSelect: (String) -> Unit
-) {
-    SearchableSelectionField(
-        items = titulars,
-        selectedItem = titulars.find { it.id == selectedId },
-        onSelect = { titular -> onSelect(titular?.id ?: "") },
-        itemLabel = { "${it.nom_rao} (${it.nif ?: "-"})" },
-        itemSearchText = { "${it.nom_rao} ${it.nif ?: ""} ${it.telefon ?: ""} ${it.email ?: ""} ${it.codi_postal ?: ""}" },
-        label = "Titular receptor",
-        placeholder = "Cerca per nom, NIF, telefon o CP"
-    )
-}
-
 private fun formatEntregaReceptor(entrega: EntregaDejeccioDto): String {
-    entrega.receptor_titular?.let { return "${it.nom_rao} (${it.nif ?: "-"})" }
     entrega.terra_desti?.let { terra ->
         val codi = terra.codi_sigpac_complet ?: terra.id
         val titular = terra.titular?.nom_rao ?: "-"
         return "$codi · $titular"
     }
-    return entrega.receptor_titular_id ?: "terra:${entrega.terra_desti_id ?: "-"}"
+    return "terra:${entrega.terra_desti_id ?: "-"}"
+}
+
+private fun formatBalanceNumber(value: Double?): String {
+    if (value == null) return "-"
+    val rounded = kotlin.math.round(value * 100) / 100
+    return rounded.toString().replace('.', ',')
 }
 
 @Composable

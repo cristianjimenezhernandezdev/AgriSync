@@ -44,6 +44,7 @@ data class DanRefDto(
 data class AplicacioFertilitzantDto(
     val id: String,
     val terra_id: String? = null,
+    val entrega_id: String? = null,
     val data: String? = null,
     val tipus_fertilitzant: String? = null,
     val procedencia: String? = null,
@@ -53,7 +54,14 @@ data class AplicacioFertilitzantDto(
     val tecnic_id: String? = null,
     val updated_at: String? = null,
     val updated_by: String? = null,
+    val entrega: EntregaAplicacioLinkDto? = null,
     val dan: DanRefDto? = null
+)
+
+@Serializable
+data class EntregaAplicacioLinkDto(
+    val id: String,
+    val granja_origen: GranjaDto? = null
 )
 
 @Serializable
@@ -95,15 +103,31 @@ data class GranjaBestiarDto(
 data class EntregaDejeccioDto(
     val id: String,
     val data: String? = null,
-    val quantitat: Double? = null,
+    val tipus_fertilitzant: String? = null,
+    val volum_m3: Double? = null,
+    val kg_n_m3: Double? = null,
+    val kg_n: Double? = null,
     val granja_origen_id: String,
-    val receptor_titular_id: String? = null,
     val terra_desti_id: String? = null,
     val updated_at: String? = null,
     val updated_by: String? = null,
     val dan: DanRefDto? = null,
-    val receptor_titular: TitularDto? = null,
-    val terra_desti: TerraDto? = null
+    val granja_origen: GranjaDto? = null,
+    val terra_desti: TerraDto? = null,
+    val aplicacio_generada: AplicacioFertilitzantDto? = null
+)
+
+@Serializable
+data class GranjaCampanyaBalanceDto(
+    val id: String,
+    val granja_id: String,
+    val dan: DanRefDto? = null,
+    val granja: GranjaDto? = null,
+    val estoc_inicial_kg_n: Double? = null,
+    val kg_n_generat: Double? = null,
+    val estoc_final_declarat_kg_n: Double? = null,
+    val updated_at: String? = null,
+    val updated_by: String? = null
 )
 
 data class TitularCollaboratingTecnicSummary(
@@ -210,6 +234,7 @@ data class DanCreateRequest(
 data class AplicacioCreateRequest(
     val dan_id: String,
     val terra_id: String,
+    val entrega_id: String? = null,
     val data: String,
     val tipus_fertilitzant: String? = null,
     val procedencia: String? = null,
@@ -259,13 +284,35 @@ data class EntregaCreateRequest(
     val dan_id: String,
     val granja_origen_id: String,
     val data: String,
-    val quantitat: Double,
-    val terra_desti_id: String? = null,
-    val receptor_titular_id: String? = null
+    val terra_desti_id: String,
+    val tipus_fertilitzant: String? = null,
+    val volum_m3: Double,
+    val kg_n_m3: Double,
+    val kg_n: Double
 )
 
 @Serializable
 data class EntregaUpdateRequest(
     val data: String? = null,
-    val quantitat: Double? = null
+    val terra_desti_id: String? = null,
+    val tipus_fertilitzant: String? = null,
+    val volum_m3: Double? = null,
+    val kg_n_m3: Double? = null,
+    val kg_n: Double? = null
+)
+
+@Serializable
+data class GranjaCampanyaBalanceCreateRequest(
+    val dan_id: String,
+    val granja_id: String,
+    val estoc_inicial_kg_n: Double? = null,
+    val kg_n_generat: Double? = null,
+    val estoc_final_declarat_kg_n: Double? = null
+)
+
+@Serializable
+data class GranjaCampanyaBalanceUpdateRequest(
+    val estoc_inicial_kg_n: Double? = null,
+    val kg_n_generat: Double? = null,
+    val estoc_final_declarat_kg_n: Double? = null
 )

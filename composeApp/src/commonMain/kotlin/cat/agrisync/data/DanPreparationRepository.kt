@@ -3,6 +3,12 @@ package cat.agrisync.data
 import kotlinx.serialization.Serializable
 
 internal class DanPreparationRepository(private val restClient: RestClient) {
+    private val aplicacioSelect =
+        "?select=id,entrega_id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,entrega:entrega_id(id,granja_origen:granja_origen_id(id,titular_id,marca_oficial,nom)),terra:terra_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha),dan:dan_id(id,titular_id,campanya)"
+    private val entregaSelect =
+        "?select=id,data,tipus_fertilitzant,volum_m3,kg_n_m3,kg_n,granja_origen:granja_origen_id(id,titular_id,marca_oficial,nom),terra_desti:terra_desti_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha),dan:dan_id(id,titular_id,campanya)"
+    private val balanceSelect =
+        "?select=id,granja_id,estoc_inicial_kg_n,kg_n_generat,estoc_final_declarat_kg_n,granja:granja_id(id,titular_id,marca_oficial,nom),dan:dan_id(id,titular_id,campanya)"
 
     internal suspend fun getTitular(titularId: String): TitularDto? {
         val q = "?select=id,nif,nom_rao,telefon,email,adreca,codi_postal,updated_at,updated_by&id=eq.$titularId&limit=1"
@@ -17,7 +23,7 @@ internal class DanPreparationRepository(private val restClient: RestClient) {
 
     internal suspend fun listAplicacionsByTitular(titularId: String, campanya: Int): List<DanPreparationAplicacioDto> {
         val dan = findDanByCampanya(titularId, campanya) ?: return emptyList()
-        val q = "?select=id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,terra:terra_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha),dan:dan_id(id,titular_id,campanya)&dan_id=eq.${dan.id}&order=data.desc"
+        val q = "$aplicacioSelect&dan_id=eq.${dan.id}&order=data.desc"
         return restClient.get("aplicacions_fertilitzants", q)
     }
 
@@ -44,8 +50,14 @@ internal class DanPreparationRepository(private val restClient: RestClient) {
 
     internal suspend fun listEntreguesByTitular(titularId: String, campanya: Int): List<DanPreparationEntregaDto> {
         val dan = findDanByCampanya(titularId, campanya) ?: return emptyList()
-        val q = "?select=id,data,quantitat,granja_origen:granja_origen_id(id,titular_id,marca_oficial,nom),receptor_titular:receptor_titular_id(id,nif,nom_rao,telefon,email,adreca,codi_postal),terra_desti:terra_desti_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha),dan:dan_id(id,titular_id,campanya)&dan_id=eq.${dan.id}&order=data.desc"
+        val q = "$entregaSelect&dan_id=eq.${dan.id}&order=data.desc"
         return restClient.get("entrega_dejeccions", q)
+    }
+
+    internal suspend fun listGranjaCampanyaBalances(titularId: String, campanya: Int): List<DanPreparationGranjaBalanceDto> {
+        val dan = findDanByCampanya(titularId, campanya) ?: return emptyList()
+        val q = "$balanceSelect&dan_id=eq.${dan.id}&order=granja_id"
+        return restClient.get("granja_campanya_balance", q)
     }
 
     private suspend fun findDanByCampanya(titularId: String, campanya: Int): DanRefDto? {
@@ -78,12 +90,14 @@ internal data class DanPreparationTerraDto(
 @Serializable
 internal data class DanPreparationAplicacioDto(
     val id: String,
+    val entrega_id: String? = null,
     val data: String? = null,
     val tipus_fertilitzant: String? = null,
     val procedencia: String? = null,
     val volum_m3: Double? = null,
     val kg_n_m3: Double? = null,
     val kg_n: Double? = null,
+    val entrega: EntregaAplicacioLinkDto? = null,
     val terra: DanPreparationTerraDto? = null,
     val dan: DanRefDto? = null
 )
@@ -92,9 +106,22 @@ internal data class DanPreparationAplicacioDto(
 internal data class DanPreparationEntregaDto(
     val id: String,
     val data: String? = null,
-    val quantitat: Double? = null,
+    val tipus_fertilitzant: String? = null,
+    val volum_m3: Double? = null,
+    val kg_n_m3: Double? = null,
+    val kg_n: Double? = null,
     val granja_origen: GranjaDto? = null,
-    val receptor_titular: TitularDto? = null,
     val terra_desti: DanPreparationTerraDto? = null,
+    val dan: DanRefDto? = null
+)
+
+@Serializable
+internal data class DanPreparationGranjaBalanceDto(
+    val id: String,
+    val granja_id: String,
+    val estoc_inicial_kg_n: Double? = null,
+    val kg_n_generat: Double? = null,
+    val estoc_final_declarat_kg_n: Double? = null,
+    val granja: GranjaDto? = null,
     val dan: DanRefDto? = null
 )

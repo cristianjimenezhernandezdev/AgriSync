@@ -2,6 +2,7 @@ package cat.agrisync.viewmodel
 
 import cat.agrisync.data.*
 import cat.agrisync.util.parseEnteredDateToIso
+import cat.agrisync.util.validateAndResolveNitrogenTriplet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -266,34 +267,26 @@ internal class TitularAgricolaViewModel(
         volumText: String,
         kgNM3Text: String
     ): Boolean {
+        val currentApp = _uiState.value.aplicacions.firstOrNull { it.id == id }
+        if (currentApp?.entrega_id != null) {
+            _uiState.update { it.copy(saveMessage = "Aquesta aplicacio ve d'una entrega ramadera. Edita-la des del modul ramader.") }
+            return false
+        }
         val cleanData = parseEnteredDateToIso(data)
-        val kgN = kgNText.toDoubleOrNull()
-        val volum = volumText.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
-        val kgNM3 = kgNM3Text.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
         if (cleanData == null) {
             _uiState.update { it.copy(saveMessage = "La data ha de tenir format dd/MM/YYYY") }
             return false
         }
-        if (kgN == null) {
-            _uiState.update { it.copy(saveMessage = "Kg N ha de ser un nombre valid") }
+        val nutrients = validateAndResolveNitrogenTriplet(
+            kgNText = kgNText,
+            volumM3Text = volumText,
+            kgNPerM3Text = kgNM3Text
+        )
+        if (nutrients.errorMessage != null) {
+            _uiState.update { it.copy(saveMessage = nutrients.errorMessage) }
             return false
         }
-        if (volumText.isNotBlank() && volum == null) {
-            _uiState.update { it.copy(saveMessage = "El volum m3 ha de ser un nombre valid") }
-            return false
-        }
-        if (kgNM3Text.isNotBlank() && kgNM3 == null) {
-            _uiState.update { it.copy(saveMessage = "El kg N/m3 ha de ser un nombre valid") }
-            return false
-        }
-        if (kgN < 0) {
-            _uiState.update { it.copy(saveMessage = "Kg N no pot ser negatiu") }
-            return false
-        }
-        if ((volum ?: 0.0) < 0 || (kgNM3 ?: 0.0) < 0) {
-            _uiState.update { it.copy(saveMessage = "Volum m3 i kg N/m3 no poden ser negatius") }
-            return false
-        }
+        val resolved = nutrients.values ?: return false
         scope.launch {
             try {
                 val updated = repository.updateAplicacio(
@@ -302,9 +295,9 @@ internal class TitularAgricolaViewModel(
                         data = cleanData,
                         tipus_fertilitzant = tipusFertilitzant.trim().ifBlank { null },
                         procedencia = procedencia.trim().ifBlank { null },
-                        volum_m3 = volum,
-                        kg_n_m3 = kgNM3,
-                        kg_n = kgN
+                        volum_m3 = resolved.volumM3,
+                        kg_n_m3 = resolved.kgNPerM3,
+                        kg_n = resolved.kgN
                     )
                 )
                 val actorLabels = updateActorLabels(_uiState.value.actorLabels, updated.updated_by)
@@ -334,9 +327,6 @@ internal class TitularAgricolaViewModel(
         kgNM3Text: String
     ): Boolean {
         val cleanData = parseEnteredDateToIso(data)
-        val kgN = kgNText.toDoubleOrNull()
-        val volum = volumText.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
-        val kgNM3 = kgNM3Text.trim().takeIf { it.isNotBlank() }?.toDoubleOrNull()
         if (terraId.isBlank()) {
             _uiState.update { it.copy(saveMessage = "Has de seleccionar una terra") }
             return false
@@ -345,26 +335,16 @@ internal class TitularAgricolaViewModel(
             _uiState.update { it.copy(saveMessage = "La data ha de tenir format dd/MM/YYYY") }
             return false
         }
-        if (kgN == null) {
-            _uiState.update { it.copy(saveMessage = "Kg N ha de ser un nombre valid") }
+        val nutrients = validateAndResolveNitrogenTriplet(
+            kgNText = kgNText,
+            volumM3Text = volumText,
+            kgNPerM3Text = kgNM3Text
+        )
+        if (nutrients.errorMessage != null) {
+            _uiState.update { it.copy(saveMessage = nutrients.errorMessage) }
             return false
         }
-        if (volumText.isNotBlank() && volum == null) {
-            _uiState.update { it.copy(saveMessage = "El volum m3 ha de ser un nombre valid") }
-            return false
-        }
-        if (kgNM3Text.isNotBlank() && kgNM3 == null) {
-            _uiState.update { it.copy(saveMessage = "El kg N/m3 ha de ser un nombre valid") }
-            return false
-        }
-        if (kgN < 0) {
-            _uiState.update { it.copy(saveMessage = "Kg N no pot ser negatiu") }
-            return false
-        }
-        if ((volum ?: 0.0) < 0 || (kgNM3 ?: 0.0) < 0) {
-            _uiState.update { it.copy(saveMessage = "Volum m3 i kg N/m3 no poden ser negatius") }
-            return false
-        }
+        val resolved = nutrients.values ?: return false
         scope.launch {
             try {
                 val created = repository.createAplicacio(
@@ -374,9 +354,9 @@ internal class TitularAgricolaViewModel(
                     data = cleanData,
                     tipusFertilitzant = tipusFertilitzant.trim().ifBlank { null },
                     procedencia = procedencia.trim().ifBlank { null },
-                    volumM3 = volum,
-                    kgNM3 = kgNM3,
-                    kgN = kgN
+                    volumM3 = resolved.volumM3,
+                    kgNM3 = resolved.kgNPerM3,
+                    kgN = resolved.kgN
                 )
                 val actorLabels = updateActorLabels(_uiState.value.actorLabels, created.updated_by)
                 _uiState.update { st ->
@@ -395,6 +375,11 @@ internal class TitularAgricolaViewModel(
     }
 
     fun deleteAplicacio(id: String) {
+        val app = _uiState.value.aplicacions.firstOrNull { it.id == id }
+        if (app?.entrega_id != null) {
+            _uiState.update { it.copy(saveMessage = "Aquesta aplicacio ve d'una entrega ramadera. Elimina-la des del modul ramader.") }
+            return
+        }
         scope.launch {
             try {
                 repository.deleteAplicacio(id)
@@ -476,6 +461,8 @@ private fun mapHttpError(message: String?): String {
     return when {
         msg.contains("401") -> "Sessio caducada (401). Torna a iniciar sessio."
         msg.contains("403") -> "No tens permis per aquest titular (403)."
+        msg.contains("PGRST200") || msg.contains("Could not find a relationship between") ->
+            "No s'ha pogut carregar una relacio de dades del modul agricola. Torna-ho a provar i, si persisteix, cal revisar la configuracio de Supabase."
         else -> msg
     }
 }

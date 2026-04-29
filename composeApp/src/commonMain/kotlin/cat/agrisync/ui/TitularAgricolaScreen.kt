@@ -144,7 +144,7 @@ internal fun TitularAgricolaScreen(
                     item {
                         SectionHeader(
                             title = "Aplicacions fertilitzants",
-                            description = "Registres d'aplicació de nitrogen vinculats a la DAN.",
+                            description = "Inclou aplicacions manuals i aplicacions justificades automàticament des d'entregues ramaderes.",
                             actionLabel = "+ Nova Aplicacio",
                             onAction = { showCreateAplicacioDialog = true }
                         )
@@ -427,6 +427,8 @@ private fun EditableAplicacioCard(
     var procedencia by remember(app.id, app.procedencia) { mutableStateOf(app.procedencia ?: "") }
     var volumM3 by remember(app.id, app.volum_m3) { mutableStateOf(app.volum_m3?.toString() ?: "") }
     var kgNM3 by remember(app.id, app.kg_n_m3) { mutableStateOf(app.kg_n_m3?.toString() ?: "") }
+    val isLinkedEntrega = app.entrega_id != null
+    val linkedGranja = app.entrega?.granja_origen?.nom ?: app.entrega?.granja_origen?.marca_oficial
     val terra = terres.find { it.id == app.terra_id }
     val limitKgNHa = terra?.limit_kg_n_ha ?: if (terra?.zona == "ZV") 170.0 else 190.0
     val allowedKgN = terra?.superficie?.let { it * limitKgNHa }
@@ -437,7 +439,14 @@ private fun EditableAplicacioCard(
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Campanya: ${app.dan?.campanya ?: "-"}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-            if (editing) {
+            if (isLinkedEntrega) {
+                Text(
+                    "Aplicacio sincronitzada des d'una entrega ramadera${linkedGranja?.let { " de $it" } ?: ""}.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            if (editing && !isLinkedEntrega) {
                 DateInputField(
                     value = data,
                     onValueChange = { data = it },
@@ -446,13 +455,14 @@ private fun EditableAplicacioCard(
                 )
                 OutlinedTextField(value = tipusFertilitzant, onValueChange = { tipusFertilitzant = it }, label = { Text("Tipus fertilitzant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = procedencia, onValueChange = { procedencia = it }, label = { Text("Procedencia") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = kgN, onValueChange = { kgN = it }, label = { Text("Kg N") }, singleLine = true, modifier = Modifier.weight(1f))
-                    OutlinedTextField(value = volumM3, onValueChange = { volumM3 = it }, label = { Text("Volum m3") }, singleLine = true, modifier = Modifier.weight(1f))
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = kgNM3, onValueChange = { kgNM3 = it }, label = { Text("Kg N/m3") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                }
+                NitrogenTripletFieldGroup(
+                    kgN = kgN,
+                    onKgNChange = { kgN = it },
+                    volumM3 = volumM3,
+                    onVolumM3Change = { volumM3 = it },
+                    kgNPerM3 = kgNM3,
+                    onKgNPerM3Change = { kgNM3 = it }
+                )
                 if (projectedExcessKgN != null) {
                     HorizontalDivider()
                     Text(
@@ -477,6 +487,13 @@ private fun EditableAplicacioCard(
                 Text("Kg N: ${app.kg_n ?: 0.0} · Volum m3: ${app.volum_m3 ?: "-"}")
                 Text("Tipus: ${app.tipus_fertilitzant ?: "-"} · Procedencia: ${app.procedencia ?: "-"}")
                 Text("Kg N/m3: ${app.kg_n_m3 ?: "-"}")
+                if (isLinkedEntrega) {
+                    Text(
+                        "Edita o elimina aquesta justificacio des del modul ramader.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 if (allowedKgN != null && projectedExcessKgN != null) {
                     Text(
                         "Avis campanya $selectedCampanya: terra per sobre del limit anual en ${formatKgN(projectedExcessKgN)} kg N.",
@@ -489,8 +506,10 @@ private fun EditableAplicacioCard(
                     fallbackUserId = app.updated_by
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { editing = true }) { Text("Editar") }
-                    TextButton(onClick = onDelete) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+                    if (!isLinkedEntrega) {
+                        TextButton(onClick = { editing = true }) { Text("Editar") }
+                        TextButton(onClick = onDelete) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+                    }
                 }
             }
         }
@@ -626,11 +645,14 @@ private fun CreateAplicacioDialog(
                     )
                     OutlinedTextField(value = tipusFertilitzant, onValueChange = { tipusFertilitzant = it }, label = { Text("Tipus fertilitzant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = procedencia, onValueChange = { procedencia = it }, label = { Text("Procedencia") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = kgN, onValueChange = { kgN = it }, label = { Text("Kg N") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(value = volumM3, onValueChange = { volumM3 = it }, label = { Text("Volum m3") }, singleLine = true, modifier = Modifier.weight(1f))
-                        OutlinedTextField(value = kgNM3, onValueChange = { kgNM3 = it }, label = { Text("Kg N/m3") }, singleLine = true, modifier = Modifier.weight(1f))
-                    }
+                    NitrogenTripletFieldGroup(
+                        kgN = kgN,
+                        onKgNChange = { kgN = it },
+                        volumM3 = volumM3,
+                        onVolumM3Change = { volumM3 = it },
+                        kgNPerM3 = kgNM3,
+                        onKgNPerM3Change = { kgNM3 = it }
+                    )
                     if (projectedExcessKgN != null) {
                         HorizontalDivider()
                         Text(

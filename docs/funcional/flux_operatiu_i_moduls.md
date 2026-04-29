@@ -26,7 +26,9 @@ Permet:
   Inclou `nif`, `telefon`, `email`, `adreca` i `codi_postal`
 - veure quines oficines i tecnics tenen acces al titular, amb scopes visibles
 - crear, editar i eliminar terres
-- crear, editar i eliminar aplicacions fertilitzants
+- crear, editar i eliminar aplicacions fertilitzants manuals
+- veure aplicacions generades automàticament des de les entregues ramaderes
+- treballar amb `Kg N`, `Volum m3` i `Kg N/m3` relacionats entre si
 - treballar per campanya
 - visualitzar avisos basics sobre nitrogen aplicat
 
@@ -39,8 +41,10 @@ Permet:
 - veure quines oficines i tecnics tenen acces al titular, amb scopes visibles
 - crear, editar i eliminar granges
 - gestionar bestiar i fases productives
-- registrar entregues de dejeccions
-- seleccionar terra o titular receptor quan es permet
+- informar balanc de nitrogen per granja i campanya
+- registrar entregues de dejeccions sempre cap a una terra concreta
+- justificar cada entrega com a aplicacio fertilitzant equivalent sobre la terra de desti
+- treballar amb `Kg N`, `Volum m3` i `Kg N/m3` relacionats entre si
 - treballar per campanya
 
 ## Preparar DAN
@@ -51,7 +55,9 @@ La pantalla `Preparar DAN` agrega informacio per titular i campanya:
 - terres
 - aplicacions fertilitzants
 - granges i censos
+- balanc de nitrogen per granja i campanya
 - entregues de dejeccions
+- justificacio de cada entrega cap a terres
 - totals derivats
 - checklist automatica
 
@@ -73,5 +79,5 @@ Segons rol, l'app ofereix:
 - usuaris de lectura
 - campanyes 2024 i 2025
 - treball combinat agricola i ramader
-- entregues cap a altres titulars o terres accessibles
+- entregues cap a terres accessibles amb justificacio agricola
 - gestio des d'`admin` i des d'`oficina_manager`

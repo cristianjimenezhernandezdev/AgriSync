@@ -279,7 +279,7 @@ Composable UI
 |---|---|
 | `AccessRepository.kt` | Resol titulars visibles a la home segons rol i assignacions |
 | `AgricolaRepository.kt` | CRUD de titular agrícola, terres i aplicacions |
-| `RamaderRepository.kt` | CRUD de titular ramader, granges, bestiar i entregues |
+| `RamaderRepository.kt` | CRUD de titular ramader, granges, bestiar, balanç de nitrogen i entregues |
 | `DanPreparationRepository.kt` | Agregació de dades per a `Preparar DAN` |
 | `OficinaRepository.kt` | CRUD d'oficines |
 | `TecnicRepository.kt` | CRUD de tècnics, assignacions i operacions Admin API |
@@ -382,6 +382,7 @@ Mètodes principals:
 - `updateGranja`
 - `deleteGranja`
 - `listGranjaBestiar`
+- `listGranjaCampanyaBalances`
 - `createGranjaBestiar`
 - `updateGranjaBestiar`
 - `deleteGranjaBestiar`
@@ -389,12 +390,16 @@ Mètodes principals:
 - `createEntrega`
 - `updateEntrega`
 - `deleteEntrega`
+- `createGranjaCampanyaBalance`
+- `updateGranjaCampanyaBalance`
 - `listAccessibleTitulars`
 - `listAccessibleTerres`
 
 Detall important:
 
-- els receptors d'una entrega es resolen contra dades accessibles via RLS
+- cada entrega va cap a una terra concreta
+- una entrega pot justificar automàticament una aplicació agrícola equivalent
+- el balanç per granja permet veure `estoc inicial + generat - justificat = final calculat`
 
 ### `DanPreparationRepository.kt`
 
@@ -467,7 +472,7 @@ Cada viewmodel segueix el mateix patró:
 | `TitularsScreen` | `HomeViewModel` | home, cerca i paginacio |
 | `ProfileScreen` | `ProfileViewModel` | perfil propi i canvi de password |
 | `TitularAgricolaScreen` | `TitularAgricolaViewModel` | titular, terres i aplicacions |
-| `TitularRamaderScreen` | `TitularRamaderViewModel` | titular, granges, cens i entregues |
+| `TitularRamaderScreen` | `TitularRamaderViewModel` | titular, granges, cens, balanç nitrogen i entregues |
 | `DanPreparationScreen` | `DanPreparationViewModel` | resum per campanya i text per clipboard |
 | `TecnicManagementScreen` | `TecnicManagementViewModel` | alta/baixa de tecnics i reset de password |
 | `TecnicDetailScreen` | `TecnicDetailViewModel` | detall de tecnic i assignacions |
@@ -539,6 +544,7 @@ Detall important:
 - calcula nitrogen aplicat per terra
 - calcula límits per zona `ZV` o `ZNV`
 - mostra avisos quan una terra supera el límit anual
+- bloqueja l'edició manual de les aplicacions provinents d'entregues
 - carrega també col·laboradors del titular
 
 ### `TitularRamaderViewModel.kt`
@@ -553,6 +559,7 @@ Mètodes principals:
 - `updateGranjaBestiar`
 - `createGranjaBestiar`
 - `deleteGranjaBestiar`
+- `saveGranjaCampanyaBalance`
 - `updateEntrega`
 - `createEntrega`
 - `deleteEntrega`
@@ -560,7 +567,8 @@ Mètodes principals:
 Detall important:
 
 - treballa per campanya
-- carrega titulars i terres accessibles com a possibles receptors
+- carrega terres accessibles com a possibles destins
+- calcula el balanç ramader per granja a partir d'estoc inicial, generat, justificat i final declarat
 - mostra col·laboradors del titular
 
 ### `DanPreparationViewModel.kt`
@@ -688,7 +696,8 @@ Fa:
 - mostrar col·laboració d'oficines i tècnics
 - canviar de campanya
 - gestionar terres
-- gestionar aplicacions fertilitzants
+- gestionar aplicacions fertilitzants manuals
+- visualitzar aplicacions provinents d'entregues ramaderes
 
 ### `TitularRamaderScreen.kt`
 
@@ -699,6 +708,7 @@ Peces importants:
 - `EditableRamaderTitularCard`
 - `EditableGranjaCard`
 - `EditableGranjaBestiarCard`
+- `EditableGranjaCampanyaBalanceCard`
 - `EditableEntregaCard`
 - `CreateGranjaDialog`
 - `CreateGranjaBestiarDialog`
@@ -706,7 +716,6 @@ Peces importants:
 - `GranjaDropdown`
 - `BestiarDropdown`
 - `FaseDropdown`
-- `TitularDropdown`
 - `TerraDropdown`
 
 Fa:
@@ -715,7 +724,9 @@ Fa:
 - mostrar col·laboració d'oficines i tècnics
 - gestionar granges
 - gestionar cens per bestiar i fase
-- gestionar entregues i receptors
+- gestionar balanç de nitrogen per granja i campanya
+- gestionar entregues sempre cap a terra
+- sincronitzar cada entrega amb una aplicació agrícola equivalent
 
 ### `DanPreparationScreen.kt`
 
@@ -872,16 +883,19 @@ sempre que el titular i l'ambit ho permetin.
 1. `TitularAgricolaViewModel.load()` carrega titular, terres, campanyes i aplicacions
 2. calcula totals de nitrogen i avisos
 3. la pantalla permet crear o editar terres
-4. la pantalla permet crear o editar aplicacions
-5. cada operacio escriu via `AgricolaRepository`
-6. la BDD decideix si l'usuari pot fer l'operacio segons `can_write_agricola(...)`
+4. la pantalla permet crear o editar aplicacions manuals
+5. les aplicacions provinents d'entregues es mostren com a justificacions sincronitzades
+6. cada operacio escriu via `AgricolaRepository`
+7. la BDD decideix si l'usuari pot fer l'operacio segons `can_write_agricola(...)`
 
 ### Flux 4. Modul Ramader
 
-1. `TitularRamaderViewModel.load()` carrega titular, granges, cens, entregues, receptors i campanyes
+1. `TitularRamaderViewModel.load()` carrega titular, granges, cens, balanç de nitrogen, entregues i campanyes
 2. la pantalla permet mantenir granges i registres de bestiar
-3. la pantalla permet registrar entregues amb receptor titular o terra
-4. la BDD valida accessos amb `can_write_ramader(...)`, `can_read_titular(...)` i `can_reference_terra(...)`
+3. la pantalla permet informar estoc inicial, nitrogen generat i estoc final declarat per granja
+4. la pantalla permet registrar entregues sempre cap a una terra
+5. la BDD valida accessos amb `can_write_ramader(...)` i `can_reference_terra(...)`
+6. una entrega pot sincronitzar automàticament una aplicació agrícola equivalent
 
 ### Flux 5. Preparar DAN
 

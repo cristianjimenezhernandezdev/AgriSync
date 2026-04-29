@@ -11,6 +11,11 @@ drop view if exists public.v_titular_access cascade;
 
 drop function if exists public.get_my_tecnic() cascade;
 drop function if exists public.audit_fill_actor() cascade;
+drop function if exists public.resolve_nutrient_triplet(numeric, numeric, numeric) cascade;
+drop function if exists public.normalize_nutrient_fields() cascade;
+drop function if exists public.find_or_create_dan(uuid, integer) cascade;
+drop function if exists public.ensure_entrega_origen_matches_dan() cascade;
+drop function if exists public.sync_entrega_to_aplicacio() cascade;
 drop function if exists public.current_oficina_id() cascade;
 drop function if exists public.is_admin() cascade;
 drop function if exists public.is_oficina_manager() cascade;
@@ -50,6 +55,7 @@ end
 $$;
 
 drop table if exists public.entrega_dejeccions cascade;
+drop table if exists public.granja_campanya_balance cascade;
 drop table if exists public.granja_bestiar cascade;
 drop table if exists public.fase_productiva cascade;
 drop table if exists public.bestiar cascade;
@@ -210,23 +216,6 @@ create table public.terra (
   unique (mun_codi, poligon, parcela, recinte)
 );
 
-create table public.aplicacions_fertilitzants (
-  id uuid primary key default gen_random_uuid(),
-  dan_id uuid not null references public.dan_declaracio(id) on delete cascade,
-  terra_id uuid not null references public.terra(id) on delete restrict,
-  data date not null,
-  tipus_fertilitzant text,
-  procedencia text,
-  volum_m3 numeric check (volum_m3 is null or volum_m3 >= 0),
-  kg_n_m3 numeric check (kg_n_m3 is null or kg_n_m3 >= 0),
-  kg_n numeric not null default 0 check (kg_n >= 0),
-  tecnic_id uuid references public.tecnic(id) on delete set null,
-  created_at timestamptz not null default now(),
-  created_by uuid,
-  updated_at timestamptz not null default now(),
-  updated_by uuid
-);
-
 create table public.granja (
   id uuid primary key default gen_random_uuid(),
   titular_id uuid not null references public.titular(id) on delete cascade,
@@ -263,23 +252,52 @@ create table public.granja_bestiar (
   unique (granja_id, bestiar_id, fase_productiva_id)
 );
 
-create table public.entrega_dejeccions (
+create table public.granja_campanya_balance (
   id uuid primary key default gen_random_uuid(),
   dan_id uuid not null references public.dan_declaracio(id) on delete cascade,
-  granja_origen_id uuid not null references public.granja(id) on delete restrict,
-  data date not null,
-  quantitat numeric not null default 0 check (quantitat >= 0),
-  terra_desti_id uuid references public.terra(id) on delete set null,
-  receptor_titular_id uuid references public.titular(id) on delete set null,
+  granja_id uuid not null references public.granja(id) on delete cascade,
+  estoc_inicial_kg_n numeric check (estoc_inicial_kg_n is null or estoc_inicial_kg_n >= 0),
+  kg_n_generat numeric check (kg_n_generat is null or kg_n_generat >= 0),
+  estoc_final_declarat_kg_n numeric check (estoc_final_declarat_kg_n is null or estoc_final_declarat_kg_n >= 0),
   created_at timestamptz not null default now(),
   created_by uuid,
   updated_at timestamptz not null default now(),
   updated_by uuid,
-  check (
-    (terra_desti_id is not null and receptor_titular_id is null)
-    or
-    (terra_desti_id is null and receptor_titular_id is not null)
-  )
+  unique (dan_id, granja_id)
+);
+
+create table public.entrega_dejeccions (
+  id uuid primary key default gen_random_uuid(),
+  dan_id uuid not null references public.dan_declaracio(id) on delete cascade,
+  granja_origen_id uuid not null references public.granja(id) on delete restrict,
+  terra_desti_id uuid not null references public.terra(id) on delete restrict,
+  data date not null,
+  tipus_fertilitzant text,
+  volum_m3 numeric check (volum_m3 is null or volum_m3 >= 0),
+  kg_n_m3 numeric check (kg_n_m3 is null or kg_n_m3 >= 0),
+  kg_n numeric check (kg_n is null or kg_n >= 0),
+  created_at timestamptz not null default now(),
+  created_by uuid,
+  updated_at timestamptz not null default now(),
+  updated_by uuid
+);
+
+create table public.aplicacions_fertilitzants (
+  id uuid primary key default gen_random_uuid(),
+  dan_id uuid not null references public.dan_declaracio(id) on delete cascade,
+  terra_id uuid not null references public.terra(id) on delete restrict,
+  entrega_id uuid unique references public.entrega_dejeccions(id) on delete cascade,
+  data date not null,
+  tipus_fertilitzant text,
+  procedencia text,
+  volum_m3 numeric check (volum_m3 is null or volum_m3 >= 0),
+  kg_n_m3 numeric check (kg_n_m3 is null or kg_n_m3 >= 0),
+  kg_n numeric check (kg_n is null or kg_n >= 0),
+  tecnic_id uuid references public.tecnic(id) on delete set null,
+  created_at timestamptz not null default now(),
+  created_by uuid,
+  updated_at timestamptz not null default now(),
+  updated_by uuid
 );
 
 create index idx_tecnic_oficina_id on public.tecnic(oficina_id);
@@ -298,13 +316,208 @@ create index idx_dan_titular on public.dan_declaracio(titular_id);
 create index idx_terra_titular on public.terra(titular_id);
 create index idx_aplicacions_dan on public.aplicacions_fertilitzants(dan_id);
 create index idx_aplicacions_terra on public.aplicacions_fertilitzants(terra_id);
+create index idx_aplicacions_entrega on public.aplicacions_fertilitzants(entrega_id);
 create index idx_granja_titular on public.granja(titular_id);
 create index idx_gb_granja on public.granja_bestiar(granja_id);
+create index idx_balance_dan on public.granja_campanya_balance(dan_id);
+create index idx_balance_granja on public.granja_campanya_balance(granja_id);
 create index idx_entrega_dan on public.entrega_dejeccions(dan_id);
+create index idx_entrega_granja on public.entrega_dejeccions(granja_origen_id);
+create index idx_entrega_terra on public.entrega_dejeccions(terra_desti_id);
 
 -- =========================================================
 -- 4) TRIGGERS
 -- =========================================================
+
+create or replace function public.resolve_nutrient_triplet(
+  p_volum_m3 numeric,
+  p_kg_n_m3 numeric,
+  p_kg_n numeric
+)
+returns table (
+  volum_m3 numeric,
+  kg_n_m3 numeric,
+  kg_n numeric
+)
+language plpgsql
+as $$
+declare
+  present_count integer := 0;
+begin
+  present_count :=
+    (case when p_volum_m3 is not null then 1 else 0 end)
+    + (case when p_kg_n_m3 is not null then 1 else 0 end)
+    + (case when p_kg_n is not null then 1 else 0 end);
+
+  if coalesce(p_volum_m3, 0) < 0 or coalesce(p_kg_n_m3, 0) < 0 or coalesce(p_kg_n, 0) < 0 then
+    raise exception 'Kg N, volum m3 i kg N/m3 no poden ser negatius';
+  end if;
+
+  if present_count < 2 then
+    raise exception 'Cal informar almenys 2 dels camps: volum m3, kg N/m3 o kg N';
+  end if;
+
+  if p_volum_m3 is not null and p_kg_n_m3 is not null and p_kg_n is null then
+    p_kg_n := p_volum_m3 * p_kg_n_m3;
+  elsif p_volum_m3 is not null and p_kg_n is not null and p_kg_n_m3 is null then
+    if p_volum_m3 <= 0 then
+      raise exception 'El volum m3 ha de ser superior a 0 per calcular kg N/m3';
+    end if;
+    p_kg_n_m3 := p_kg_n / p_volum_m3;
+  elsif p_kg_n_m3 is not null and p_kg_n is not null and p_volum_m3 is null then
+    if p_kg_n_m3 <= 0 then
+      raise exception 'El kg N/m3 ha de ser superior a 0 per calcular el volum m3';
+    end if;
+    p_volum_m3 := p_kg_n / p_kg_n_m3;
+  elsif p_volum_m3 is not null and p_kg_n_m3 is not null and p_kg_n is not null then
+    if abs((p_volum_m3 * p_kg_n_m3) - p_kg_n) > 0.0001 then
+      raise exception 'Kg N ha de ser igual a volum m3 x kg N/m3';
+    end if;
+  end if;
+
+  return query select p_volum_m3, p_kg_n_m3, p_kg_n;
+end;
+$$;
+
+create or replace function public.normalize_nutrient_fields()
+returns trigger
+language plpgsql
+as $$
+declare
+  resolved record;
+begin
+  select * into resolved
+  from public.resolve_nutrient_triplet(new.volum_m3, new.kg_n_m3, new.kg_n);
+
+  new.volum_m3 := resolved.volum_m3;
+  new.kg_n_m3 := resolved.kg_n_m3;
+  new.kg_n := resolved.kg_n;
+  return new;
+end;
+$$;
+
+create or replace function public.find_or_create_dan(p_titular_id uuid, p_campanya integer)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_dan_id uuid;
+begin
+  select id
+  into v_dan_id
+  from public.dan_declaracio
+  where titular_id = p_titular_id
+    and campanya = p_campanya
+  limit 1;
+
+  if v_dan_id is not null then
+    return v_dan_id;
+  end if;
+
+  insert into public.dan_declaracio (titular_id, campanya)
+  values (p_titular_id, p_campanya)
+  returning id into v_dan_id;
+
+  return v_dan_id;
+end;
+$$;
+
+create or replace function public.ensure_entrega_origen_matches_dan()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_dan_titular uuid;
+  v_granja_titular uuid;
+begin
+  select titular_id into v_dan_titular
+  from public.dan_declaracio
+  where id = new.dan_id;
+
+  select titular_id into v_granja_titular
+  from public.granja
+  where id = new.granja_origen_id;
+
+  if v_dan_titular is null or v_granja_titular is null or v_dan_titular <> v_granja_titular then
+    raise exception 'La granja origen ha de pertanyer al mateix titular que la DAN d''origen';
+  end if;
+
+  if new.tipus_fertilitzant is null or btrim(new.tipus_fertilitzant) = '' then
+    new.tipus_fertilitzant := 'Dejeccio ramadera';
+  end if;
+
+  return new;
+end;
+$$;
+
+create or replace function public.sync_entrega_to_aplicacio()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_campanya integer;
+  v_terra_titular uuid;
+  v_dest_dan_id uuid;
+  v_granja_label text;
+begin
+  select campanya into v_campanya
+  from public.dan_declaracio
+  where id = new.dan_id;
+
+  select titular_id into v_terra_titular
+  from public.terra
+  where id = new.terra_desti_id;
+
+  if v_campanya is null or v_terra_titular is null then
+    raise exception 'No s''ha pogut resoldre la campanya o el titular de la terra de desti';
+  end if;
+
+  v_dest_dan_id := public.find_or_create_dan(v_terra_titular, v_campanya);
+
+  select coalesce(g.nom, g.marca_oficial) into v_granja_label
+  from public.granja g
+  where g.id = new.granja_origen_id;
+
+  insert into public.aplicacions_fertilitzants (
+    dan_id,
+    terra_id,
+    entrega_id,
+    data,
+    tipus_fertilitzant,
+    procedencia,
+    volum_m3,
+    kg_n_m3,
+    kg_n
+  )
+  values (
+    v_dest_dan_id,
+    new.terra_desti_id,
+    new.id,
+    new.data,
+    new.tipus_fertilitzant,
+    concat('Entrega ramadera des de ', coalesce(v_granja_label, new.granja_origen_id::text)),
+    new.volum_m3,
+    new.kg_n_m3,
+    new.kg_n
+  )
+  on conflict (entrega_id) do update
+  set
+    dan_id = excluded.dan_id,
+    terra_id = excluded.terra_id,
+    data = excluded.data,
+    tipus_fertilitzant = excluded.tipus_fertilitzant,
+    procedencia = excluded.procedencia,
+    volum_m3 = excluded.volum_m3,
+    kg_n_m3 = excluded.kg_n_m3,
+    kg_n = excluded.kg_n;
+
+  return new;
+end;
+$$;
 
 create trigger trg_tecnic_actor
 before insert or update on public.tecnic
@@ -338,9 +551,29 @@ create trigger trg_granja_bestiar_actor
 before insert or update on public.granja_bestiar
 for each row execute function public.audit_fill_actor();
 
+create trigger trg_granja_campanya_balance_actor
+before insert or update on public.granja_campanya_balance
+for each row execute function public.audit_fill_actor();
+
 create trigger trg_entrega_actor
 before insert or update on public.entrega_dejeccions
 for each row execute function public.audit_fill_actor();
+
+create trigger trg_entrega_origin_match
+before insert or update on public.entrega_dejeccions
+for each row execute function public.ensure_entrega_origen_matches_dan();
+
+create trigger trg_entrega_nutrients
+before insert or update on public.entrega_dejeccions
+for each row execute function public.normalize_nutrient_fields();
+
+create trigger trg_aplicacio_nutrients
+before insert or update on public.aplicacions_fertilitzants
+for each row execute function public.normalize_nutrient_fields();
+
+create trigger trg_entrega_sync_aplicacio
+after insert or update on public.entrega_dejeccions
+for each row execute function public.sync_entrega_to_aplicacio();
 
 -- =========================================================
 -- 5) HELPERS DE SEGURETAT
@@ -672,6 +905,7 @@ grant select, insert, update, delete on public.granja to authenticated;
 grant select, insert, update, delete on public.bestiar to authenticated;
 grant select, insert, update, delete on public.fase_productiva to authenticated;
 grant select, insert, update, delete on public.granja_bestiar to authenticated;
+grant select, insert, update, delete on public.granja_campanya_balance to authenticated;
 grant select, insert, update, delete on public.entrega_dejeccions to authenticated;
 
 -- =========================================================
@@ -690,6 +924,7 @@ alter table public.granja enable row level security;
 alter table public.bestiar enable row level security;
 alter table public.fase_productiva enable row level security;
 alter table public.granja_bestiar enable row level security;
+alter table public.granja_campanya_balance enable row level security;
 alter table public.entrega_dejeccions enable row level security;
 
 -- OFICINA
@@ -968,46 +1203,58 @@ using (
 create policy aplicacions_insert on public.aplicacions_fertilitzants
 for insert to authenticated
 with check (
-  public.is_admin()
-  or exists (
-    select 1
-    from public.dan_declaracio d
-    where d.id = dan_id
-      and public.can_write_agricola(d.titular_id)
+  (
+    public.is_admin()
+    or exists (
+      select 1
+      from public.dan_declaracio d
+      where d.id = dan_id
+        and public.can_write_agricola(d.titular_id)
+    )
   )
+  and entrega_id is null
 );
 
 create policy aplicacions_update on public.aplicacions_fertilitzants
 for update to authenticated
 using (
-  public.is_admin()
-  or exists (
-    select 1
-    from public.dan_declaracio d
-    where d.id = aplicacions_fertilitzants.dan_id
-      and public.can_write_agricola(d.titular_id)
+  (
+    public.is_admin()
+    or exists (
+      select 1
+      from public.dan_declaracio d
+      where d.id = aplicacions_fertilitzants.dan_id
+        and public.can_write_agricola(d.titular_id)
+    )
   )
+  and aplicacions_fertilitzants.entrega_id is null
 )
 with check (
-  public.is_admin()
-  or exists (
-    select 1
-    from public.dan_declaracio d
-    where d.id = dan_id
-      and public.can_write_agricola(d.titular_id)
+  (
+    public.is_admin()
+    or exists (
+      select 1
+      from public.dan_declaracio d
+      where d.id = dan_id
+        and public.can_write_agricola(d.titular_id)
+    )
   )
+  and entrega_id is null
 );
 
 create policy aplicacions_delete on public.aplicacions_fertilitzants
 for delete to authenticated
 using (
-  public.is_admin()
-  or exists (
-    select 1
-    from public.dan_declaracio d
-    where d.id = aplicacions_fertilitzants.dan_id
-      and public.can_write_agricola(d.titular_id)
+  (
+    public.is_admin()
+    or exists (
+      select 1
+      from public.dan_declaracio d
+      where d.id = aplicacions_fertilitzants.dan_id
+        and public.can_write_agricola(d.titular_id)
+    )
   )
+  and aplicacions_fertilitzants.entrega_id is null
 );
 
 -- GRANJA
@@ -1137,6 +1384,64 @@ using (
   )
 );
 
+-- GRANJA_CAMPANYA_BALANCE
+create policy granja_balance_select on public.granja_campanya_balance
+for select to authenticated
+using (
+  public.is_admin()
+  or exists (
+    select 1
+    from public.dan_declaracio d
+    where d.id = granja_campanya_balance.dan_id
+      and public.can_read_titular(d.titular_id)
+  )
+);
+
+create policy granja_balance_insert on public.granja_campanya_balance
+for insert to authenticated
+with check (
+  public.is_admin()
+  or exists (
+    select 1
+    from public.dan_declaracio d
+    where d.id = dan_id
+      and public.can_write_ramader(d.titular_id)
+  )
+);
+
+create policy granja_balance_update on public.granja_campanya_balance
+for update to authenticated
+using (
+  public.is_admin()
+  or exists (
+    select 1
+    from public.dan_declaracio d
+    where d.id = granja_campanya_balance.dan_id
+      and public.can_write_ramader(d.titular_id)
+  )
+)
+with check (
+  public.is_admin()
+  or exists (
+    select 1
+    from public.dan_declaracio d
+    where d.id = dan_id
+      and public.can_write_ramader(d.titular_id)
+  )
+);
+
+create policy granja_balance_delete on public.granja_campanya_balance
+for delete to authenticated
+using (
+  public.is_admin()
+  or exists (
+    select 1
+    from public.dan_declaracio d
+    where d.id = granja_campanya_balance.dan_id
+      and public.can_write_ramader(d.titular_id)
+  )
+);
+
 -- ENTREGA_DEJECCIONS
 create policy entrega_select on public.entrega_dejeccions
 for select to authenticated
@@ -1147,10 +1452,6 @@ using (
     from public.dan_declaracio d
     where d.id = entrega_dejeccions.dan_id
       and public.can_read_titular(d.titular_id)
-  )
-  or (
-    entrega_dejeccions.receptor_titular_id is not null
-    and public.can_read_titular(entrega_dejeccions.receptor_titular_id)
   )
   or exists (
     select 1
@@ -1171,8 +1472,7 @@ with check (
     where d.id = dan_id
       and public.can_write_ramader(d.titular_id)
   )
-  and (terra_desti_id is null or public.can_reference_terra(terra_desti_id))
-  and (receptor_titular_id is null or public.can_read_titular(receptor_titular_id))
+  and public.can_reference_terra(terra_desti_id)
 );
 
 create policy entrega_update on public.entrega_dejeccions
@@ -1194,8 +1494,7 @@ with check (
     where d.id = dan_id
       and public.can_write_ramader(d.titular_id)
   )
-  and (terra_desti_id is null or public.can_reference_terra(terra_desti_id))
-  and (receptor_titular_id is null or public.can_read_titular(receptor_titular_id))
+  and public.can_reference_terra(terra_desti_id)
 );
 
 create policy entrega_delete on public.entrega_dejeccions

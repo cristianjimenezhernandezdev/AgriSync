@@ -36,7 +36,9 @@ auth.users
             -> public.terra
             -> public.granja
                -> public.granja_bestiar
-            -> public.entrega_dejeccions
+               -> public.granja_campanya_balance
+               -> public.entrega_dejeccions
+            -> public.aplicacions_fertilitzants
 
 public.oficina
    -> public.tecnic
@@ -297,10 +299,17 @@ Columnes clau:
 - `kg_n_m3`
 - `kg_n`
 - `tecnic_id`
+- `entrega_id`
 
 Pantalla principal:
 
 - `Modul Agricola`
+
+Comentaris importants:
+
+- una aplicacio pot ser manual o venir sincronitzada des d'una `entrega_dejeccions`
+- si ve d'una entrega, la seva traçabilitat fins a la granja origen queda preservada
+- `kg_n`, `volum_m3` i `kg_n_m3` s'han de poder resoldre entre si
 
 ## 9. `public.granja`
 
@@ -359,26 +368,46 @@ Pantalla principal:
 
 - `Modul Ramader`
 
-## 13. `public.entrega_dejeccions`
+## 13. `public.granja_campanya_balance`
 
 Propòsit:
 
-- registrar sortides de dejeccions
+- guardar el balanç de nitrogen per granja i campanya
+
+Columnes clau:
+
+- `dan_id`
+- `granja_id`
+- `estoc_inicial_kg_n`
+- `kg_n_generat`
+- `estoc_final_declarat_kg_n`
+
+Comentari:
+
+- permet comparar el nitrogen justificat per entregues amb l'estoc final declarat
+
+## 14. `public.entrega_dejeccions`
+
+Propòsit:
+
+- registrar sortides de dejeccions sempre cap a una terra concreta
 
 Columnes clau:
 
 - `dan_id`
 - `granja_origen_id`
-- `data`
-- `quantitat`
 - `terra_desti_id`
-- `receptor_titular_id`
+- `data`
+- `tipus_fertilitzant`
+- `volum_m3`
+- `kg_n_m3`
+- `kg_n`
 
 Restricció important:
 
-- exactament un receptor
-- o bé `terra_desti_id`
-- o bé `receptor_titular_id`
+- tota entrega ha d'anar a una `terra`
+- l'entrega representa una justificació agrícola real
+- el sistema pot sincronitzar aquesta entrega cap a `aplicacions_fertilitzants`
 
 ## Auditoria
 
@@ -430,8 +459,9 @@ La BDD no es limita a guardar dades. També imposa coherència.
 - `codi_postal` ha de tenir 5 digits si s'informa
 - `mun_codi` ha de tenir 5 digits
 - `poligon`, `parcela` i `recinte` han de ser positius
-- `superficie`, `cens`, `kg_n`, `quantitat` i altres magnituds no poden ser negatives
-- `entrega_dejeccions` obliga a informar exactament un receptor
+- `superficie`, `cens`, `kg_n`, `volum_m3` i altres magnituds no poden ser negatives
+- `entrega_dejeccions` obliga a informar una terra de destí
+- `kg_n`, `volum_m3` i `kg_n_m3` han de quadrar entre si
 
 ### Columnes calculades importants
 
@@ -466,6 +496,9 @@ L'esquema crea indexos per accelerar consultes habituals. Alguns dels més impor
 - `idx_granja_titular`
 - `idx_gb_granja`
 - `idx_entrega_dan`
+- `idx_balance_dan`
+- `idx_balance_granja`
+- `idx_aplicacions_entrega`
 
 El sentit d'aquests indexos no és teòric. Responen directament a com consulta el client:
 
@@ -540,8 +573,8 @@ La pregunta important no és "quin rol té l'usuari?", sinó:
 1. la UI envia un `POST` a `entrega_dejeccions`
 2. la policy comprova:
    - escriptura ramadera sobre el titular origen
-   - lectura sobre titular receptor si n'hi ha
-   - referència a terra si el receptor és terra
+   - referència a terra de destí
+3. la BDD pot sincronitzar automàticament una aplicació fertilitzant equivalent sobre la terra de destí
 
 ## Grants i RLS
 
@@ -570,7 +603,8 @@ Important:
 | `aplicacions_fertilitzants` | lectura del titular de la DAN | escriptura agrícola |
 | `granja` | lectura del titular | escriptura ramadera |
 | `granja_bestiar` | lectura del titular de la granja | escriptura ramadera |
-| `entrega_dejeccions` | lectura del titular origen o receptor | escriptura ramadera amb validacions addicionals |
+| `granja_campanya_balance` | lectura del titular de la DAN | escriptura ramadera |
+| `entrega_dejeccions` | lectura del titular origen o de la terra destí | escriptura ramadera amb validacions addicionals |
 | `bestiar`, `fase_productiva` | lectura oberta a autenticats | administració restringida a `admin` |
 
 ## Seed de demo
@@ -595,6 +629,7 @@ També està preparat per provar casos com:
 - usuaris de lectura
 - treball agrícola i ramader sobre el mateix titular
 - col·laboració entre oficines
+- traçabilitat de sortides cap a terres amb justificació nitrogenada
 
 ## Scripts de manteniment
 
@@ -691,10 +726,12 @@ L'ordre conceptual correcte seria:
 6. definir aplicacions agrícoles
 7. definir granges, bestiar i fases
 8. definir cens per granja
-9. definir entregues
-10. afegir auditoria
-11. afegir funcions helper
-12. afegir grants i RLS
+9. definir balanç de nitrogen per granja i campanya
+10. definir entregues cap a terres
+11. sincronitzar entregues amb aplicacions quan pertoqui
+12. afegir auditoria
+13. afegir funcions helper
+14. afegir grants i RLS
 
 Precisament això és el que fa `agrisync_schema.sql`.
 

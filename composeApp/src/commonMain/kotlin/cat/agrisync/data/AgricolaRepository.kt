@@ -1,6 +1,11 @@
 package cat.agrisync.data
 
 internal class AgricolaRepository(private val restClient: RestClient) {
+    private val aplicacioSelect =
+        "?select=id,terra_id,entrega_id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,tecnic_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)"
+    private val entregaLinkSelect =
+        "?select=id,granja_origen:granja_origen_id(id,titular_id,marca_oficial,nom,updated_at,updated_by)"
+
     internal suspend fun getTitular(titularId: String): TitularDto? {
         val q = "?select=id,nif,nom_rao,telefon,email,adreca,codi_postal,updated_at,updated_by&id=eq.$titularId&limit=1"
         val result: List<TitularDto> = restClient.get("titular", q)
@@ -36,8 +41,9 @@ internal class AgricolaRepository(private val restClient: RestClient) {
 
     internal suspend fun listAplicacionsByTitular(titularId: String, campanya: Int): List<AplicacioFertilitzantDto> {
         val dan = findDanByCampanya(titularId, campanya) ?: return emptyList()
-        val q = "?select=id,terra_id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,tecnic_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)&dan_id=eq.${dan.id}&order=data.desc"
-        return restClient.get("aplicacions_fertilitzants", q)
+        val q = "$aplicacioSelect&dan_id=eq.${dan.id}&order=data.desc"
+        val aplicacions: List<AplicacioFertilitzantDto> = restClient.get("aplicacions_fertilitzants", q)
+        return hydrateEntregaLinks(aplicacions)
     }
 
     internal suspend fun listCampanyesByTitular(titularId: String): List<Int> {
@@ -59,12 +65,13 @@ internal class AgricolaRepository(private val restClient: RestClient) {
         kgN: Double
     ): AplicacioFertilitzantDto {
         val dan = getOrCreateDan(titularId, campanya)
-        val q = "?select=id,terra_id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,tecnic_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)"
+        val q = aplicacioSelect
         val result: List<AplicacioFertilitzantDto> = restClient.post(
             "aplicacions_fertilitzants",
             AplicacioCreateRequest(
                 dan_id = dan.id,
                 terra_id = terraId,
+                entrega_id = null,
                 data = data,
                 tipus_fertilitzant = tipusFertilitzant,
                 procedencia = procedencia,
@@ -74,13 +81,13 @@ internal class AgricolaRepository(private val restClient: RestClient) {
             ),
             q
         )
-        return result.first()
+        return hydrateEntregaLinks(result).first()
     }
 
     internal suspend fun updateAplicacio(id: String, body: AplicacioUpdateRequest): AplicacioFertilitzantDto {
-        val q = "?select=id,terra_id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,tecnic_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)&id=eq.$id"
+        val q = "$aplicacioSelect&id=eq.$id"
         val result: List<AplicacioFertilitzantDto> = restClient.patch("aplicacions_fertilitzants", body, q)
-        return result.first()
+        return hydrateEntregaLinks(result).first()
     }
 
     internal suspend fun deleteAplicacio(id: String) {
@@ -110,6 +117,22 @@ internal class AgricolaRepository(private val restClient: RestClient) {
     private suspend fun listDansByTitular(titularId: String): List<DanRefDto> {
         val q = "?select=id,titular_id,campanya&titular_id=eq.$titularId&order=campanya.desc"
         return restClient.get("dan_declaracio", q)
+    }
+
+    private suspend fun hydrateEntregaLinks(aplicacions: List<AplicacioFertilitzantDto>): List<AplicacioFertilitzantDto> {
+        val entregaIds = aplicacions
+            .mapNotNull { it.entrega_id?.takeIf(String::isNotBlank) }
+            .distinct()
+        if (entregaIds.isEmpty()) return aplicacions
+
+        val ids = entregaIds.joinToString(separator = ",")
+        val entregues: List<EntregaAplicacioLinkDto> =
+            restClient.get("entrega_dejeccions", "$entregaLinkSelect&id=in.($ids)")
+        val entregaById = entregues.associateBy { it.id }
+
+        return aplicacions.map { app ->
+            app.copy(entrega = app.entrega ?: app.entrega_id?.let(entregaById::get))
+        }
     }
 }
 
