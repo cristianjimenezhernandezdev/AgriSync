@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 internal class DanPreparationRepository(private val restClient: RestClient) {
     private val aplicacioSelect =
-        "?select=id,entrega_id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,entrega:entrega_id(id,granja_origen:granja_origen_id(id,titular_id,marca_oficial,nom)),terra:terra_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha),dan:dan_id(id,titular_id,campanya)"
+        "?select=id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,terra:terra_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha),dan:dan_id(id,titular_id,campanya)"
     private val entregaSelect =
         "?select=id,data,tipus_fertilitzant,volum_m3,kg_n_m3,kg_n,granja_origen:granja_origen_id(id,titular_id,marca_oficial,nom),terra_desti:terra_desti_id(id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha),dan:dan_id(id,titular_id,campanya)"
     private val balanceSelect =

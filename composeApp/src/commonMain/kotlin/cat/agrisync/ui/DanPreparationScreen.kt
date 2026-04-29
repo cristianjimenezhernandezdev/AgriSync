@@ -38,6 +38,7 @@ import cat.agrisync.data.DanPreparationGranjaBalanceDto
 import cat.agrisync.data.DanPreparationTerraDto
 import cat.agrisync.data.GranjaBestiarDto
 import cat.agrisync.data.GranjaDto
+import cat.agrisync.data.ramaderOriginLabel
 import cat.agrisync.util.formatStoredDateForDisplay
 import cat.agrisync.viewmodel.DanPreparationViewModel
 import cat.agrisync.viewmodel.DanPreparationUiState
@@ -493,7 +494,7 @@ private fun AplicacioPreparationCard(
             PreparationFieldRow("Mes", monthName(aplicacio.data))
             PreparationFieldRow("Tipus fertilitzant", aplicacio.tipus_fertilitzant ?: "-")
             PreparationFieldRow("Procedencia", aplicacio.procedencia ?: "-")
-            PreparationFieldRow("Origen granja", aplicacio.entrega?.granja_origen?.marca_oficial ?: "-")
+            PreparationFieldRow("Origen granja", aplicacio.ramaderOriginLabel() ?: "-")
             PreparationFieldRow("Volum m3", formatDecimal(aplicacio.volum_m3))
             PreparationFieldRow("Kg N/m3", formatDecimal(aplicacio.kg_n_m3))
             PreparationFieldRow("kg N", formatDecimal(aplicacio.kg_n))

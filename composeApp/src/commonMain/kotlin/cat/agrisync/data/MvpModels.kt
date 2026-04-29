@@ -130,6 +130,36 @@ data class GranjaCampanyaBalanceDto(
     val updated_by: String? = null
 )
 
+private const val RAMADER_PROCEDENCIA_PREFIX = "Entrega ramadera des de "
+
+internal fun AplicacioFertilitzantDto.isSynchronizedFromRamader(): Boolean {
+    return !entrega_id.isNullOrBlank() || entrega != null || procedencia.hasRamaderProcedencia()
+}
+
+internal fun AplicacioFertilitzantDto.ramaderOriginLabel(): String? {
+    return entrega?.granja_origen?.nom
+        ?: entrega?.granja_origen?.marca_oficial
+        ?: procedencia.extractRamaderOriginLabel()
+}
+
+internal fun DanPreparationAplicacioDto.ramaderOriginLabel(): String? {
+    return entrega?.granja_origen?.nom
+        ?: entrega?.granja_origen?.marca_oficial
+        ?: procedencia.extractRamaderOriginLabel()
+}
+
+private fun String?.hasRamaderProcedencia(): Boolean {
+    return this?.startsWith(RAMADER_PROCEDENCIA_PREFIX) == true
+}
+
+private fun String?.extractRamaderOriginLabel(): String? {
+    return this
+        ?.takeIf { it.startsWith(RAMADER_PROCEDENCIA_PREFIX) }
+        ?.removePrefix(RAMADER_PROCEDENCIA_PREFIX)
+        ?.trim()
+        ?.ifBlank { null }
+}
+
 data class TitularCollaboratingTecnicSummary(
     val id: String,
     val nom: String,

@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.dp
 import cat.agrisync.data.AplicacioFertilitzantDto
 import cat.agrisync.data.TerraDto
 import cat.agrisync.data.TitularDto
+import cat.agrisync.data.isSynchronizedFromRamader
+import cat.agrisync.data.ramaderOriginLabel
 import cat.agrisync.util.formatStoredDateForDisplay
 import cat.agrisync.util.formatStoredDateForInput
 import cat.agrisync.viewmodel.TitularAgricolaViewModel
@@ -427,8 +429,8 @@ private fun EditableAplicacioCard(
     var procedencia by remember(app.id, app.procedencia) { mutableStateOf(app.procedencia ?: "") }
     var volumM3 by remember(app.id, app.volum_m3) { mutableStateOf(app.volum_m3?.toString() ?: "") }
     var kgNM3 by remember(app.id, app.kg_n_m3) { mutableStateOf(app.kg_n_m3?.toString() ?: "") }
-    val isLinkedEntrega = app.entrega_id != null
-    val linkedGranja = app.entrega?.granja_origen?.nom ?: app.entrega?.granja_origen?.marca_oficial
+    val isLinkedEntrega = app.isSynchronizedFromRamader()
+    val linkedGranja = app.ramaderOriginLabel()
     val terra = terres.find { it.id == app.terra_id }
     val limitKgNHa = terra?.limit_kg_n_ha ?: if (terra?.zona == "ZV") 170.0 else 190.0
     val allowedKgN = terra?.superficie?.let { it * limitKgNHa }

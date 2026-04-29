@@ -313,7 +313,7 @@ internal class DanPreparationViewModel(
                     )
                 }
             } catch (ex: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = ex.message ?: "Error carregant el resum DAN") }
+                _uiState.update { it.copy(isLoading = false, error = mapDanPreparationError(ex.message)) }
             }
         }
     }
@@ -324,5 +324,18 @@ internal class DanPreparationViewModel(
 
     fun clear() {
         scope.cancel()
+    }
+}
+
+private fun mapDanPreparationError(message: String?): String {
+    val msg = message ?: return "Error carregant el resum DAN"
+    return when {
+        msg.contains("401") -> "Sessio caducada (401). Torna a iniciar sessio."
+        msg.contains("403") -> "No tens permis per consultar aquest resum DAN (403)."
+        msg.contains("42703") && msg.contains("entrega_id") ->
+            "La base de dades actual no te el camp antic `entrega_id`. El resum DAN s'ha d'obrir amb el mode compatible."
+        msg.contains("PGRST200") || msg.contains("Could not find a relationship between") ->
+            "No s'ha pogut carregar una relacio de dades del resum DAN. Cal revisar la configuracio de Supabase."
+        else -> msg
     }
 }
