@@ -461,9 +461,9 @@ private fun mapHttpError(message: String?): String {
     return when {
         msg.contains("401") -> "Sessio caducada (401). Torna a iniciar sessio."
         msg.contains("403") -> "No tens permis per aquest titular (403)."
-        msg.contains("42703") && msg.contains("entrega_id") ->
+        SchemaCompatibility.isMissingColumn(msg, SchemaCompatibility.legacyAplicacioEntregaField) ->
             "La base de dades actual no te el camp antic d'enllac amb entregues. S'ha bloquejat aquesta consulta per evitar l'error."
-        msg.contains("PGRST200") || msg.contains("Could not find a relationship between") ->
+        SchemaCompatibility.isMissingRelationship(msg) ->
             "No s'ha pogut carregar una relacio de dades del modul agricola. Torna-ho a provar i, si persisteix, cal revisar la configuracio de Supabase."
         else -> msg
     }

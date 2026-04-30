@@ -1,6 +1,10 @@
 -- =========================================================
 -- AgriSync MVP - SQL base per Supabase
 -- Reinicia els objectes del projecte i recrea un esquema net
+-- Aquesta versio ja integra els camps volum_m3, kg_n_m3 i kg_n
+-- a entrega_dejeccions i aplicacions_fertilitzants.
+-- La migracio maintenance/add_volum_nitrogen_columns.sql queda
+-- nomes per actualitzar bases de dades antigues ja desplegades.
 -- =========================================================
 
 -- =========================================================

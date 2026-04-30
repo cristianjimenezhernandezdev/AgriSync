@@ -2,7 +2,7 @@ package cat.agrisync.data
 
 internal class RamaderRepository(private val restClient: RestClient) {
     private val entregaSelect =
-        "?select=id,data,tipus_fertilitzant,volum_m3,kg_n_m3,kg_n,granja_origen_id,terra_desti_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya),granja_origen:granja_origen_id(id,titular_id,marca_oficial,nom,updated_at,updated_by),terra_desti:terra_desti_id(id,titular_id,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,titular:titular_id(id,nif,nom_rao,telefon,email,adreca,codi_postal))"
+        SchemaCompatibility.ramaderEntregaSelect
     private val balanceSelect =
         "?select=id,granja_id,estoc_inicial_kg_n,kg_n_generat,estoc_final_declarat_kg_n,updated_at,updated_by,dan:dan_id(id,titular_id,campanya),granja:granja_id(id,titular_id,marca_oficial,nom,updated_at,updated_by)"
 
@@ -124,7 +124,6 @@ internal class RamaderRepository(private val restClient: RestClient) {
                 granja_origen_id = granjaOrigenId,
                 data = data,
                 terra_desti_id = terraDestiId,
-                tipus_fertilitzant = tipusFertilitzant,
                 volum_m3 = volumM3,
                 kg_n_m3 = kgNM3,
                 kg_n = kgN

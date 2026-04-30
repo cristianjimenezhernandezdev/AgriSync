@@ -7,6 +7,7 @@ import cat.agrisync.data.DanPreparationRepository
 import cat.agrisync.data.DanPreparationTerraDto
 import cat.agrisync.data.GranjaBestiarDto
 import cat.agrisync.data.GranjaDto
+import cat.agrisync.data.SchemaCompatibility
 import cat.agrisync.data.TitularDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -301,7 +302,7 @@ internal class DanPreparationViewModel(
                 val granjaBalances = try {
                     repository.listGranjaCampanyaBalances(titularId, selectedCampanya)
                 } catch (ex: Exception) {
-                    if (isMissingGranjaCampanyaBalance(ex.message)) {
+                    if (SchemaCompatibility.isMissingSchemaCacheTable(ex.message, SchemaCompatibility.optionalGranjaCampanyaBalanceTable)) {
                         isGranjaCampanyaBalanceAvailable = false
                         emptyList()
                     } else {
@@ -344,17 +345,16 @@ private fun mapDanPreparationError(message: String?): String {
     return when {
         msg.contains("401") -> "Sessio caducada (401). Torna a iniciar sessio."
         msg.contains("403") -> "No tens permis per consultar aquest resum DAN (403)."
-        isMissingGranjaCampanyaBalance(msg) ->
+        SchemaCompatibility.isMissingColumn(msg, SchemaCompatibility.legacyEntregaVolumField, "entrega_dejeccions") ->
+            "La base de dades actual no te les columnes de volum/nitrogen a entrega_dejeccions. Cal executar la migracio SQL per afegir volum_m3, kg_n_m3 i kg_n."
+        SchemaCompatibility.isMissingColumn(msg, SchemaCompatibility.legacyEntregaTipusField) ->
+            "La base de dades actual no te el camp `tipus_fertilitzant` a les entregues. El resum DAN s'obrira amb compatibilitat."
+        SchemaCompatibility.isMissingSchemaCacheTable(msg, SchemaCompatibility.optionalGranjaCampanyaBalanceTable) ->
             "La base de dades actual no te disponible el balanc de granja per campanya. El resum DAN s'obrira sense aquest bloc."
-        msg.contains("42703") && msg.contains("entrega_id") ->
+        SchemaCompatibility.isMissingColumn(msg, SchemaCompatibility.legacyAplicacioEntregaField) ->
             "La base de dades actual no te el camp antic `entrega_id`. El resum DAN s'ha d'obrir amb el mode compatible."
-        msg.contains("PGRST200") || msg.contains("Could not find a relationship between") ->
+        SchemaCompatibility.isMissingRelationship(msg) ->
             "No s'ha pogut carregar una relacio de dades del resum DAN. Cal revisar la configuracio de Supabase."
         else -> msg
     }
-}
-
-private fun isMissingGranjaCampanyaBalance(message: String?): Boolean {
-    val msg = message ?: return false
-    return msg.contains("PGRST205") && msg.contains("granja_campanya_balance")
 }

@@ -33,6 +33,15 @@ Reconstrueix la base de dades del projecte:
 - RLS
 - policies
 
+També deixa integrats dins l'esquema base els camps:
+
+- `entrega_dejeccions.volum_m3`
+- `entrega_dejeccions.kg_n_m3`
+- `entrega_dejeccions.kg_n`
+- `aplicacions_fertilitzants.volum_m3`
+- `aplicacions_fertilitzants.kg_n_m3`
+- `aplicacions_fertilitzants.kg_n`
+
 ### `seeds/agrisync_demo_seed.sql`
 
 Carrega una demo funcional amb:
@@ -50,6 +59,13 @@ Carrega una demo funcional amb:
 - fases
 - entregues
 
+El seed actual:
+
+- es pot reexecutar sobre la mateixa BDD de demo
+- neteja les dades demo conegudes abans de recarregar-les
+- inclou zones `ZV` i `ZNV`
+- deixa dades manuals i dades sincronitzades des de `entrega_dejeccions`
+
 ### `maintenance/reaplica_permisos.sql`
 
 Reaplica permisos i execucio de funcions. Es útil quan s'ha tocat el `schema` o algun entorn ha quedat a mig ajustar.
@@ -64,10 +80,11 @@ Neteja usuaris demo coneguts d'Auth abans de recrear-los.
 
 ## Ordre recomanat d'execucio
 
-1. `schema/agrisync_schema.sql`
-2. crear usuaris demo a Supabase Auth
-3. `seeds/agrisync_demo_seed.sql`
-4. manteniment només si cal
+1. si vols reconstruir una demo existent: `maintenance/reset_auth_seed_users.sql`
+2. `schema/agrisync_schema.sql`
+3. crear usuaris demo a Supabase Auth
+4. `seeds/agrisync_demo_seed.sql`
+5. manteniment només si cal
 
 ## Recomanacio operativa
 

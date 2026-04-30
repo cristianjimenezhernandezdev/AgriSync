@@ -74,15 +74,17 @@ $env:SUPABASE_SERVICE_ROLE_KEY="<service_role_key>"
 
 L'ordre important es aquest:
 
-1. executar `docs/sql/schema/agrisync_schema.sql`
-2. crear manualment els usuaris demo a `Authentication > Users`
-3. executar `docs/sql/seeds/agrisync_demo_seed.sql`
-4. si cal, executar `docs/sql/maintenance/resincronitza_tecnic_user_ids.sql`
-5. si cal, executar `docs/sql/maintenance/reaplica_permisos.sql`
+1. si refas una demo existent, executar `docs/sql/maintenance/reset_auth_seed_users.sql`
+2. executar `docs/sql/schema/agrisync_schema.sql`
+3. crear manualment els usuaris demo a `Authentication > Users`
+4. executar `docs/sql/seeds/agrisync_demo_seed.sql`
+5. si cal, executar `docs/sql/maintenance/resincronitza_tecnic_user_ids.sql`
+6. si cal, executar `docs/sql/maintenance/reaplica_permisos.sql`
 
 Aquest ordre no es arbitrari:
 
 - l'esquema crea taules, funcions helper, grants i policies
+- el reset d'Auth evita col·lisions quan es reconstrueix una demo ja existent
 - el seed assumeix que els usuaris Auth ja existeixen
 - les operacions de manteniment nomes tenen sentit quan la base ja esta desplegada
 
@@ -97,6 +99,7 @@ Aquest fitxer fa una reconstruccio completa:
 - esborra objectes previs
 - recrea enums
 - recrea totes les taules
+- integra directament els camps `volum_m3`, `kg_n_m3` i `kg_n`
 - recrea triggers d'auditoria
 - recrea funcions helper de seguretat
 - aplica grants
@@ -156,11 +159,20 @@ Aquest seed no es limita a posar quatre registres. Carrega una demo realista amb
 - bestiar i fases productives
 - entregues de dejeccions
 
+I a mes:
+
+- neteja abans les dades demo conegudes del projecte
+- deixa aplicacions manuals i aplicacions sincronitzades des d'entregues
+- inclou terres en `ZV` i `ZNV`
+- deixa casos per comprovar limits anuals de nitrogen per campanya
+
 Al final deixa consultes de verificacio per confirmar:
 
 - volum de dades carregades
 - titulars compartits entre oficines
 - nombre d'assignacions actives per tecnic
+- volum d'aplicacions manuals versus sincronitzades
+- terres que superen el limit anual de nitrogen
 
 ## Pas 4. Executar l'aplicacio
 

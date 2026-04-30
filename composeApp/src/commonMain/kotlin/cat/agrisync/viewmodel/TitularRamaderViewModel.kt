@@ -62,7 +62,7 @@ internal class TitularRamaderViewModel(
                 val balances = try {
                     repository.listGranjaCampanyaBalances(titularId, selectedCampanya)
                 } catch (ex: Exception) {
-                    if (isMissingGranjaCampanyaBalance(ex.message)) {
+                    if (SchemaCompatibility.isMissingSchemaCacheTable(ex.message, SchemaCompatibility.optionalGranjaCampanyaBalanceTable)) {
                         isGranjaCampanyaBalanceAvailable = false
                         emptyList()
                     } else {
@@ -340,7 +340,6 @@ internal class TitularRamaderViewModel(
                     EntregaUpdateRequest(
                         data = cleanData,
                         terra_desti_id = terraDestiId,
-                        tipus_fertilitzant = tipusFertilitzant.trim().ifBlank { null },
                         volum_m3 = resolved.volumM3,
                         kg_n_m3 = resolved.kgNPerM3,
                         kg_n = resolved.kgN
@@ -518,15 +517,14 @@ internal class TitularRamaderViewModel(
         return when {
             msg.contains("401") -> "Sessio caducada (401). Torna a iniciar sessio."
             msg.contains("403") -> "No tens permis per aquest titular (403)."
-            isMissingGranjaCampanyaBalance(msg) ->
+            SchemaCompatibility.isMissingColumn(msg, SchemaCompatibility.legacyEntregaVolumField, "entrega_dejeccions") ->
+                "La base de dades actual no te les columnes de volum/nitrogen a entrega_dejeccions. Cal executar la migracio SQL per afegir volum_m3, kg_n_m3 i kg_n."
+            SchemaCompatibility.isMissingColumn(msg, SchemaCompatibility.legacyEntregaTipusField) ->
+                "La base de dades actual no te el camp `tipus_fertilitzant` a les entregues. El modul continua en mode compatible."
+            SchemaCompatibility.isMissingSchemaCacheTable(msg, SchemaCompatibility.optionalGranjaCampanyaBalanceTable) ->
                 "La base de dades actual no te disponible el balanc de granja per campanya. La resta del modul ramader si que es pot obrir."
             else -> msg
         }
-    }
-
-    private fun isMissingGranjaCampanyaBalance(message: String?): Boolean {
-        val msg = message ?: return false
-        return msg.contains("PGRST205") && msg.contains("granja_campanya_balance")
     }
 
     private suspend fun resolveActorLabels(

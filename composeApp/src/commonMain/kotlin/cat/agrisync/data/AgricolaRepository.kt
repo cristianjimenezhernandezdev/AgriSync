@@ -2,7 +2,7 @@ package cat.agrisync.data
 
 internal class AgricolaRepository(private val restClient: RestClient) {
     private val aplicacioSelect =
-        "?select=id,terra_id,data,tipus_fertilitzant,procedencia,volum_m3,kg_n_m3,kg_n,tecnic_id,updated_at,updated_by,dan:dan_id(id,titular_id,campanya)"
+        SchemaCompatibility.agricolaAplicacioSelect
 
     internal suspend fun getTitular(titularId: String): TitularDto? {
         val q = "?select=id,nif,nom_rao,telefon,email,adreca,codi_postal,updated_at,updated_by&id=eq.$titularId&limit=1"

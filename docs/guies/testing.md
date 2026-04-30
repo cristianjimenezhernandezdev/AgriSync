@@ -88,16 +88,73 @@ composeApp/
         └── kotlin/
             └── cat/
                 └── agrisync/
-                    ├── ComposeAppDesktopTest.kt   ← test de plantilla (conservat)
+                    ├── ComposeAppDesktopTest.kt      ← test de plantilla (conservat)
+                    ├── data/
+                    │   └── SchemaCompatibilityTest.kt ← 17 tests de compatibilitat BDD
                     └── util/
-                        ├── NitrogenMathTest.kt    ← 24 tests de lògica DAN
-                        └── DateFormatsTest.kt     ← 24 tests de dates
+                        ├── NitrogenMathTest.kt        ← 24 tests de lògica DAN
+                        └── DateFormatsTest.kt         ← 24 tests de dates
 ```
 
 ---
 
 ## 6. Tests implementats
 
+### 6.0 `SchemaCompatibilityTest.kt` — 17 tests
+
+**Ruta:** `composeApp/src/jvmTest/kotlin/cat/agrisync/data/SchemaCompatibilityTest.kt`
+
+Cobreix la capa de **compatibilitat d'esquema** entre el codi Kotlin i la base de dades Supabase real. Quan la BDD no coincideix exactament amb l'esquema esperat (columnes que falten, taules opcionals, relacions inexistents), el codi ha de detectar-ho i retornar missatges d'error intel·ligibles en lloc de mostrar el JSON brut de PostgreSQL.
+
+**Origen real d'aquest test:** error en producció `column entrega_dejeccions.volum_m3 does not exist` (codi PostgreSQL 42703), causat perquè la BDD de Supabase fou creada amb una versió anterior de l'esquema que no incloïa les columnes `volum_m3`, `kg_n_m3`, `kg_n` a la taula `entrega_dejeccions`.
+
+| Grup | Tests | Cobertura |
+|---|---|---|
+| Taula absent a la caché | 2 | `isMissingSchemaCacheTable` — detecció i no-fals-positiu |
+| Columna absent `tipus_fertilitzant` | 1 | Error legacy conegut |
+| **Columna absent `volum_m3`** | **4** | **Error real reportat: detecció, sense filtre de taula, fals negatiu, null** |
+| Relació absent | 1 | `isMissingRelationship` |
+| Selects segurs (camp legacy absent) | 2 | No contenen camps legacy als SELECTs |
+| **Selects de fallback (sense volum)** | **3** | **Fallbacks ometen `volum_m3/kg_n_m3/kg_n`, conserven FK** |
+| Serialització JSON | 4 | Requests no inclouen camps legacy al body |
+
+#### Correcció aplicada a la BDD
+
+L'error `volum_m3 does not exist` s'arregla executant la migració SQL:
+
+```
+docs/sql/maintenance/add_volum_nitrogen_columns.sql
+```
+
+```sql
+alter table public.entrega_dejeccions
+    add column if not exists volum_m3 numeric check (volum_m3 is null or volum_m3 >= 0),
+    add column if not exists kg_n_m3  numeric check (kg_n_m3  is null or kg_n_m3  >= 0),
+    add column if not exists kg_n     numeric check (kg_n     is null or kg_n     >= 0);
+```
+
+#### Codi afegit a `SchemaCompatibility.kt`
+
+```kotlin
+const val legacyEntregaVolumField = "volum_m3"
+
+const val ramaderEntregaSelectNoVolum =
+    "?select=id,data,granja_origen_id,terra_desti_id,updated_at,updated_by,dan:dan_id(...)..."
+
+const val danPreparationEntregaSelectNoVolum =
+    "?select=id,data,granja_origen:granja_origen_id(...)..."
+```
+
+#### Codi afegit als ViewModels
+
+A `TitularRamaderViewModel` i `DanPreparationViewModel`, dins de `mapHttpError`:
+
+```kotlin
+SchemaCompatibility.isMissingColumn(msg, SchemaCompatibility.legacyEntregaVolumField, "entrega_dejeccions") ->
+    "La base de dades actual no te les columnes de volum/nitrogen a entrega_dejeccions. Cal executar la migracio SQL."
+```
+
+---
 ### 6.1 `NitrogenMathTest.kt` — 24 tests
 
 **Ruta:** `composeApp/src/jvmTest/kotlin/cat/agrisync/util/NitrogenMathTest.kt`
@@ -215,10 +272,11 @@ BUILD SUCCESSFUL in 14s
 
 | Suite | Tests | Passats | Fallats | Temps |
 |---|---|---|---|---|
-| `NitrogenMathTest` | 24 | ✅ 24 | 0 | 0.032 s |
-| `DateFormatsTest` | 24 | ✅ 24 | 0 | 0.040 s |
-| `ComposeAppDesktopTest` | 1 | ✅ 1 | 0 | — |
-| **Total** | **49** | **✅ 49** | **0** | — |
+| `SchemaCompatibilityTest` | 17 | ✅ 17 | 0 | 0.052 s |
+| `NitrogenMathTest` | 24 | ✅ 24 | 0 | 0.031 s |
+| `DateFormatsTest` | 24 | ✅ 24 | 0 | 0.028 s |
+| `ComposeAppDesktopTest` | 1 | ✅ 1 | 0 | 0.028 s |
+| **Total** | **66** | **✅ 66** | **0** | — |
 
 L'informe HTML complet es genera automàticament a:
 
