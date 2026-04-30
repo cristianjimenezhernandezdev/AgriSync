@@ -182,7 +182,14 @@ internal fun TitularRamaderScreen(
                             )
                         }
                     }
-                    if (ui.granges.isEmpty()) {
+                    if (!ui.isGranjaCampanyaBalanceAvailable) {
+                        item {
+                            EmptySectionCard(
+                                title = "Balanç no disponible",
+                                message = "Aquesta base de dades encara no te activada la taula de balanç de granja per campanya. Pots treballar granges, bestiar i entregues igualment."
+                            )
+                        }
+                    } else if (ui.granges.isEmpty()) {
                         item {
                             EmptySectionCard(
                                 title = "Sense balanç ramader",

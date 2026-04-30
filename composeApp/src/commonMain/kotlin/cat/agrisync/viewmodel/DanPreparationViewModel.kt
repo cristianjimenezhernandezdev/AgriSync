@@ -28,6 +28,7 @@ internal data class DanPreparationUiState(
     val entregues: List<DanPreparationEntregaDto> = emptyList(),
     val availableCampanyes: List<Int> = emptyList(),
     val selectedCampanya: Int = 0,
+    val isGranjaCampanyaBalanceAvailable: Boolean = true,
     val isLoading: Boolean = false,
     val error: String? = null
 ) {
@@ -296,7 +297,17 @@ internal class DanPreparationViewModel(
                 val aplicacions = repository.listAplicacionsByTitular(titularId, selectedCampanya)
                 val granges = repository.listGranges(titularId)
                 val granjaBestiar = repository.listGranjaBestiar(titularId)
-                val granjaBalances = repository.listGranjaCampanyaBalances(titularId, selectedCampanya)
+                var isGranjaCampanyaBalanceAvailable = true
+                val granjaBalances = try {
+                    repository.listGranjaCampanyaBalances(titularId, selectedCampanya)
+                } catch (ex: Exception) {
+                    if (isMissingGranjaCampanyaBalance(ex.message)) {
+                        isGranjaCampanyaBalanceAvailable = false
+                        emptyList()
+                    } else {
+                        throw ex
+                    }
+                }
                 val entregues = repository.listEntreguesByTitular(titularId, selectedCampanya)
                 _uiState.update {
                     it.copy(
@@ -309,7 +320,8 @@ internal class DanPreparationViewModel(
                         granjaBalances = granjaBalances,
                         entregues = entregues,
                         availableCampanyes = normalizedCampanyes(existingCampanyes),
-                        selectedCampanya = selectedCampanya
+                        selectedCampanya = selectedCampanya,
+                        isGranjaCampanyaBalanceAvailable = isGranjaCampanyaBalanceAvailable
                     )
                 }
             } catch (ex: Exception) {
@@ -332,10 +344,17 @@ private fun mapDanPreparationError(message: String?): String {
     return when {
         msg.contains("401") -> "Sessio caducada (401). Torna a iniciar sessio."
         msg.contains("403") -> "No tens permis per consultar aquest resum DAN (403)."
+        isMissingGranjaCampanyaBalance(msg) ->
+            "La base de dades actual no te disponible el balanc de granja per campanya. El resum DAN s'obrira sense aquest bloc."
         msg.contains("42703") && msg.contains("entrega_id") ->
             "La base de dades actual no te el camp antic `entrega_id`. El resum DAN s'ha d'obrir amb el mode compatible."
         msg.contains("PGRST200") || msg.contains("Could not find a relationship between") ->
             "No s'ha pogut carregar una relacio de dades del resum DAN. Cal revisar la configuracio de Supabase."
         else -> msg
     }
+}
+
+private fun isMissingGranjaCampanyaBalance(message: String?): Boolean {
+    val msg = message ?: return false
+    return msg.contains("PGRST205") && msg.contains("granja_campanya_balance")
 }

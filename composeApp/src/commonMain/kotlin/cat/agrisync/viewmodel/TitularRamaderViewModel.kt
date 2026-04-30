@@ -27,6 +27,7 @@ data class TitularRamaderUiState(
     val receptorTerres: List<TerraDto> = emptyList(),
     val availableCampanyes: List<Int> = emptyList(),
     val selectedCampanya: Int = 0,
+    val isGranjaCampanyaBalanceAvailable: Boolean = true,
     val bestiars: List<BestiarDto> = emptyList(),
     val fasesProductives: List<FaseProductivaDto> = emptyList(),
     val actorLabels: Map<String, String> = emptyMap(),
@@ -57,7 +58,17 @@ internal class TitularRamaderViewModel(
                 val gb = repository.listGranjaBestiar(titularId)
                 val existingCampanyes = repository.listCampanyesByTitular(titularId)
                 val selectedCampanya = resolveSelectedCampanya(existingCampanyes, preferredCampanya)
-                val balances = repository.listGranjaCampanyaBalances(titularId, selectedCampanya)
+                var isGranjaCampanyaBalanceAvailable = true
+                val balances = try {
+                    repository.listGranjaCampanyaBalances(titularId, selectedCampanya)
+                } catch (ex: Exception) {
+                    if (isMissingGranjaCampanyaBalance(ex.message)) {
+                        isGranjaCampanyaBalanceAvailable = false
+                        emptyList()
+                    } else {
+                        throw ex
+                    }
+                }
                 val entregues = repository.listEntreguesByTitular(titularId, selectedCampanya)
                 val terres = repository.listTerres(titularId)
                 val receptorTitulars = repository.listAccessibleTitulars()
@@ -83,6 +94,7 @@ internal class TitularRamaderViewModel(
                         receptorTerres = receptorTerres,
                         availableCampanyes = normalizedCampanyes(existingCampanyes),
                         selectedCampanya = selectedCampanya,
+                        isGranjaCampanyaBalanceAvailable = isGranjaCampanyaBalanceAvailable,
                         bestiars = bestiars,
                         fasesProductives = fases,
                         actorLabels = actorLabels
@@ -420,6 +432,10 @@ internal class TitularRamaderViewModel(
         kgNGeneratText: String,
         estocFinalText: String
     ): Boolean {
+        if (!_uiState.value.isGranjaCampanyaBalanceAvailable) {
+            _uiState.update { it.copy(saveMessage = "El balanc de granja no esta disponible en aquesta base de dades.") }
+            return false
+        }
         if (granjaId.isBlank()) {
             _uiState.update { it.copy(saveMessage = "Has de seleccionar una granja") }
             return false
@@ -502,8 +518,15 @@ internal class TitularRamaderViewModel(
         return when {
             msg.contains("401") -> "Sessio caducada (401). Torna a iniciar sessio."
             msg.contains("403") -> "No tens permis per aquest titular (403)."
+            isMissingGranjaCampanyaBalance(msg) ->
+                "La base de dades actual no te disponible el balanc de granja per campanya. La resta del modul ramader si que es pot obrir."
             else -> msg
         }
+    }
+
+    private fun isMissingGranjaCampanyaBalance(message: String?): Boolean {
+        val msg = message ?: return false
+        return msg.contains("PGRST205") && msg.contains("granja_campanya_balance")
     }
 
     private suspend fun resolveActorLabels(
