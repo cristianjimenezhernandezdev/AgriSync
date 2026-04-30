@@ -172,32 +172,77 @@ private fun CreateTecnicDialog(
         onDismissRequest = onDismiss,
         title = { Text("Crear nou tecnic") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = nom, onValueChange = onNomChange, label = { Text("Nom complet") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = email, onValueChange = onEmailChange, label = { Text("Email (sera el login)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = telefon, onValueChange = onTelefonChange, label = { Text("Telefon") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = password, onValueChange = onPasswordChange, label = { Text("Password") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-
-                // Selector d'oficina
-                Text("Oficina:", style = MaterialTheme.typography.labelMedium)
-                oficines.forEach { ofi ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    OutlinedTextField(
+                        value = nom,
+                        onValueChange = onNomChange,
+                        label = { Text("Nom complet") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = onEmailChange,
+                        label = { Text("Email (sera el login)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = telefon,
+                        onValueChange = onTelefonChange,
+                        label = { Text("Telefon") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = onPasswordChange,
+                        label = { Text("Password") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    Text("Oficina:", style = MaterialTheme.typography.labelMedium)
+                }
+                items(oficines, key = { it.id }) { ofi ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         RadioButton(selected = oficinaId == ofi.id, onClick = { onOficinaChange(ofi.id) })
                         Text(ofi.nom)
                     }
                 }
-
-                // Selector de rol
-                Text("Rol:", style = MaterialTheme.typography.labelMedium)
-                listOf("tecnic", "oficina_manager", "admin").forEach { r ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = rol == r, onClick = { onRolChange(r) })
-                        Text(r)
+                item {
+                    Text("Rol:", style = MaterialTheme.typography.labelMedium)
+                }
+                items(listOf("tecnic", "oficina_manager", "admin"), key = { it }) { currentRol ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = rol == currentRol, onClick = { onRolChange(currentRol) })
+                        Text(currentRol)
                     }
                 }
-
                 if (isCreating) {
-                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    item {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                    }
                 }
             }
         },
