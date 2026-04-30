@@ -28,7 +28,7 @@ Si una persona no coneix gens el projecte, l'ordre recomanat es aquest:
 - `funcional/`
   Resum funcional dels moduls i del flux operatiu d'usuari.
 - `guies/`
-  Posada en marxa, demo i resolucio de problemes habituals.
+  Posada en marxa, demo, resolucio de problemes habituals i procediment de testing.
 - `presentacio/`
   Material de suport per defensa o explicacio oral del projecte.
 - `projecte/`
@@ -46,6 +46,7 @@ Si una persona no coneix gens el projecte, l'ordre recomanat es aquest:
 - [Permisos i seguretat](arquitectura/permisos_i_seguretat.md)
 - [Flux operatiu i moduls](funcional/flux_operatiu_i_moduls.md)
 - [Index del paquet SQL](sql/README.md)
+- [Procediment de testing](guies/testing.md)
 
 ## Quina pregunta respon cada document
 

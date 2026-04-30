@@ -1,16 +1,18 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.gradle.api.tasks.JavaExec
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.composeHotReload)
     alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
-    jvm()
+    jvm {
+        mainRun {
+            mainClass.set("cat.agrisync.MainKt")
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {
@@ -30,6 +32,10 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+        }
+        jvmTest.dependencies {
+            implementation(kotlin("test"))
+            implementation("org.junit.jupiter:junit-jupiter:5.10.2")
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -52,8 +58,7 @@ compose.desktop {
     }
 }
 
-tasks.withType<JavaExec>().configureEach {
-    if (name == "jvmRun") {
-        mainClass.set("cat.agrisync.MainKt")
-    }
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
+
