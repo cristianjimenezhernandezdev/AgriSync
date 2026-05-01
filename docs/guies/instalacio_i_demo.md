@@ -174,6 +174,8 @@ Despres d'executar el seed, pots entrar a l'app amb aquests usuaris:
 | Tecnic agricola Girona | `joan.agri.demo@agrisync.com` | `joan1234` | Provar treball agricola des d'una altra oficina |
 | Tecnic ramader Girona | `anna.ram.demo@agrisync.com` | `anna1234` | Provar treball ramader des d'una altra oficina |
 | Lectura | `lectura.demo@agrisync.com` | `lectura1234` | Validar acces nomes de consulta |
+`campamanager@campa.net` | `campa1234` 
+`rmart@campa.net` | `rmart1234` 
 
 Aquestes credencials son nomes per demo/MVP i surten de `docs/sql/seeds/agrisync_demo_seed.sql`.
 
@@ -226,9 +228,10 @@ Has de poder:
 
 - veure dades limitades a la seva oficina i comparticions
 - editar titulars dins del seu abast
-- assignar tecnics de la seva oficina
+- crear i gestionar nomes tecnics de rol `tecnic` o `lectura` de la seva oficina
+- assignar tecnics de la seva oficina als titulars que pugui gestionar o que rebi compartits segons `scope`
 - veure o crear comparticions d'oficina quan pertoqui
-- compartir un titular amb una oficina no visible introduint l'email del manager receptor al dialeg de comparticio
+- comprovar que no pot editar, eliminar ni canviar passwords de tecnics d'altres oficines encara que comparteixin un titular
 
 ### Com a tecnic agricola
 

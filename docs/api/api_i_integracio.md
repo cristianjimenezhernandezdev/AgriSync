@@ -118,6 +118,7 @@ Important:
 
 - aquestes crides necessiten `SUPABASE_SERVICE_ROLE_KEY`
 - son molt potents
+- la UI limita les accions de manager a tecnics de la seva oficina, i les policies RLS reforcen els canvis sobre `public.tecnic` i `tecnic_titular`
 - en un entorn de produccio més exigent haurien de passar per una API backend propia en comptes de viatjar directament des del client
 
 ## Peces personalitzades del projecte

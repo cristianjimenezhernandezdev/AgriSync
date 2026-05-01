@@ -516,6 +516,7 @@ Aquestes funcions són clau perquè la lògica de permisos viu aquí.
 - `is_admin()`
 - `is_oficina_manager()`
 - `same_oficina(uuid)`
+- `can_manage_tecnic_in_current_office(uuid)`
 
 ### Permisos sobre tècnics i oficines
 
@@ -559,6 +560,7 @@ La pregunta important no és "quin rol té l'usuari?", sinó:
 1. la UI intenta inserir a `oficina_titular_compartit`
 2. la policy comprova `can_manage_office_titular(titular_id)`
 3. si no el pot gestionar, la inserció falla
+4. el manager receptor pot treballar el titular compartit segons `scope`, però no rep permisos sobre els tècnics ni l'oficina d'origen
 
 ### Exemple 3. Crear una aplicació agrícola
 
@@ -598,10 +600,10 @@ Aquestes RPCs no donen permisos nous; centralitzen la mateixa decisio de permiso
 
 | Taula | Lectura | Escriptura |
 |---|---|---|
-| `oficina` | `can_view_oficina` | només `admin` |
-| `tecnic` | `can_view_tecnic` | `admin`, manager de la mateixa oficina o autoactualització restringida |
+| `oficina` | `can_view_oficina` | `admin`; el manager pot editar només la seva oficina |
+| `tecnic` | `can_view_tecnic` | `admin`, manager sobre `tecnic`/`lectura` de la seva oficina o autoactualització restringida |
 | `titular` | `can_read_titular` | segons `can_write_scope` o rol |
-| `tecnic_titular` | admin, manager o lectura vinculada al titular | admin o manager dins del seu abast |
+| `tecnic_titular` | admin, manager o lectura vinculada al titular | admin o manager només sobre tècnics propis; el titular compartit no dona gestió sobre tècnics aliens |
 | `oficina_titular_compartit` | admin, managers i usuaris amb lectura del titular | admin o manager que pot gestionar el titular |
 | `dan_declaracio` | lectura del titular | escriptura agrícola o ramadera sobre el titular |
 | `terra` | lectura del titular | escriptura agrícola o gestió específica de manager/admin |

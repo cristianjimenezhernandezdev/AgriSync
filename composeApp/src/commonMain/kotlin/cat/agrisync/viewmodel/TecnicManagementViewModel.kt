@@ -45,13 +45,34 @@ internal class TecnicManagementViewModel(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _uiState = MutableStateFlow(TecnicManagementUiState())
     val uiState: StateFlow<TecnicManagementUiState> = _uiState.asStateFlow()
+    private val managerManagedRoles = setOf("tecnic", "lectura")
+
+    private fun isAdmin(): Boolean = currentTecnic.rol == "admin"
+
+    private fun isOfficeManager(): Boolean = currentTecnic.rol == "oficina_manager"
+
+    private fun canManageTecnic(tecnic: TecnicDto): Boolean {
+        return isAdmin() || (
+            isOfficeManager() &&
+                tecnic.oficina_id == currentTecnic.oficina_id &&
+                (tecnic.rol ?: "tecnic") in managerManagedRoles
+        )
+    }
+
+    private fun filterManagedTecnics(tecnics: List<TecnicDto>): List<TecnicDto> {
+        return if (isAdmin()) tecnics else tecnics.filter(::canManageTecnic)
+    }
+
+    private fun filterManagedOficines(oficines: List<OficinaDto>): List<OficinaDto> {
+        return if (isAdmin()) oficines else oficines.filter { it.id == currentTecnic.oficina_id }
+    }
 
     fun load() {
         scope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val tecnics = repository.listAll()
-                val oficines = repository.listOficines()
+                val tecnics = filterManagedTecnics(repository.listAll())
+                val oficines = filterManagedOficines(repository.listOficines())
                 val defaultOficinaId = if (currentTecnic.rol == "oficina_manager") {
                     currentTecnic.oficina_id
                 } else {
@@ -113,7 +134,7 @@ internal class TecnicManagementViewModel(
                     st.newOficinaId
                 }
                 val targetRol = when {
-                    currentTecnic.rol == "oficina_manager" && st.newRol !in setOf("tecnic", "lectura") -> "tecnic"
+                    currentTecnic.rol == "oficina_manager" && st.newRol !in managerManagedRoles -> "tecnic"
                     else -> st.newRol
                 }
 
@@ -154,7 +175,7 @@ internal class TecnicManagementViewModel(
                 println("[TECNIC] Tecnic creat: ${st.newNom}")
 
                 // 3) Recarregar llista
-                val tecnics = repository.listAll()
+                val tecnics = filterManagedTecnics(repository.listAll())
                 _uiState.update {
                     it.copy(
                         isCreating = false, showCreateDialog = false,
@@ -173,6 +194,10 @@ internal class TecnicManagementViewModel(
     fun toggleActiu(tecnic: TecnicDto) {
         scope.launch {
             try {
+                if (!canManageTecnic(tecnic)) {
+                    _uiState.update { it.copy(message = "Nomes pots gestionar tecnics de la teva oficina") }
+                    return@launch
+                }
                 if (tecnic.rol.equals("admin", ignoreCase = true)) {
                     _uiState.update { it.copy(message = "L'administrador no es pot desactivar") }
                     return@launch
@@ -197,12 +222,23 @@ internal class TecnicManagementViewModel(
     fun updateTecnic(tecnicId: String, nom: String, email: String, telefon: String, rol: String, oficinaId: String) {
         scope.launch {
             try {
+                val current = _uiState.value.tecnics.find { it.id == tecnicId }
+                if (current != null && !canManageTecnic(current)) {
+                    _uiState.update { it.copy(message = "Nomes pots gestionar tecnics de la teva oficina") }
+                    return@launch
+                }
+                val targetOficinaId = if (isOfficeManager()) currentTecnic.oficina_id else oficinaId
+                val targetRol = if (isOfficeManager() && rol !in managerManagedRoles) "tecnic" else rol
                 val updated = repository.updateTecnic(tecnicId, TecnicUpdateRequest(
-                    nom = nom, email = email, telefon = telefon.ifBlank { null }, rol = rol, oficina_id = oficinaId
+                    nom = nom,
+                    email = email,
+                    telefon = telefon.ifBlank { null },
+                    rol = targetRol,
+                    oficina_id = targetOficinaId
                 ))
                 _uiState.update { st ->
                     st.copy(
-                        tecnics = st.tecnics.map { if (it.id == tecnicId) updated else it },
+                        tecnics = filterManagedTecnics(st.tecnics.map { if (it.id == tecnicId) updated else it }),
                         message = "Tecnic '${updated.nom}' actualitzat"
                     )
                 }
@@ -217,6 +253,10 @@ internal class TecnicManagementViewModel(
     }
 
     fun showDeleteDialog(tecnic: TecnicDto) {
+        if (!canManageTecnic(tecnic)) {
+            _uiState.update { it.copy(message = "Nomes pots eliminar tecnics de la teva oficina") }
+            return
+        }
         _uiState.update { it.copy(showDeleteDialog = true, deleteTecnic = tecnic) }
     }
 
@@ -227,6 +267,17 @@ internal class TecnicManagementViewModel(
     fun confirmDeleteTecnic() {
         val st = _uiState.value
         val tecnic = st.deleteTecnic ?: return
+        if (!canManageTecnic(tecnic)) {
+            _uiState.update {
+                it.copy(
+                    showDeleteDialog = false,
+                    deleteTecnic = null,
+                    isDeleting = false,
+                    message = "Nomes pots eliminar tecnics de la teva oficina"
+                )
+            }
+            return
+        }
 
         scope.launch {
             _uiState.update { it.copy(isDeleting = true) }
@@ -243,7 +294,7 @@ internal class TecnicManagementViewModel(
                     }
                 }
 
-                val tecnics = repository.listAll()
+                val tecnics = filterManagedTecnics(repository.listAll())
                 _uiState.update {
                     it.copy(
                         tecnics = tecnics,
@@ -266,6 +317,10 @@ internal class TecnicManagementViewModel(
 
     // ── Reset password ──
     fun showPasswordDialog(tecnic: TecnicDto) {
+        if (!canManageTecnic(tecnic)) {
+            _uiState.update { it.copy(message = "Nomes pots canviar el password de tecnics de la teva oficina") }
+            return
+        }
         _uiState.update { it.copy(showPasswordDialog = true, passwordTecnic = tecnic, resetPassword = "", resetPasswordConfirm = "") }
     }
 
@@ -279,6 +334,17 @@ internal class TecnicManagementViewModel(
     fun confirmResetPassword() {
         val st = _uiState.value
         val tecnic = st.passwordTecnic ?: return
+        if (!canManageTecnic(tecnic)) {
+            _uiState.update {
+                it.copy(
+                    isResettingPassword = false,
+                    showPasswordDialog = false,
+                    passwordTecnic = null,
+                    message = "Nomes pots canviar el password de tecnics de la teva oficina"
+                )
+            }
+            return
+        }
         val userId = tecnic.user_id
         if (userId == null) {
             _uiState.update { it.copy(message = "'${tecnic.nom}' no te compte Auth (sense user_id)") }

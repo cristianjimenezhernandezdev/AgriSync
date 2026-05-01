@@ -10,16 +10,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import cat.agrisync.data.OficinaDto
+import cat.agrisync.data.TecnicDto
 import cat.agrisync.data.TitularDto
 import cat.agrisync.viewmodel.TecnicDetailViewModel
 
 @Composable
 internal fun TecnicDetailScreen(
     viewModel: TecnicDetailViewModel,
+    currentTecnic: TecnicDto,
     onBack: () -> Unit
 ) {
     val ui by viewModel.uiState.collectAsState()
     var pendingDeleteAssignacioId by remember { mutableStateOf<String?>(null) }
+    val managerManagedRoles = remember { setOf("tecnic", "lectura") }
+    val isManager = currentTecnic.rol == "oficina_manager"
+    val allowedRoles = if (isManager) listOf("tecnic", "lectura") else listOf("tecnic", "lectura", "oficina_manager", "admin")
+    val canManageTarget = ui.tecnic?.let { tecnic ->
+        currentTecnic.rol == "admin" ||
+            (
+                isManager &&
+                    tecnic.oficina_id == currentTecnic.oficina_id &&
+                    (tecnic.rol ?: "tecnic") in managerManagedRoles
+            )
+    } ?: false
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(ui.message) {
@@ -70,7 +83,7 @@ internal fun TecnicDetailScreen(
 
                                 // Selector de rol
                                 Text("Rol:", style = MaterialTheme.typography.labelMedium)
-                                listOf("tecnic", "oficina_manager", "admin").forEach { r ->
+                                allowedRoles.forEach { r ->
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         RadioButton(selected = ui.editRol == r, onClick = { viewModel.onEditRol(r) })
                                         Text(r)
@@ -78,7 +91,7 @@ internal fun TecnicDetailScreen(
                                 }
 
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Button(onClick = viewModel::saveTecnic) { Text("Guardar canvis") }
+                                    Button(onClick = viewModel::saveTecnic, enabled = canManageTarget) { Text("Guardar canvis") }
                                 }
 
                                 // Info
@@ -103,7 +116,7 @@ internal fun TecnicDetailScreen(
                                     }
 
                                     // Canvi de password
-                                    if (t.user_id != null) {
+                                    if (t.user_id != null && canManageTarget) {
                                         HorizontalDivider(Modifier.padding(vertical = 4.dp))
                                         if (ui.showPasswordField) {
                                             OutlinedTextField(
@@ -151,8 +164,10 @@ internal fun TecnicDetailScreen(
                                         Text(assig.titular?.nom_rao ?: assig.titular_id, style = MaterialTheme.typography.bodyLarge)
                                         Text("NIF: ${assig.titular?.nif ?: "-"} · Scope: ${assig.scope}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
-                                    IconButton(onClick = { pendingDeleteAssignacioId = assig.id }) {
-                                        Text("✕", color = MaterialTheme.colorScheme.error)
+                                    if (canManageTarget) {
+                                        IconButton(onClick = { pendingDeleteAssignacioId = assig.id }) {
+                                            Text("✕", color = MaterialTheme.colorScheme.error)
+                                        }
                                     }
                                 }
                             }
@@ -160,7 +175,7 @@ internal fun TecnicDetailScreen(
                     }
 
                     // Afegir assignació
-                    item {
+                    if (canManageTarget) item {
                         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("Afegir assignacio", style = MaterialTheme.typography.titleSmall)

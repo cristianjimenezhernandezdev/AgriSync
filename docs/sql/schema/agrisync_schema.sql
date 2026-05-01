@@ -27,6 +27,7 @@ drop function if exists public.current_oficina_id() cascade;
 drop function if exists public.is_admin() cascade;
 drop function if exists public.is_oficina_manager() cascade;
 drop function if exists public.same_oficina(uuid) cascade;
+drop function if exists public.can_manage_tecnic_in_current_office(uuid) cascade;
 drop function if exists public.can_manage_office_titular(uuid) cascade;
 drop function if exists public.office_has_any_share(uuid, uuid) cascade;
 drop function if exists public.office_has_shared_scope(uuid, public.scope_titular, uuid) cascade;
@@ -718,6 +719,22 @@ as $$
   );
 $$;
 
+create or replace function public.can_manage_tecnic_in_current_office(p_tecnic_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.tecnic t
+    where t.id = p_tecnic_id
+      and t.oficina_id = public.current_oficina_id()
+      and t.rol in ('tecnic', 'lectura')
+  );
+$$;
+
 create or replace function public.can_self_update_tecnic(
   p_tecnic_id uuid,
   p_user_id uuid,
@@ -1130,8 +1147,14 @@ with check (public.is_admin());
 
 create policy oficina_update on public.oficina
 for update to authenticated
-using (public.is_admin())
-with check (public.is_admin());
+using (
+  public.is_admin()
+  or (public.is_oficina_manager() and oficina.id = public.current_oficina_id())
+)
+with check (
+  public.is_admin()
+  or (public.is_oficina_manager() and id = public.current_oficina_id())
+);
 
 create policy oficina_delete on public.oficina
 for delete to authenticated
@@ -1146,19 +1169,27 @@ create policy tecnic_insert on public.tecnic
 for insert to authenticated
 with check (
   public.is_admin()
-  or (public.is_oficina_manager() and oficina_id = public.current_oficina_id())
+  or (
+    public.is_oficina_manager()
+    and oficina_id = public.current_oficina_id()
+    and rol in ('tecnic', 'lectura')
+  )
 );
 
 create policy tecnic_update on public.tecnic
 for update to authenticated
 using (
   public.is_admin()
-  or (public.is_oficina_manager() and public.same_oficina(tecnic.id))
+  or (public.is_oficina_manager() and public.can_manage_tecnic_in_current_office(tecnic.id))
   or public.can_self_update_tecnic(tecnic.id, tecnic.user_id, tecnic.oficina_id, tecnic.rol, tecnic.actiu)
 )
 with check (
   public.is_admin()
-  or (public.is_oficina_manager() and oficina_id = public.current_oficina_id())
+  or (
+    public.is_oficina_manager()
+    and oficina_id = public.current_oficina_id()
+    and rol in ('tecnic', 'lectura')
+  )
   or public.can_self_update_tecnic(id, user_id, oficina_id, rol, actiu)
 );
 
@@ -1166,7 +1197,7 @@ create policy tecnic_delete on public.tecnic
 for delete to authenticated
 using (
   public.is_admin()
-  or (public.is_oficina_manager() and public.same_oficina(tecnic.id))
+  or (public.is_oficina_manager() and public.can_manage_tecnic_in_current_office(tecnic.id))
 );
 
 -- TITULAR
@@ -1212,7 +1243,7 @@ with check (
   public.is_admin()
   or (
     public.is_oficina_manager()
-    and public.same_oficina(tecnic_id)
+    and public.can_manage_tecnic_in_current_office(tecnic_id)
     and (
       public.can_manage_office_titular(titular_id)
       or public.office_has_shared_scope(titular_id, scope)
@@ -1226,7 +1257,7 @@ using (
   public.is_admin()
   or (
     public.is_oficina_manager()
-    and public.same_oficina(tecnic_titular.tecnic_id)
+    and public.can_manage_tecnic_in_current_office(tecnic_titular.tecnic_id)
     and (
       public.can_manage_office_titular(tecnic_titular.titular_id)
       or public.office_has_shared_scope(tecnic_titular.titular_id, tecnic_titular.scope)
@@ -1237,7 +1268,7 @@ with check (
   public.is_admin()
   or (
     public.is_oficina_manager()
-    and public.same_oficina(tecnic_id)
+    and public.can_manage_tecnic_in_current_office(tecnic_id)
     and (
       public.can_manage_office_titular(titular_id)
       or public.office_has_shared_scope(titular_id, scope)
@@ -1251,7 +1282,7 @@ using (
   public.is_admin()
   or (
     public.is_oficina_manager()
-    and public.same_oficina(tecnic_titular.tecnic_id)
+    and public.can_manage_tecnic_in_current_office(tecnic_titular.tecnic_id)
     and (
       public.can_manage_office_titular(tecnic_titular.titular_id)
       or public.office_has_shared_scope(tecnic_titular.titular_id, tecnic_titular.scope)

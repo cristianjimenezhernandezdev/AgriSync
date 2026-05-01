@@ -35,12 +35,30 @@ data class TecnicDetailUiState(
 )
 
 internal class TecnicDetailViewModel(
-    private val repository: TecnicRepository
+    private val repository: TecnicRepository,
+    private val currentTecnic: TecnicDto
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _uiState = MutableStateFlow(TecnicDetailUiState())
     val uiState: StateFlow<TecnicDetailUiState> = _uiState.asStateFlow()
     private var tecnicId: String = ""
+    private val managerManagedRoles = setOf("tecnic", "lectura")
+
+    private fun isAdmin(): Boolean = currentTecnic.rol == "admin"
+
+    private fun isOfficeManager(): Boolean = currentTecnic.rol == "oficina_manager"
+
+    private fun canManageTecnic(tecnic: TecnicDto): Boolean {
+        return isAdmin() || (
+            isOfficeManager() &&
+                tecnic.oficina_id == currentTecnic.oficina_id &&
+                (tecnic.rol ?: "tecnic") in managerManagedRoles
+        )
+    }
+
+    private fun filterManagedOficines(oficines: List<OficinaDto>): List<OficinaDto> {
+        return if (isAdmin()) oficines else oficines.filter { it.id == currentTecnic.oficina_id }
+    }
 
     fun load(id: String) {
         tecnicId = id
@@ -50,7 +68,10 @@ internal class TecnicDetailViewModel(
                 val tecnics: List<TecnicDto> = repository.listAll()
                 val tecnic = tecnics.find { it.id == id }
                     ?: throw IllegalStateException("Tecnic no trobat")
-                val oficines = repository.listOficines()
+                if (!canManageTecnic(tecnic)) {
+                    throw IllegalStateException("No pots gestionar tecnics d'altres oficines")
+                }
+                val oficines = filterManagedOficines(repository.listOficines())
                 val assignacions = repository.listAssignacions(id)
                 val titulars = repository.listAllTitulars()
                 val updatedByLabel = repository.resolveActorLabel(tecnic.updated_by)
@@ -75,8 +96,14 @@ internal class TecnicDetailViewModel(
     fun onEditNom(v: String) { _uiState.update { it.copy(editNom = v) } }
     fun onEditEmail(v: String) { _uiState.update { it.copy(editEmail = v) } }
     fun onEditTelefon(v: String) { _uiState.update { it.copy(editTelefon = v) } }
-    fun onEditRol(v: String) { _uiState.update { it.copy(editRol = v) } }
-    fun onEditOficina(v: String) { _uiState.update { it.copy(editOficinaId = v) } }
+    fun onEditRol(v: String) {
+        if (isOfficeManager() && v !in managerManagedRoles) return
+        _uiState.update { it.copy(editRol = v) }
+    }
+    fun onEditOficina(v: String) {
+        if (isOfficeManager() && v != currentTecnic.oficina_id) return
+        _uiState.update { it.copy(editOficinaId = v) }
+    }
     fun onNewTitular(v: String) { _uiState.update { it.copy(newTitularId = v) } }
     fun onNewScope(v: String) { _uiState.update { it.copy(newScope = v) } }
     fun onNewPassword(v: String) { _uiState.update { it.copy(newPassword = v) } }
@@ -84,7 +111,12 @@ internal class TecnicDetailViewModel(
 
     fun changePassword() {
         val st = _uiState.value
-        val userId = st.tecnic?.user_id
+        val tecnic = st.tecnic ?: return
+        if (!canManageTecnic(tecnic)) {
+            _uiState.update { it.copy(message = "Nomes pots canviar el password de tecnics de la teva oficina") }
+            return
+        }
+        val userId = tecnic.user_id
         if (userId == null) {
             _uiState.update { it.copy(message = "Aquest tecnic no te login (sense user_id)") }
             return
@@ -105,12 +137,19 @@ internal class TecnicDetailViewModel(
 
     fun saveTecnic() {
         val st = _uiState.value
+        val tecnic = st.tecnic ?: return
+        if (!canManageTecnic(tecnic)) {
+            _uiState.update { it.copy(message = "Nomes pots gestionar tecnics de la teva oficina") }
+            return
+        }
+        val targetRol = if (isOfficeManager() && st.editRol !in managerManagedRoles) "tecnic" else st.editRol
+        val targetOficinaId = if (isOfficeManager()) currentTecnic.oficina_id else st.editOficinaId
         scope.launch {
             try {
                 val updated = repository.updateTecnic(tecnicId, TecnicUpdateRequest(
                     nom = st.editNom.trim(), email = st.editEmail.trim(),
                     telefon = st.editTelefon.trim().ifBlank { null },
-                    rol = st.editRol, oficina_id = st.editOficinaId
+                    rol = targetRol, oficina_id = targetOficinaId
                 ))
                 val updatedByLabel = repository.resolveActorLabel(updated.updated_by)
                 _uiState.update {
@@ -128,6 +167,11 @@ internal class TecnicDetailViewModel(
 
     fun addAssignacio() {
         val st = _uiState.value
+        val tecnic = st.tecnic ?: return
+        if (!canManageTecnic(tecnic)) {
+            _uiState.update { it.copy(message = "Nomes pots gestionar assignacions dels teus tecnics") }
+            return
+        }
         if (st.newTitularId.isBlank()) return
         scope.launch {
             try {
@@ -146,6 +190,11 @@ internal class TecnicDetailViewModel(
     }
 
     fun deleteAssignacio(assignacioId: String) {
+        val tecnic = _uiState.value.tecnic ?: return
+        if (!canManageTecnic(tecnic)) {
+            _uiState.update { it.copy(message = "Nomes pots eliminar assignacions dels teus tecnics") }
+            return
+        }
         scope.launch {
             try {
                 repository.deleteAssignacio(assignacioId)

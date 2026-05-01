@@ -846,6 +846,8 @@ A mes de l'anterior, veuen:
 - `Tecnics`
 - `Oficines`
 
+La diferencia important es d'abast: `admin` pot gestionar globalment; `oficina_manager` nomes pot gestionar tecnics `tecnic`/`lectura` de la seva oficina i editar la seva oficina. Les comparticions de titulars donen acces operatiu al titular, no permisos administratius sobre oficines o tecnics aliens.
+
 ### Rol `tecnic` o `lectura`
 
 No veuen pantalles de gestio administrativa. Treballen des de:
@@ -906,12 +908,13 @@ sempre que el titular i l'ambit ho permetin.
 
 ### Flux 6. Gestio de tecnics
 
-1. `TecnicManagementViewModel.load()` llegeix tecnics i oficines
+1. `TecnicManagementViewModel.load()` llegeix tecnics i oficines visibles
 2. la creacio d'un tecnic pot implicar:
    - crear usuari Auth
    - crear registre a `public.tecnic`
 3. el detall del tecnic usa `TecnicDetailViewModel`
-4. el detall permet editar oficina, rol, dades i assignacions
+4. si l'usuari es `oficina_manager`, la UI filtra a la seva oficina i nomes permet rols `tecnic` i `lectura`
+5. la UI bloqueja resets de password aliens i les policies RLS reforcen que un manager no pugui editar, eliminar ni assignar tecnics aliens
 
 ### Flux 7. Gestio de titulars i comparticions
 
@@ -919,6 +922,7 @@ sempre que el titular i l'ambit ho permetin.
 2. la UI permet alta, baixa i edicio
 3. quan s'obre comparticio, es llegeixen `oficina_titular_compartit`
 4. es poden crear comparticions per `scope`
+5. si l'oficina receptora no es visible, es pot resoldre per email del manager receptor sense obrir permisos globals d'oficines
 
 ## Gestio d'estat a Compose
 

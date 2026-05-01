@@ -241,11 +241,12 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                 }
 
                 is Screen.TecnicDetail -> {
-                    val vm = remember(screen.tecnicId) { TecnicDetailViewModel(services.tecnicRepository) }
+                    val vm = remember(screen.tecnicId, data.tecnic.id) { TecnicDetailViewModel(services.tecnicRepository, data.tecnic) }
                     DisposableEffect(screen.tecnicId) { onDispose { vm.clear() } }
                     LaunchedEffect(screen.tecnicId) { vm.load(screen.tecnicId) }
                     TecnicDetailScreen(
                         viewModel = vm,
+                        currentTecnic = data.tecnic,
                         onBack = { currentScreen = Screen.TecnicManagement }
                     )
                 }
@@ -271,11 +272,12 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                 }
 
                 Screen.OficinaManagement -> {
-                    val vm = remember { OficinaManagementViewModel(services.oficinaRepository) }
+                    val vm = remember(data.tecnic.id) { OficinaManagementViewModel(services.oficinaRepository, data.tecnic) }
                     DisposableEffect(Unit) { onDispose { vm.clear() } }
                     LaunchedEffect(Unit) { vm.load() }
                     OficinaManagementScreen(
                         viewModel = vm,
+                        currentTecnic = data.tecnic,
                         onBack = { currentScreen = Screen.TitularsHome }
                     )
                 }

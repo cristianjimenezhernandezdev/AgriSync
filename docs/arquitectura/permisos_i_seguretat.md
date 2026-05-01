@@ -45,6 +45,7 @@ L'esquema defineix, entre d'altres:
 - `current_oficina_id()`
 - `is_admin()`
 - `is_oficina_manager()`
+- `can_manage_tecnic_in_current_office(...)`
 - `can_manage_office_titular(...)`
 - `can_read_titular(...)`
 - `can_write_scope(...)`
@@ -58,11 +59,13 @@ L'esquema defineix, entre d'altres:
 
 - `admin` te visio global
 - `oficina_manager` queda limitat a la seva oficina i a comparticions admeses
+- `oficina_manager` nomes pot gestionar perfils `tecnic` i `lectura` de la seva propia oficina
 - un tecnic pot treballar nomes els titulars que te assignats o compartits
 - `lectura` pot veure pero no editar
 - les entregues cap a terres o titulars d'altres ambit passen per comprovacions de referencia i lectura
 - les altes de titulars i terres passen per RPCs de domini per conservar permisos i auditoria
 - la comparticio amb una oficina no visible es resol introduint l'email del manager receptor; l'app nomes usa aquesta cerca per trobar l'oficina i despres crea la comparticio amb les policies normals
+- una comparticio de titular no dona permis per editar, eliminar o canviar passwords de tecnics d'altres oficines
 
 ## Scripts de suport
 

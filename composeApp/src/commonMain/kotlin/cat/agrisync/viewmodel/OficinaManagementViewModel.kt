@@ -4,6 +4,7 @@ import cat.agrisync.data.OficinaCreateRequest
 import cat.agrisync.data.OficinaDto
 import cat.agrisync.data.OficinaRepository
 import cat.agrisync.data.OficinaUpdateRequest
+import cat.agrisync.data.TecnicDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,17 +31,24 @@ data class OficinaManagementUiState(
 )
 
 internal class OficinaManagementViewModel(
-    private val repository: OficinaRepository
+    private val repository: OficinaRepository,
+    private val currentTecnic: TecnicDto
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _uiState = MutableStateFlow(OficinaManagementUiState())
     val uiState: StateFlow<OficinaManagementUiState> = _uiState.asStateFlow()
+    private fun isAdmin(): Boolean = currentTecnic.rol == "admin"
+    private fun canEditOficina(oficina: OficinaDto): Boolean {
+        return isAdmin() || (currentTecnic.rol == "oficina_manager" && oficina.id == currentTecnic.oficina_id)
+    }
 
     fun load() {
         scope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val list = repository.listAll()
+                val list = repository.listAll().let { oficines ->
+                    if (isAdmin()) oficines else oficines.filter { it.id == currentTecnic.oficina_id }
+                }
                 _uiState.update { it.copy(isLoading = false, oficines = list) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error carregant oficines") }
@@ -54,6 +62,10 @@ internal class OficinaManagementViewModel(
     fun onNewNom(v: String) { _uiState.update { it.copy(newNom = v) } }
 
     fun createOficina() {
+        if (!isAdmin()) {
+            _uiState.update { it.copy(message = "Nomes l'administrador pot crear oficines") }
+            return
+        }
         val nom = _uiState.value.newNom.trim()
         if (nom.isBlank()) {
             _uiState.update { it.copy(message = "El nom es obligatori") }
@@ -73,6 +85,10 @@ internal class OficinaManagementViewModel(
 
     // ── Editar ──
     fun startEdit(oficina: OficinaDto) {
+        if (!canEditOficina(oficina)) {
+            _uiState.update { it.copy(message = "Nomes pots editar la teva oficina") }
+            return
+        }
         _uiState.update { it.copy(editingOficina = oficina, editNom = oficina.nom) }
     }
     fun cancelEdit() { _uiState.update { it.copy(editingOficina = null) } }
@@ -80,6 +96,10 @@ internal class OficinaManagementViewModel(
 
     fun saveEdit() {
         val oficina = _uiState.value.editingOficina ?: return
+        if (!canEditOficina(oficina)) {
+            _uiState.update { it.copy(isEditing = false, editingOficina = null, message = "Nomes pots editar la teva oficina") }
+            return
+        }
         val nom = _uiState.value.editNom.trim()
         if (nom.isBlank()) {
             _uiState.update { it.copy(message = "El nom es obligatori") }
@@ -99,6 +119,10 @@ internal class OficinaManagementViewModel(
 
     // ── Eliminar ──
     fun deleteOficina(id: String) {
+        if (!isAdmin()) {
+            _uiState.update { it.copy(message = "Nomes l'administrador pot eliminar oficines") }
+            return
+        }
         scope.launch {
             try {
                 repository.delete(id)

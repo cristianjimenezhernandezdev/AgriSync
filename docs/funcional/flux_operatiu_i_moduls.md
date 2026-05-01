@@ -67,10 +67,10 @@ També permet copiar un resum estructurat i la checklist al porta-retalls.
 
 Segons rol, l'app ofereix:
 
-- `Tecnics`: alta, baixa, detall, assignacions i canvi de password
+- `Tecnics`: alta, baixa, detall, assignacions i canvi de password. L'`admin` te gestio global; l'`oficina_manager` nomes gestiona perfils `tecnic` i `lectura` de la seva oficina
 - `Titulars`: alta, edicio, baixa, comparticio entre oficines i cerca ampliada per `nif`, `telefon`, `email`, `adreca` i `codi_postal`
 - `Terres`: manteniment transversal de terres
-- `Oficines`: alta, edicio i baixa
+- `Oficines`: l'`admin` pot crear, editar i eliminar; l'`oficina_manager` nomes pot editar la seva oficina
 - `Perfil`: dades del tecnic actual amb `nom`, `oficina`, `email`, `telefon` i canvi del propi password
 
 ### Comparticio de titulars amb oficines no visibles
@@ -80,6 +80,8 @@ Per mantenir la RLS estricta, un manager nomes veu directament les oficines que 
 Com a solucio MVP, el dialeg de comparticio de titular permet introduir l'email del manager receptor. L'app busca l'oficina associada a aquell manager actiu, l'afegeix temporalment a la llista d'oficines receptores i permet crear la comparticio normal per `scope`.
 
 Aquest flux evita haver d'obrir la lectura global d'oficines als managers i permet compartir amb oficines acabades de crear sense canviar l'esquema de base de dades.
+
+La comparticio no arrossega permisos administratius. El manager receptor pot usar el titular compartit i assignar-hi els seus tecnics quan el `scope` ho permet, pero no pot editar, eliminar ni canviar passwords de tecnics d'altres oficines.
 
 ## Casos de prova que cobreix la seed
 

@@ -9,14 +9,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cat.agrisync.data.OficinaDto
+import cat.agrisync.data.TecnicDto
 import cat.agrisync.viewmodel.OficinaManagementViewModel
 
 @Composable
 internal fun OficinaManagementScreen(
     viewModel: OficinaManagementViewModel,
+    currentTecnic: TecnicDto,
     onBack: () -> Unit
 ) {
     val ui by viewModel.uiState.collectAsState()
+    val isAdmin = currentTecnic.rol == "admin"
+    val isManager = currentTecnic.rol == "oficina_manager"
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(ui.message) {
@@ -38,8 +42,10 @@ internal fun OficinaManagementScreen(
                     TextButton(onClick = onBack) { Text("< Tornar") }
                     Text("Gestio d'Oficines", style = MaterialTheme.typography.headlineSmall)
                 }
-                Button(onClick = { viewModel.showCreateDialog() }) {
-                    Text("+ Nova Oficina")
+                if (isAdmin) {
+                    Button(onClick = { viewModel.showCreateDialog() }) {
+                        Text("+ Nova Oficina")
+                    }
                 }
             }
 
@@ -63,6 +69,8 @@ internal fun OficinaManagementScreen(
                                 isEditingThis = ui.editingOficina?.id == oficina.id,
                                 editNom = ui.editNom,
                                 isEditing = ui.isEditing,
+                                canEdit = isAdmin || (isManager && oficina.id == currentTecnic.oficina_id),
+                                canDelete = isAdmin,
                                 onStartEdit = { viewModel.startEdit(oficina) },
                                 onCancelEdit = viewModel::cancelEdit,
                                 onEditNom = viewModel::onEditNom,
@@ -111,6 +119,8 @@ private fun OficinaCard(
     isEditingThis: Boolean,
     editNom: String,
     isEditing: Boolean,
+    canEdit: Boolean,
+    canDelete: Boolean,
     onStartEdit: () -> Unit,
     onCancelEdit: () -> Unit,
     onEditNom: (String) -> Unit,
@@ -148,11 +158,15 @@ private fun OficinaCard(
                         Text("ID: ${oficina.id}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        TextButton(onClick = onStartEdit) { Text("Editar") }
-                        TextButton(
-                            onClick = { showDeleteConfirm = true },
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                        ) { Text("Eliminar") }
+                        if (canEdit) {
+                            TextButton(onClick = onStartEdit) { Text("Editar") }
+                        }
+                        if (canDelete) {
+                            TextButton(
+                                onClick = { showDeleteConfirm = true },
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) { Text("Eliminar") }
+                        }
                     }
                 }
             }
