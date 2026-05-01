@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -660,14 +661,25 @@ private fun CreateGranjaDialog(
         onDismissRequest = onDismiss,
         title = { Text("Nova granja") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "Identifica la granja pel seu nom i per la marca oficial.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedTextField(value = nom, onValueChange = { nom = it }, label = { Text("Nom granja") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = marca, onValueChange = { marca = it }, label = { Text("Marca oficial") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    Text(
+                        "Identifica la granja pel seu nom i per la marca oficial.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                item {
+                    OutlinedTextField(value = nom, onValueChange = { nom = it }, label = { Text("Nom granja") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                    OutlinedTextField(value = marca, onValueChange = { marca = it }, label = { Text("Marca oficial") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
             }
         },
         confirmButton = {
@@ -697,22 +709,39 @@ private fun CreateGranjaBestiarDialog(
         onDismissRequest = onDismiss,
         title = { Text("Nou registre de bestiar") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 if (!canCreate) {
-                    Text(
-                        "Per crear aquest registre necessites almenys una granja i catalegs de bestiar i fase productiva disponibles.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    item {
+                        Text(
+                            "Per crear aquest registre necessites almenys una granja i catalegs de bestiar i fase productiva disponibles.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 } else {
-                    Text(
-                        "Selecciona la granja, el tipus de bestiar, la fase productiva i el cens.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    GranjaDropdown(granges = granges, selectedId = selectedGranjaId, onSelect = { selectedGranjaId = it }, label = "Granja")
-                    BestiarDropdown(bestiars = bestiars, selectedId = selectedBestiarId, onSelect = { selectedBestiarId = it })
-                    FaseDropdown(fases = fases, selectedId = selectedFaseId, onSelect = { selectedFaseId = it })
-                    OutlinedTextField(value = cens, onValueChange = { cens = it }, label = { Text("Cens") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    item {
+                        Text(
+                            "Selecciona la granja, el tipus de bestiar, la fase productiva i el cens.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    item {
+                        GranjaDropdown(granges = granges, selectedId = selectedGranjaId, onSelect = { selectedGranjaId = it }, label = "Granja")
+                    }
+                    item {
+                        BestiarDropdown(bestiars = bestiars, selectedId = selectedBestiarId, onSelect = { selectedBestiarId = it })
+                    }
+                    item {
+                        FaseDropdown(fases = fases, selectedId = selectedFaseId, onSelect = { selectedFaseId = it })
+                    }
+                    item {
+                        OutlinedTextField(value = cens, onValueChange = { cens = it }, label = { Text("Cens") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    }
                 }
             }
         },
@@ -746,44 +775,67 @@ private fun CreateEntregaDialog(
         onDismissRequest = onDismiss,
         title = { Text("Nova entrega") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 if (!canCreate) {
-                    Text(
-                        "Per crear una entrega necessites almenys una granja d'origen.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Text(
-                        "Registra la sortida de dejeccions indicant origen, terra de destí i càlcul de nitrogen.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        "Campanya activa: $selectedCampanya",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    GranjaDropdown(granges = granges, selectedId = selectedGranjaId, onSelect = { selectedGranjaId = it }, label = "Granja d'origen")
-                    DateInputField(
-                        value = data,
-                        onValueChange = { data = it },
-                        label = "Data (dd/MM/YYYY)",
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (terres.isEmpty()) {
-                        Text("No tens cap terra accessible per seleccionar.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else {
-                        TerraDropdown(terres = terres, selectedId = selectedTerraId, onSelect = { selectedTerraId = it }, label = "Terra desti")
+                    item {
+                        Text(
+                            "Per crear una entrega necessites almenys una granja d'origen.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    OutlinedTextField(value = tipusFertilitzant, onValueChange = { tipusFertilitzant = it }, label = { Text("Tipus fertilitzant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    NitrogenTripletFieldGroup(
-                        kgN = kgN,
-                        onKgNChange = { kgN = it },
-                        volumM3 = volumM3,
-                        onVolumM3Change = { volumM3 = it },
-                        kgNPerM3 = kgNM3,
-                        onKgNPerM3Change = { kgNM3 = it }
-                    )
+                } else {
+                    item {
+                        Text(
+                            "Registra la sortida de dejeccions indicant origen, terra de destí i càlcul de nitrogen.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    item {
+                        Text(
+                            "Campanya activa: $selectedCampanya",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    item {
+                        GranjaDropdown(granges = granges, selectedId = selectedGranjaId, onSelect = { selectedGranjaId = it }, label = "Granja d'origen")
+                    }
+                    item {
+                        DateInputField(
+                            value = data,
+                            onValueChange = { data = it },
+                            label = "Data (dd/MM/YYYY)",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    if (terres.isEmpty()) {
+                        item {
+                            Text("No tens cap terra accessible per seleccionar.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        item {
+                            TerraDropdown(terres = terres, selectedId = selectedTerraId, onSelect = { selectedTerraId = it }, label = "Terra desti")
+                        }
+                    }
+                    item {
+                        OutlinedTextField(value = tipusFertilitzant, onValueChange = { tipusFertilitzant = it }, label = { Text("Tipus fertilitzant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    }
+                    item {
+                        NitrogenTripletFieldGroup(
+                            kgN = kgN,
+                            onKgNChange = { kgN = it },
+                            volumM3 = volumM3,
+                            onVolumM3Change = { volumM3 = it },
+                            kgNPerM3 = kgNM3,
+                            onKgNPerM3Change = { kgNM3 = it }
+                        )
+                    }
                 }
             }
         },

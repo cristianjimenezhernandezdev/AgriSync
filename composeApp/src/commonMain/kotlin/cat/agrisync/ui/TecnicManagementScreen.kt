@@ -124,6 +124,7 @@ private fun TecnicCard(
     onDelete: () -> Unit
 ) {
     val oficinaNom = oficines.find { it.id == tecnic.oficina_id }?.nom ?: tecnic.oficina_id
+    val isAdmin = tecnic.rol.equals("admin", ignoreCase = true)
 
     Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
         Row(
@@ -146,8 +147,10 @@ private fun TecnicCard(
                 }
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Switch(checked = tecnic.actiu, onCheckedChange = { onToggleActiu() })
-                Text(if (tecnic.actiu) "Actiu" else "Inactiu", style = MaterialTheme.typography.labelSmall)
+                if (!isAdmin) {
+                    Switch(checked = tecnic.actiu, onCheckedChange = { onToggleActiu() })
+                    Text(if (tecnic.actiu) "Actiu" else "Inactiu", style = MaterialTheme.typography.labelSmall)
+                }
                 TextButton(onClick = onOpenDetail) { Text("Detalls") }
                 if (tecnic.user_id != null) {
                     TextButton(onClick = onResetPassword) { Text("Password") }

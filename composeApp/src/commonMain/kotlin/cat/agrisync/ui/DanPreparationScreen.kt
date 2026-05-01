@@ -214,7 +214,7 @@ internal fun DanPreparationScreen(
                     item {
                         SectionTitle(
                             title = "Camps a revisar manualment",
-                            description = "Als PDFs reals hi ha camps finals que el MVP encara no calcula o no desa explicitament."
+                            description = "Abans de tancar la DAN, convé revisar alguns camps finals i comprovacions complementaries."
                         )
                     }
 
@@ -372,7 +372,7 @@ private fun AutomaticChecklistCard(ui: DanPreparationUiState) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text("Checklist automatica", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+            Text("Avisos automatics", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
             ui.automaticChecklistItems().forEach { item ->
                 Text("- $item", color = MaterialTheme.colorScheme.onTertiaryContainer)
             }
@@ -595,9 +595,9 @@ private fun ManualReviewCard() {
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text("Comprovacions finals", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
-            Text("Agricola: revisar S/R i qualsevol camp normatiu extern que encara no estigui modelat al sistema.", color = MaterialTheme.colorScheme.onSecondaryContainer)
+            Text("Agricola: revisar S/R i qualsevol dada normativa o documental que s'hagi d'incorporar a la declaracio final.", color = MaterialTheme.colorScheme.onSecondaryContainer)
             Text("Ramadera: revisar que el balanç de cada granja quadri entre estoc inicial, generat, justificat per entregues i estoc final declarat.", color = MaterialTheme.colorScheme.onSecondaryContainer)
-            Text("Si algun d'aquests camps es necessita de manera recurrent, ja tenim una base clara per una iteracio posterior mes orientada a la DAN final.", color = MaterialTheme.colorScheme.onSecondaryContainer)
+            Text("Comprovar tambe els valors finals de fossa o altres dades complementaries abans de presentar la DAN.", color = MaterialTheme.colorScheme.onSecondaryContainer)
         }
     }
 }

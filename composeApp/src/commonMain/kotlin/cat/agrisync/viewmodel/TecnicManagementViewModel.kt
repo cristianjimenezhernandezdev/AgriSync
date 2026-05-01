@@ -124,6 +124,10 @@ internal class TecnicManagementViewModel(
     fun toggleActiu(tecnic: TecnicDto) {
         scope.launch {
             try {
+                if (tecnic.rol.equals("admin", ignoreCase = true)) {
+                    _uiState.update { it.copy(message = "L'administrador no es pot desactivar") }
+                    return@launch
+                }
                 println("[TECNIC] toggleActiu: ${tecnic.id} actiu=${tecnic.actiu} -> ${!tecnic.actiu}")
                 val updated = repository.updateTecnic(tecnic.id, TecnicUpdateRequest(actiu = !tecnic.actiu))
                 println("[TECNIC] toggleActiu OK: ${updated.nom} actiu=${updated.actiu}")

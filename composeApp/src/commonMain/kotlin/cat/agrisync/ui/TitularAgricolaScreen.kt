@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -537,21 +538,46 @@ private fun CreateTerraDialog(
         onDismissRequest = onDismiss,
         title = { Text("Nova terra") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "Introdueix la identificació SIGPAC bàsica i la superfície de la nova terra.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedTextField(value = munCodi, onValueChange = { munCodi = it }, label = { Text("Codi municipal (5 digits)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = poligon, onValueChange = { poligon = it }, label = { Text("Poligon") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = parcela, onValueChange = { parcela = it }, label = { Text("Parcela") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = recinte, onValueChange = { recinte = it }, label = { Text("Recinte") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = municipiLiteral, onValueChange = { municipiLiteral = it }, label = { Text("Municipi literal") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = usSigpac, onValueChange = { usSigpac = it }, label = { Text("Us SIGPAC") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = cultiu, onValueChange = { cultiu = it }, label = { Text("Cultiu") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = superficie, onValueChange = { superficie = it }, label = { Text("Superficie (ha)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                ZonaSelector(zona = zona, onZonaChange = { zona = it })
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    Text(
+                        "Introdueix la identificació SIGPAC bàsica i la superfície de la nova terra.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                item {
+                    OutlinedTextField(value = munCodi, onValueChange = { munCodi = it }, label = { Text("Codi municipal (5 digits)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                    OutlinedTextField(value = poligon, onValueChange = { poligon = it }, label = { Text("Poligon") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                    OutlinedTextField(value = parcela, onValueChange = { parcela = it }, label = { Text("Parcela") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                    OutlinedTextField(value = recinte, onValueChange = { recinte = it }, label = { Text("Recinte") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                    OutlinedTextField(value = municipiLiteral, onValueChange = { municipiLiteral = it }, label = { Text("Municipi literal") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                    OutlinedTextField(value = usSigpac, onValueChange = { usSigpac = it }, label = { Text("Us SIGPAC") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                    OutlinedTextField(value = cultiu, onValueChange = { cultiu = it }, label = { Text("Cultiu") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                    OutlinedTextField(value = superficie, onValueChange = { superficie = it }, label = { Text("Superficie (ha)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+                item {
+                    ZonaSelector(zona = zona, onZonaChange = { zona = it })
+                }
             }
         },
         confirmButton = {
@@ -617,50 +643,75 @@ private fun CreateAplicacioDialog(
         onDismissRequest = onDismiss,
         title = { Text("Nova aplicacio") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 if (terres.isEmpty()) {
-                    Text(
-                        "Abans de crear una aplicacio has de donar d'alta almenys una terra per aquest titular.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Text(
-                        "Selecciona la terra i informa la data i les quantitats aplicades.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        "Campanya activa: $selectedCampanya",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    TerraDropdown(
-                        terres = terres,
-                        selectedId = selectedTerraId,
-                        onSelect = { selectedTerraId = it }
-                    )
-                    DateInputField(
-                        value = data,
-                        onValueChange = { data = it },
-                        label = "Data (dd/MM/YYYY)",
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(value = tipusFertilitzant, onValueChange = { tipusFertilitzant = it }, label = { Text("Tipus fertilitzant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = procedencia, onValueChange = { procedencia = it }, label = { Text("Procedencia") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    NitrogenTripletFieldGroup(
-                        kgN = kgN,
-                        onKgNChange = { kgN = it },
-                        volumM3 = volumM3,
-                        onVolumM3Change = { volumM3 = it },
-                        kgNPerM3 = kgNM3,
-                        onKgNPerM3Change = { kgNM3 = it }
-                    )
-                    if (projectedExcessKgN != null) {
-                        HorizontalDivider()
+                    item {
                         Text(
-                            "Avis campanya $selectedCampanya: aquesta entrada deixara la terra ${formatKgN(projectedExcessKgN)} kg N per sobre del limit anual.",
-                            color = MaterialTheme.colorScheme.error
+                            "Abans de crear una aplicacio has de donar d'alta almenys una terra per aquest titular.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                } else {
+                    item {
+                        Text(
+                            "Selecciona la terra i informa la data i les quantitats aplicades.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    item {
+                        Text(
+                            "Campanya activa: $selectedCampanya",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    item {
+                        TerraDropdown(
+                            terres = terres,
+                            selectedId = selectedTerraId,
+                            onSelect = { selectedTerraId = it }
+                        )
+                    }
+                    item {
+                        DateInputField(
+                            value = data,
+                            onValueChange = { data = it },
+                            label = "Data (dd/MM/YYYY)",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    item {
+                        OutlinedTextField(value = tipusFertilitzant, onValueChange = { tipusFertilitzant = it }, label = { Text("Tipus fertilitzant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    }
+                    item {
+                        OutlinedTextField(value = procedencia, onValueChange = { procedencia = it }, label = { Text("Procedencia") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    }
+                    item {
+                        NitrogenTripletFieldGroup(
+                            kgN = kgN,
+                            onKgNChange = { kgN = it },
+                            volumM3 = volumM3,
+                            onVolumM3Change = { volumM3 = it },
+                            kgNPerM3 = kgNM3,
+                            onKgNPerM3Change = { kgNM3 = it }
+                        )
+                    }
+                    if (projectedExcessKgN != null) {
+                        item {
+                            HorizontalDivider()
+                        }
+                        item {
+                            Text(
+                                "Avis campanya $selectedCampanya: aquesta entrada deixara la terra ${formatKgN(projectedExcessKgN)} kg N per sobre del limit anual.",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }

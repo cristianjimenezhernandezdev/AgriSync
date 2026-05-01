@@ -302,18 +302,28 @@ private fun ShareTitularDialog(
         onDismissRequest = onDismiss,
         title = { Text("Compartir titular") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Titular: ${titular.nom_rao}")
-                Text(
-                    "Comparteix la part agricola, ramadera o comuna amb una altra oficina. Despres, el manager receptor podra assignar els seus tecnics.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    Text("Titular: ${titular.nom_rao}")
+                }
+                item {
+                    Text(
+                        "Comparteix la part agricola, ramadera o comuna amb una altra oficina. Despres, el manager receptor podra assignar els seus tecnics.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 if (officeShares.isEmpty()) {
-                    Text("Encara no hi ha comparticions actives.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    item {
+                        Text("Encara no hi ha comparticions actives.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 } else {
-                    officeShares.forEach { share ->
+                    items(officeShares, key = { it.id }) { share ->
                         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -332,31 +342,40 @@ private fun ShareTitularDialog(
                         }
                     }
                 }
-
-                Text("Nova comparticio", style = MaterialTheme.typography.titleSmall)
+                item {
+                    Text("Nova comparticio", style = MaterialTheme.typography.titleSmall)
+                }
                 if (oficines.isEmpty()) {
-                    Text("No hi ha mes oficines disponibles per compartir aquest titular.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    item {
+                        Text("No hi ha mes oficines disponibles per compartir aquest titular.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 } else {
-                    SearchableSelectionField(
-                        items = oficines,
-                        selectedItem = oficines.find { it.id == selectedOficinaId },
-                        onSelect = { oficina -> onSelectOficina(oficina?.id ?: "") },
-                        itemLabel = { it.nom },
-                        itemSearchText = { it.nom },
-                        label = "Oficina receptora",
-                        placeholder = "Cerca una oficina"
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("lectura", "agricola", "ramader", "comu").forEach { scope ->
-                            FilterChip(
-                                selected = selectedScope == scope,
-                                onClick = { onSelectScope(scope) },
-                                label = { Text(scope) }
-                            )
+                    item {
+                        SearchableSelectionField(
+                            items = oficines,
+                            selectedItem = oficines.find { it.id == selectedOficinaId },
+                            onSelect = { oficina -> onSelectOficina(oficina?.id ?: "") },
+                            itemLabel = { it.nom },
+                            itemSearchText = { it.nom },
+                            label = "Oficina receptora",
+                            placeholder = "Cerca una oficina"
+                        )
+                    }
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("lectura", "agricola", "ramader", "comu").forEach { scope ->
+                                FilterChip(
+                                    selected = selectedScope == scope,
+                                    onClick = { onSelectScope(scope) },
+                                    label = { Text(scope) }
+                                )
+                            }
                         }
                     }
                     if (isSaving) {
-                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                        item {
+                            LinearProgressIndicator(Modifier.fillMaxWidth())
+                        }
                     }
                 }
             }
@@ -395,51 +414,70 @@ private fun CreateTitularDialog(
         onDismissRequest = onDismiss,
         title = { Text("Crear nou titular") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = nom,
-                    onValueChange = onNomChange,
-                    label = { Text("Nom / Rao social") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = nif,
-                    onValueChange = onNifChange,
-                    label = { Text("NIF (opcional)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = telefon,
-                    onValueChange = onTelefonChange,
-                    label = { Text("Telefon") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = onEmailChange,
-                    label = { Text("Email") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = adreca,
-                    onValueChange = onAdrecaChange,
-                    label = { Text("Adreca") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = codiPostal,
-                    onValueChange = onCodiPostalChange,
-                    label = { Text("Codi postal") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    OutlinedTextField(
+                        value = nom,
+                        onValueChange = onNomChange,
+                        label = { Text("Nom / Rao social") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = nif,
+                        onValueChange = onNifChange,
+                        label = { Text("NIF (opcional)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = telefon,
+                        onValueChange = onTelefonChange,
+                        label = { Text("Telefon") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = onEmailChange,
+                        label = { Text("Email") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = adreca,
+                        onValueChange = onAdrecaChange,
+                        label = { Text("Adreca") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = codiPostal,
+                        onValueChange = onCodiPostalChange,
+                        label = { Text("Codi postal") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 if (isCreating) {
-                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    item {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                    }
                 }
             }
         },

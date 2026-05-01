@@ -337,83 +337,105 @@ private fun CreateTerraDialog(
         onDismissRequest = onDismiss,
         title = { Text("Crear nova terra") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Selector titular
-                SearchableSelectionField(
-                    items = titulars,
-                    selectedItem = titulars.find { it.id == titularId },
-                    onSelect = { titular -> onTitularIdChange(titular?.id ?: "") },
-                    itemLabel = { "${it.nom_rao} (${it.nif ?: "-"})" },
-                    itemSearchText = { "${it.nom_rao} ${it.nif ?: ""} ${it.telefon ?: ""} ${it.email ?: ""} ${it.codi_postal ?: ""}" },
-                    label = "Titular",
-                    placeholder = "Cerca per nom, NIF, telefon o CP",
-                    allowClearSelection = true,
-                    clearSelectionLabel = "Sense titular"
-                )
-
-                Text("Dades SIGPAC", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                OutlinedTextField(
-                    value = munCodi,
-                    onValueChange = onMunCodiChange,
-                    label = { Text("Codi municipal (5 digits, ex: 17071)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = poligon,
-                        onValueChange = onPoligonChange,
-                        label = { Text("Poligon") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = parcela,
-                        onValueChange = onParcelaChange,
-                        label = { Text("Parcela") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = recinte,
-                        onValueChange = onRecinteChange,
-                        label = { Text("Recinte") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    SearchableSelectionField(
+                        items = titulars,
+                        selectedItem = titulars.find { it.id == titularId },
+                        onSelect = { titular -> onTitularIdChange(titular?.id ?: "") },
+                        itemLabel = { "${it.nom_rao} (${it.nif ?: "-"})" },
+                        itemSearchText = { "${it.nom_rao} ${it.nif ?: ""} ${it.telefon ?: ""} ${it.email ?: ""} ${it.codi_postal ?: ""}" },
+                        label = "Titular",
+                        placeholder = "Cerca per nom, NIF, telefon o CP",
+                        allowClearSelection = true,
+                        clearSelectionLabel = "Sense titular"
                     )
                 }
-                OutlinedTextField(
-                    value = municipiLiteral,
-                    onValueChange = onMunicipiLiteralChange,
-                    label = { Text("Municipi literal") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = usSigpac,
-                    onValueChange = onUsSigpacChange,
-                    label = { Text("Us SIGPAC") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = cultiu,
-                    onValueChange = onCultiuChange,
-                    label = { Text("Cultiu") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = superficie,
-                    onValueChange = onSuperficieChange,
-                    label = { Text("Superficie (ha)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                ZonaSelector(zona = zona, onZonaChange = onZonaChange)
-
+                item {
+                    Text("Dades SIGPAC", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                }
+                item {
+                    OutlinedTextField(
+                        value = munCodi,
+                        onValueChange = onMunCodiChange,
+                        label = { Text("Codi municipal (5 digits, ex: 17071)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = poligon,
+                            onValueChange = onPoligonChange,
+                            label = { Text("Poligon") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = parcela,
+                            onValueChange = onParcelaChange,
+                            label = { Text("Parcela") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = recinte,
+                            onValueChange = onRecinteChange,
+                            label = { Text("Recinte") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                item {
+                    OutlinedTextField(
+                        value = municipiLiteral,
+                        onValueChange = onMunicipiLiteralChange,
+                        label = { Text("Municipi literal") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = usSigpac,
+                        onValueChange = onUsSigpacChange,
+                        label = { Text("Us SIGPAC") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = cultiu,
+                        onValueChange = onCultiuChange,
+                        label = { Text("Cultiu") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = superficie,
+                        onValueChange = onSuperficieChange,
+                        label = { Text("Superficie (ha)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    ZonaSelector(zona = zona, onZonaChange = onZonaChange)
+                }
                 if (isCreating) {
-                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    item {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                    }
                 }
             }
         },

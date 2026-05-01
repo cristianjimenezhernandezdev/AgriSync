@@ -152,7 +152,7 @@ internal data class DanPreparationUiState(
             items += "No s'han detectat buits basics automatics per a la campanya ${selectedCampanyaLabel()}."
         }
 
-        items += "Revisar manualment els camps finals de DAN que encara no modela el MVP: balanc ramader, estat inicial/final de fossa i camps normatius externs."
+        items += "Revisar manualment els camps finals de la DAN: balanc ramader, estat inicial/final de fossa i altres dades normatives o documentals necessaries."
         return items
     }
 
@@ -251,7 +251,7 @@ internal data class DanPreparationUiState(
         }
         appendLine()
 
-        appendLine("Checklist automatica")
+        appendLine("Avisos automatics")
         automaticChecklistItems().forEach { item ->
             appendLine("- $item")
         }
