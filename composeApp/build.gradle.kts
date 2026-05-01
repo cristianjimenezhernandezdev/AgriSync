@@ -54,6 +54,34 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "cat.agrisync"
             packageVersion = "1.0.0"
+            description = "Aplicacio desktop AgriSync per a la gestio DAN"
+            vendor = "AgriSync"
+
+            val windowsIcon = project.file("branding/icons/app-icon.ico")
+            val macIcon = project.file("branding/icons/app-icon.icns")
+            val linuxIcon = project.file("branding/icons/app-icon.png")
+
+            windows {
+                shortcut = true
+                dirChooser = true
+                perUserInstall = true
+                menuGroup = "AgriSync"
+                if (windowsIcon.exists()) {
+                    iconFile.set(windowsIcon)
+                }
+            }
+
+            macOS {
+                if (macIcon.exists()) {
+                    iconFile.set(macIcon)
+                }
+            }
+
+            linux {
+                if (linuxIcon.exists()) {
+                    iconFile.set(linuxIcon)
+                }
+            }
         }
     }
 }
@@ -61,4 +89,3 @@ compose.desktop {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
-
