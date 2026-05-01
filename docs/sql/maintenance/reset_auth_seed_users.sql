@@ -1,101 +1,45 @@
 -- =========================================================
 -- reset_auth_seed_users.sql
--- Neteja usuaris Auth dels seeds basic i demo d'AgriSync
+-- Neteja COMPLETAMENT Supabase Auth del projecte actual
 -- Executa'l al SQL Editor de Supabase ABANS de recrear usuaris
 -- =========================================================
 --
--- Aquest script elimina, si existeixen:
+-- ATENCIO:
+--   Aquest script es destructiu.
+--   Elimina TOTS els usuaris d'auth.users del projecte actual,
+--   no nomes els del seed demo.
+--
+--   També elimina, si existeixen:
 --   - sessions
 --   - refresh tokens
 --   - factors MFA
 --   - one time tokens
 --   - identities
---   - usuaris d'auth.users
 --
--- Nomes actua sobre els emails coneguts dels seeds del projecte.
--- No esborra altres usuaris del projecte de Supabase.
+--   I deixa a null tots els user_id de public.tecnic
+--   per evitar referencies trencades cap a Auth.
 -- =========================================================
-
-create temporary table if not exists tmp_agrisync_seed_emails (
-  email text primary key
-) on commit drop;
-
-truncate table tmp_agrisync_seed_emails;
-
-insert into tmp_agrisync_seed_emails (email)
-values
-  ('admin.test@agrisync.com'),
-  ('manager.test@agrisync.com'),
-  ('agricola.test@agrisync.com'),
-  ('ramader.test@agrisync.com'),
-  ('lectura.test@agrisync.com'),
-  ('admin.demo@agrisync.com'),
-  ('manager.lleida.demo@agrisync.com'),
-  ('manager.girona.demo@agrisync.com'),
-  ('sergi.agri.demo@agrisync.com'),
-  ('marta.ram.demo@agrisync.com'),
-  ('laia.comu.demo@agrisync.com'),
-  ('nil.shared.demo@agrisync.com'),
-  ('joan.agri.demo@agrisync.com'),
-  ('anna.ram.demo@agrisync.com'),
-  ('lectura.demo@agrisync.com')
-on conflict do nothing;
 
 do $$
 begin
   if to_regclass('auth.sessions') is not null then
-    execute $sql$
-      delete from auth.sessions
-      where user_id::text in (
-        select u.id::text
-        from auth.users u
-        join tmp_agrisync_seed_emails e on e.email = u.email
-      )
-    $sql$;
+    execute 'delete from auth.sessions';
   end if;
 
   if to_regclass('auth.refresh_tokens') is not null then
-    execute $sql$
-      delete from auth.refresh_tokens
-      where user_id::text in (
-        select u.id::text
-        from auth.users u
-        join tmp_agrisync_seed_emails e on e.email = u.email
-      )
-    $sql$;
+    execute 'delete from auth.refresh_tokens';
   end if;
 
   if to_regclass('auth.mfa_factors') is not null then
-    execute $sql$
-      delete from auth.mfa_factors
-      where user_id::text in (
-        select u.id::text
-        from auth.users u
-        join tmp_agrisync_seed_emails e on e.email = u.email
-      )
-    $sql$;
+    execute 'delete from auth.mfa_factors';
   end if;
 
   if to_regclass('auth.one_time_tokens') is not null then
-    execute $sql$
-      delete from auth.one_time_tokens
-      where user_id::text in (
-        select u.id::text
-        from auth.users u
-        join tmp_agrisync_seed_emails e on e.email = u.email
-      )
-    $sql$;
+    execute 'delete from auth.one_time_tokens';
   end if;
 
   if to_regclass('auth.identities') is not null then
-    execute $sql$
-      delete from auth.identities
-      where user_id::text in (
-        select u.id::text
-        from auth.users u
-        join tmp_agrisync_seed_emails e on e.email = u.email
-      )
-    $sql$;
+    execute 'delete from auth.identities';
   end if;
 end
 $$;
@@ -103,20 +47,13 @@ $$;
 do $$
 begin
   if to_regclass('public.tecnic') is not null then
-    execute $sql$
-      update public.tecnic
-      set user_id = null
-      where email in (select email from tmp_agrisync_seed_emails)
-    $sql$;
+    execute 'update public.tecnic set user_id = null where user_id is not null';
   end if;
 end
 $$;
 
-delete from auth.users
-where email in (select email from tmp_agrisync_seed_emails);
+delete from auth.users;
 
 select
-  e.email,
-  exists(select 1 from auth.users u where u.email = e.email) as continua_a_auth
-from tmp_agrisync_seed_emails e
-order by e.email;
+  (select count(*) from auth.users) as auth_users_restants,
+  (select count(*) from public.tecnic where user_id is not null) as tecnics_encara_enllacats;

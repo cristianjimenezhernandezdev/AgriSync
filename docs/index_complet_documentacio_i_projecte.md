@@ -39,14 +39,13 @@ docs/
 |-- presentacio/
 |   `-- guia_defensa.md
 |-- projecte/
-|   `-- estat_actual_i_roadmap.md
+|   |-- estat_actual_i_roadmap.md
+|   `-- millores_post_mvp.md
 `-- sql/
     |-- README.md
     |-- model_de_dades_i_bdd.md
     |-- maintenance/
-    |   |-- reaplica_permisos.sql
-    |   |-- reset_auth_seed_users.sql
-    |   `-- resincronitza_tecnic_user_ids.sql
+    |   `-- reset_auth_seed_users.sql
     |-- schema/
     |   `-- agrisync_schema.sql
     `-- seeds/
@@ -114,6 +113,10 @@ Resum funcional centrat en us d'usuari i no tant en implementacio.
 ### `docs/sql/README.md`
 
 Index del paquet SQL i de l'ordre d'execucio.
+
+### `docs/projecte/millores_post_mvp.md`
+
+Document pensat per defensa i tancament del MVP. Recull limits coneguts i linies d'evolucio futures sense necessitat d'implementar-les en aquesta fase.
 
 ## Estructura principal del repositori
 

@@ -62,14 +62,10 @@ L'esquema defineix, entre d'altres:
 
 ## Scripts de suport
 
-- `docs/sql/maintenance/reaplica_permisos.sql`
-  Reaplica grants i execucio de funcions.
-- `docs/sql/maintenance/resincronitza_tecnic_user_ids.sql`
-  Requadra `public.tecnic.user_id` amb `auth.users.id`.
 - `docs/sql/maintenance/reset_auth_seed_users.sql`
-  Neteja usuaris demo d'Auth abans de recrear-los.
+  Buida completament Auth abans de reconstruir la demo.
 
 ## Criteris actuals
 
-- no es conserva cap script SQL antic d'insercio directa a `auth.users`
-- la documentacio queda alineada amb el flux actual: dashboard/Auth API per usuaris, no hacks interns sobre GoTrue
+- el flux SQL actual si que crea usuaris demo a `auth.users` per deixar una reconstruccio completa en tres passos
+- la documentacio queda alineada amb el flux actual: `reset -> schema -> seed`

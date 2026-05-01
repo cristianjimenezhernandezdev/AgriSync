@@ -69,22 +69,19 @@ Conté:
 
 Conté:
 
-- verificació que els usuaris Auth existeixen
+- creació dels usuaris Auth demo
 - càrrega de demo
 - consultes finals de comprovació
 
 ### Scripts de manteniment
 
-- `docs/sql/maintenance/reaplica_permisos.sql`
-- `docs/sql/maintenance/resincronitza_tecnic_user_ids.sql`
 - `docs/sql/maintenance/reset_auth_seed_users.sql`
 
 ## Ordre correcte d'execució
 
-1. `schema/agrisync_schema.sql`
-2. crear usuaris a `Authentication > Users`
+1. `maintenance/reset_auth_seed_users.sql`
+2. `schema/agrisync_schema.sql`
 3. `seeds/agrisync_demo_seed.sql`
-4. manteniment només si cal
 
 ## Tipus enumerats
 
@@ -631,27 +628,19 @@ També està preparat per provar casos com:
 - col·laboració entre oficines
 - traçabilitat de sortides cap a terres amb justificació nitrogenada
 
-## Scripts de manteniment
-
-### `reaplica_permisos.sql`
-
-Reaplica grants i execucions. És útil si:
-
-- has tocat manualment el `schema`
-- algun entorn ha quedat parcialment desalineat
-
-### `resincronitza_tecnic_user_ids.sql`
-
-Serveix per reparar:
-
-- `public.tecnic.user_id`
-- respecte a `auth.users.id`
-
-És útil quan un usuari d'Auth existeix però l'app no troba el perfil funcional.
+## Scripts SQL actuals
 
 ### `reset_auth_seed_users.sql`
 
-Elimina usuaris demo coneguts d'Auth per poder reconstruir la demo des de zero.
+Buida completament `auth.users` i deixa `public.tecnic.user_id` a `null`.
+
+### `agrisync_schema.sql`
+
+Reconstrueix l'esquema funcional complet del projecte.
+
+### `agrisync_demo_seed.sql`
+
+Crea els usuaris Auth demo i carrega totes les dades de demostracio.
 
 ## Errors habituals de BDD
 
@@ -667,21 +656,11 @@ Solució:
 - executar la versió actual de `schema/agrisync_schema.sql`
 - tornar a llançar el fitxer sencer
 
-### 2. El seed falla dient que falten usuaris Auth
-
-Causa:
-
-- no s'han creat tots els usuaris a `Authentication > Users`
-
 ### 3. El login existeix a Auth però no a l'app
 
 Causa habitual:
 
 - desquadrament entre `auth.users.id` i `public.tecnic.user_id`
-
-Solució:
-
-- executar `resincronitza_tecnic_user_ids.sql`
 
 ### 4. L'usuari veu menys dades de les esperades
 

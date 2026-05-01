@@ -12,11 +12,9 @@ Aquest directori agrupa tot el que afecta la base de dades:
 ## Documents i scripts principals
 
 - [Model de dades i funcionament detallat de la BDD](model_de_dades_i_bdd.md)
+- `maintenance/reset_auth_seed_users.sql`
 - `schema/agrisync_schema.sql`
 - `seeds/agrisync_demo_seed.sql`
-- `maintenance/reaplica_permisos.sql`
-- `maintenance/resincronitza_tecnic_user_ids.sql`
-- `maintenance/reset_auth_seed_users.sql`
 
 ## Què fa cada fitxer
 
@@ -44,8 +42,9 @@ També deixa integrats dins l'esquema base els camps:
 
 ### `seeds/agrisync_demo_seed.sql`
 
-Carrega una demo funcional amb:
+Carrega una demo funcional completa amb:
 
+- usuaris Auth
 - oficines
 - tecnics
 - titulars
@@ -62,29 +61,20 @@ Carrega una demo funcional amb:
 El seed actual:
 
 - es pot reexecutar sobre la mateixa BDD de demo
+- recrea els usuaris demo a `auth.users`
 - neteja les dades demo conegudes abans de recarregar-les
 - inclou zones `ZV` i `ZNV`
 - deixa dades manuals i dades sincronitzades des de `entrega_dejeccions`
 
-### `maintenance/reaplica_permisos.sql`
-
-Reaplica permisos i execucio de funcions. Es útil quan s'ha tocat el `schema` o algun entorn ha quedat a mig ajustar.
-
-### `maintenance/resincronitza_tecnic_user_ids.sql`
-
-Torna a quadrar `public.tecnic.user_id` amb `auth.users.id`.
-
 ### `maintenance/reset_auth_seed_users.sql`
 
-Neteja usuaris demo coneguts d'Auth abans de recrear-los.
+Neteja completament Supabase Auth del projecte actual abans de recrear usuaris.
 
 ## Ordre recomanat d'execucio
 
-1. si vols reconstruir una demo existent: `maintenance/reset_auth_seed_users.sql`
+1. `maintenance/reset_auth_seed_users.sql`
 2. `schema/agrisync_schema.sql`
-3. crear usuaris demo a Supabase Auth
-4. `seeds/agrisync_demo_seed.sql`
-5. manteniment només si cal
+3. `seeds/agrisync_demo_seed.sql`
 
 ## Recomanacio operativa
 

@@ -32,7 +32,7 @@ Si una persona no coneix gens el projecte, l'ordre recomanat es aquest:
 - `presentacio/`
   Material de suport per defensa o explicacio oral del projecte.
 - `projecte/`
-  Estat actual del MVP i roadmap curt.
+  Estat actual del MVP, roadmap curt i millores futures previstes.
 - `sql/`
   Esquema, seed, manteniment i documentacio detallada de la BDD.
 
@@ -45,6 +45,7 @@ Si una persona no coneix gens el projecte, l'ordre recomanat es aquest:
 - [Model de dades i funcionament de la BDD](sql/model_de_dades_i_bdd.md)
 - [Permisos i seguretat](arquitectura/permisos_i_seguretat.md)
 - [Flux operatiu i moduls](funcional/flux_operatiu_i_moduls.md)
+- [Millores previstes per versions posteriors al MVP](projecte/millores_post_mvp.md)
 - [Index del paquet SQL](sql/README.md)
 - [Procediment de testing](guies/testing.md)
 

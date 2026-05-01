@@ -7,6 +7,7 @@ class JvmEnvConfig : EnvConfig {
 
     private val propertiesFileNames = listOf("agrisync.properties", "config/agrisync.properties")
     private data class LoadedProperties(val file: File, val props: Properties)
+    private data class LoadedBundledProperties(val source: String, val props: Properties)
 
     private fun addIfDirectory(target: MutableSet<File>, directory: File?) {
         val normalized = runCatching { directory?.canonicalFile }.getOrNull() ?: return
@@ -57,6 +58,15 @@ class JvmEnvConfig : EnvConfig {
         return LoadedProperties(file, props)
     }
 
+    private fun loadBundledProperties(): LoadedBundledProperties? {
+        val resourceName = "bundled-agrisync.properties"
+        val stream = JvmEnvConfig::class.java.classLoader.getResourceAsStream(resourceName) ?: return null
+        val props = Properties().apply {
+            stream.use { load(it) }
+        }
+        return LoadedBundledProperties(resourceName, props)
+    }
+
     private fun resolve(envName: String, props: Properties?): String? {
         System.getProperty(envName)?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
         System.getenv(envName)?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
@@ -66,12 +76,13 @@ class JvmEnvConfig : EnvConfig {
 
     override fun load(): SupabaseConfig? {
         val loaded = loadPropertiesFile()
-        val props = loaded?.props
+        val bundled = loadBundledProperties()
+        val props = loaded?.props ?: bundled?.props
         val url = resolve("SUPABASE_URL", props) ?: return null
         val anonKey = resolve("SUPABASE_ANON_KEY", props) ?: return null
         val serviceRoleKey = resolve("SUPABASE_SERVICE_ROLE_KEY", props) ?: return null
         println("[CONFIG] SUPABASE_URL=$url")
-        println("[CONFIG] Properties file=${loaded?.file?.absolutePath ?: "(cap)"}")
+        println("[CONFIG] Properties file=${loaded?.file?.absolutePath ?: bundled?.source ?: "(cap)"}")
         return SupabaseConfig(
             url = url,
             anonKey = anonKey,
@@ -80,7 +91,7 @@ class JvmEnvConfig : EnvConfig {
     }
 
     override fun missingMessage(): String {
-        val props = loadPropertiesFile()?.props
+        val props = loadPropertiesFile()?.props ?: loadBundledProperties()?.props
         val missing = buildList {
             if (resolve("SUPABASE_URL", props) == null) add("SUPABASE_URL")
             if (resolve("SUPABASE_ANON_KEY", props) == null) add("SUPABASE_ANON_KEY")

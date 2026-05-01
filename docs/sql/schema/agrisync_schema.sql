@@ -3,8 +3,6 @@
 -- Reinicia els objectes del projecte i recrea un esquema net
 -- Aquesta versio ja integra els camps volum_m3, kg_n_m3 i kg_n
 -- a entrega_dejeccions i aplicacions_fertilitzants.
--- La migracio maintenance/add_volum_nitrogen_columns.sql queda
--- nomes per actualitzar bases de dades antigues ja desplegades.
 -- =========================================================
 
 -- =========================================================
@@ -20,6 +18,7 @@ drop function if exists public.normalize_nutrient_fields() cascade;
 drop function if exists public.find_or_create_dan(uuid, integer) cascade;
 drop function if exists public.ensure_entrega_origen_matches_dan() cascade;
 drop function if exists public.sync_entrega_to_aplicacio() cascade;
+drop function if exists public.sync_tecnic_user_id_from_auth() cascade;
 drop function if exists public.current_oficina_id() cascade;
 drop function if exists public.is_admin() cascade;
 drop function if exists public.is_oficina_manager() cascade;
@@ -112,6 +111,34 @@ begin
     new.updated_at = now();
     new.updated_by = auth.uid();
     return new;
+  end if;
+
+  return new;
+end;
+$$;
+
+create or replace function public.sync_tecnic_user_id_from_auth()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  resolved_user_id uuid;
+begin
+  if new.email is null or btrim(new.email) = '' then
+    return new;
+  end if;
+
+  select u.id
+  into resolved_user_id
+  from auth.users u
+  where lower(u.email) = lower(new.email)
+  order by u.created_at desc
+  limit 1;
+
+  if resolved_user_id is not null then
+    new.user_id := resolved_user_id;
   end if;
 
   return new;
@@ -526,6 +553,10 @@ $$;
 create trigger trg_tecnic_actor
 before insert or update on public.tecnic
 for each row execute function public.audit_fill_actor();
+
+create trigger trg_tecnic_auth_sync
+before insert or update on public.tecnic
+for each row execute function public.sync_tecnic_user_id_from_auth();
 
 create trigger trg_titular_actor
 before insert or update on public.titular

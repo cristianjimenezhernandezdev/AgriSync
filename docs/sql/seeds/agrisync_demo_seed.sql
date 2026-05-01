@@ -12,57 +12,210 @@
 --   - poder-se reexecutar sobre la mateixa demo sense deixar restes
 -- 
 -- IMPORTANT:
---   Aquest script no crea usuaris a auth.users.
---   Crea primer aquests usuaris a Supabase Authentication > Users:
---
---   admin.demo@agrisync.com           / admin1234
---   manager.lleida.demo@agrisync.com  / lleida1234
---   manager.girona.demo@agrisync.com  / girona1234
---   sergi.agri.demo@agrisync.com      / sergi1234
---   marta.ram.demo@agrisync.com       / marta1234
---   laia.comu.demo@agrisync.com       / laia1234
---   nil.shared.demo@agrisync.com      / nil1234
---   joan.agri.demo@agrisync.com       / joan1234
---   anna.ram.demo@agrisync.com        / anna1234
---   lectura.demo@agrisync.com         / lectura1234
+--   Aquest script SI crea els usuaris demo a auth.users
+--   i deixa la base funcional en una sola execucio.
 -- =========================================================
 
 -- =========================================================
--- 0) VERIFICAR USUARIS AUTH
+-- 0) CREAR / RECREAR USUARIS AUTH DE DEMO
 -- =========================================================
+
+create temporary table if not exists tmp_agrisync_demo_auth_users (
+  id uuid primary key,
+  email text not null unique,
+  password text not null
+) on commit drop;
+
+truncate table tmp_agrisync_demo_auth_users;
+
+insert into tmp_agrisync_demo_auth_users (id, email, password)
+values
+  ('90000000-0000-0000-0000-000000000001', 'admin.demo@agrisync.com', 'admin1234'),
+  ('90000000-0000-0000-0000-000000000002', 'manager.lleida.demo@agrisync.com', 'lleida1234'),
+  ('90000000-0000-0000-0000-000000000003', 'manager.girona.demo@agrisync.com', 'girona1234'),
+  ('90000000-0000-0000-0000-000000000004', 'sergi.agri.demo@agrisync.com', 'sergi1234'),
+  ('90000000-0000-0000-0000-000000000005', 'marta.ram.demo@agrisync.com', 'marta1234'),
+  ('90000000-0000-0000-0000-000000000006', 'laia.comu.demo@agrisync.com', 'laia1234'),
+  ('90000000-0000-0000-0000-000000000007', 'nil.shared.demo@agrisync.com', 'nil1234'),
+  ('90000000-0000-0000-0000-000000000008', 'joan.agri.demo@agrisync.com', 'joan1234'),
+  ('90000000-0000-0000-0000-000000000009', 'anna.ram.demo@agrisync.com', 'anna1234'),
+  ('90000000-0000-0000-0000-000000000010', 'lectura.demo@agrisync.com', 'lectura1234')
+on conflict do nothing;
 
 do $$
-declare
-  missing_emails text[];
 begin
-  select array_agg(req.email)
-  into missing_emails
-  from (
-    values
-      ('admin.demo@agrisync.com'),
-      ('manager.lleida.demo@agrisync.com'),
-      ('manager.girona.demo@agrisync.com'),
-      ('sergi.agri.demo@agrisync.com'),
-      ('marta.ram.demo@agrisync.com'),
-      ('laia.comu.demo@agrisync.com'),
-      ('nil.shared.demo@agrisync.com'),
-      ('joan.agri.demo@agrisync.com'),
-      ('anna.ram.demo@agrisync.com'),
-      ('lectura.demo@agrisync.com')
-  ) as req(email)
-  where not exists (
-    select 1
-    from auth.users u
-    where u.email = req.email
-  );
+  if to_regclass('auth.sessions') is not null then
+    execute $sql$
+      delete from auth.sessions
+      where user_id::text in (
+        select u.id::text
+        from auth.users u
+        join tmp_agrisync_demo_auth_users d on lower(d.email) = lower(u.email)
+      )
+    $sql$;
+  end if;
 
-  if missing_emails is not null then
-    raise exception
-      'Falten usuaris a Authentication: %. Crea''ls primer al Dashboard de Supabase.',
-      array_to_string(missing_emails, ', ');
+  if to_regclass('auth.refresh_tokens') is not null then
+    execute $sql$
+      delete from auth.refresh_tokens
+      where user_id::text in (
+        select u.id::text
+        from auth.users u
+        join tmp_agrisync_demo_auth_users d on lower(d.email) = lower(u.email)
+      )
+    $sql$;
+  end if;
+
+  if to_regclass('auth.mfa_factors') is not null then
+    execute $sql$
+      delete from auth.mfa_factors
+      where user_id::text in (
+        select u.id::text
+        from auth.users u
+        join tmp_agrisync_demo_auth_users d on lower(d.email) = lower(u.email)
+      )
+    $sql$;
+  end if;
+
+  if to_regclass('auth.one_time_tokens') is not null then
+    execute $sql$
+      delete from auth.one_time_tokens
+      where user_id::text in (
+        select u.id::text
+        from auth.users u
+        join tmp_agrisync_demo_auth_users d on lower(d.email) = lower(u.email)
+      )
+    $sql$;
+  end if;
+
+  if to_regclass('auth.identities') is not null then
+    execute $sql$
+      delete from auth.identities
+      where user_id::text in (
+        select u.id::text
+        from auth.users u
+        join tmp_agrisync_demo_auth_users d on lower(d.email) = lower(u.email)
+      )
+    $sql$;
   end if;
 end
 $$;
+
+do $$
+begin
+  if to_regclass('public.tecnic') is not null then
+    execute $sql$
+      update public.tecnic
+      set user_id = null
+      where lower(email) in (select lower(email) from tmp_agrisync_demo_auth_users)
+    $sql$;
+  end if;
+end
+$$;
+
+delete from auth.users
+where lower(email) in (select lower(email) from tmp_agrisync_demo_auth_users);
+
+insert into auth.users (
+  instance_id,
+  id,
+  aud,
+  role,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  invited_at,
+  confirmation_token,
+  confirmation_sent_at,
+  recovery_token,
+  recovery_sent_at,
+  email_change_token_new,
+  email_change,
+  email_change_sent_at,
+  last_sign_in_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  is_super_admin,
+  created_at,
+  updated_at,
+  phone,
+  phone_confirmed_at,
+  phone_change,
+  phone_change_token,
+  phone_change_sent_at,
+  confirmed_at,
+  email_change_token_current,
+  email_change_confirm_status,
+  banned_until,
+  reauthentication_token,
+  reauthentication_sent_at,
+  is_sso_user,
+  deleted_at,
+  is_anonymous
+)
+select
+  '00000000-0000-0000-0000-000000000000'::uuid,
+  d.id,
+  'authenticated',
+  'authenticated',
+  d.email,
+  crypt(d.password, gen_salt('bf')),
+  now(),
+  null,
+  '',
+  null,
+  '',
+  null,
+  '',
+  '',
+  null,
+  null,
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{}'::jsonb,
+  false,
+  now(),
+  now(),
+  null,
+  null,
+  '',
+  '',
+  null,
+  now(),
+  '',
+  0,
+  null,
+  '',
+  null,
+  false,
+  null,
+  false
+from tmp_agrisync_demo_auth_users d;
+
+insert into auth.identities (
+  id,
+  user_id,
+  identity_data,
+  provider,
+  provider_id,
+  last_sign_in_at,
+  created_at,
+  updated_at
+)
+select
+  gen_random_uuid(),
+  d.id,
+  jsonb_build_object(
+    'sub', d.id::text,
+    'email', d.email,
+    'email_verified', true,
+    'phone_verified', false
+  ),
+  'email',
+  d.id::text,
+  null,
+  now(),
+  now()
+from tmp_agrisync_demo_auth_users d;
 
 -- =========================================================
 -- 0.1) NETEJA DE LA DEMO ANTERIOR
@@ -413,6 +566,31 @@ on conflict (id) do update set
   telefon = excluded.telefon,
   rol = excluded.rol,
   actiu = excluded.actiu;
+
+update public.tecnic t
+set user_id = u.id
+from auth.users u
+where lower(u.email) = lower(t.email)
+  and t.user_id is distinct from u.id;
+
+do $$
+declare
+  desincronitzats text[];
+begin
+  select array_agg(format('%s <%s>', t.nom, t.email))
+  into desincronitzats
+  from public.tecnic t
+  left join auth.users u on lower(u.email) = lower(t.email)
+  where u.id is null
+     or t.user_id is distinct from u.id;
+
+  if desincronitzats is not null then
+    raise exception
+      'Seed invalid: tecnics sense sincronitzar amb auth.users: %',
+      array_to_string(desincronitzats, ', ');
+  end if;
+end
+$$;
 
 -- =========================================================
 -- 3) TITULARS

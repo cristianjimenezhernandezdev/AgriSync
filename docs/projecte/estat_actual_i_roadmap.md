@@ -21,7 +21,7 @@ AgriSync esta en un punt de MVP funcional i demostrable. El nucli del projecte e
 
 El fitxer actual `docs/sql/seeds/agrisync_demo_seed.sql` no sembla una seed incompleta. Fa la feina esperada per a demo i proves funcionals:
 
-- valida que els usuaris Auth existeixin
+- recrea els usuaris Auth demo
 - carrega dades representatives
 - cobreix entitats principals del model
 - deixa consultes de comprovacio al final
@@ -41,3 +41,5 @@ La principal incidència detectada no era el seed, sino la documentacio: hi havi
 2. Afegir exportacio o plantilla formal de resum DAN.
 3. Refinar calculs normatius i validacions de domini.
 4. Revisar si algunes operacions administratives es poden desacoblar del `service_role`.
+
+Per a una llista mes detallada de limits detectats i possibles evolucions, consulta `docs/projecte/millores_post_mvp.md`.

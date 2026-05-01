@@ -1,4 +1,5 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.gradle.api.tasks.Copy
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -88,4 +89,13 @@ compose.desktop {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.named<Copy>("jvmProcessResources") {
+    val bundledRuntimeConfig = rootProject.file("agrisync.properties")
+    if (bundledRuntimeConfig.exists()) {
+        from(bundledRuntimeConfig) {
+            rename { "bundled-agrisync.properties" }
+        }
+    }
 }

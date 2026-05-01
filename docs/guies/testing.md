@@ -120,18 +120,7 @@ Cobreix la capa de **compatibilitat d'esquema** entre el codi Kotlin i la base d
 
 #### Correcció aplicada a la BDD
 
-L'error `volum_m3 does not exist` s'arregla executant la migració SQL:
-
-```
-docs/sql/maintenance/add_volum_nitrogen_columns.sql
-```
-
-```sql
-alter table public.entrega_dejeccions
-    add column if not exists volum_m3 numeric check (volum_m3 is null or volum_m3 >= 0),
-    add column if not exists kg_n_m3  numeric check (kg_n_m3  is null or kg_n_m3  >= 0),
-    add column if not exists kg_n     numeric check (kg_n     is null or kg_n     >= 0);
-```
+L'error `volum_m3 does not exist` queda resolt a l'esquema actual, perquè `docs/sql/schema/agrisync_schema.sql` ja integra aquestes columnes directament.
 
 #### Codi afegit a `SchemaCompatibility.kt`
 
