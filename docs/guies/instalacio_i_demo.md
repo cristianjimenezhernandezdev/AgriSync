@@ -158,6 +158,25 @@ Al final deixa consultes de verificacio per confirmar:
 - volum d'aplicacions manuals versus sincronitzades
 - terres que superen el limit anual de nitrogen
 
+## Credencials de demo
+
+Despres d'executar el seed, pots entrar a l'app amb aquests usuaris:
+
+| Rol | Email | Password | Us recomanat |
+|---|---|---|---|
+| Admin | `admin.demo@agrisync.com` | `admin1234` | Validar gestio global: oficines, tecnics, titulars i terres |
+| Manager Lleida | `manager.lleida.demo@agrisync.com` | `lleida1234` | Provar gestio d'oficina, creacio de titulars i tecnics |
+| Manager Girona | `manager.girona.demo@agrisync.com` | `girona1234` | Provar una segona oficina i comparticions |
+| Tecnic agricola | `sergi.agri.demo@agrisync.com` | `sergi1234` | Provar modul agricola |
+| Tecnic ramader | `marta.ram.demo@agrisync.com` | `marta1234` | Provar modul ramader |
+| Tecnic comu | `laia.comu.demo@agrisync.com` | `laia1234` | Provar acces complet agricola i ramader |
+| Tecnic compartit | `nil.shared.demo@agrisync.com` | `nil1234` | Provar dades compartides entre oficines |
+| Tecnic agricola Girona | `joan.agri.demo@agrisync.com` | `joan1234` | Provar treball agricola des d'una altra oficina |
+| Tecnic ramader Girona | `anna.ram.demo@agrisync.com` | `anna1234` | Provar treball ramader des d'una altra oficina |
+| Lectura | `lectura.demo@agrisync.com` | `lectura1234` | Validar acces nomes de consulta |
+
+Aquestes credencials son nomes per demo/MVP i surten de `docs/sql/seeds/agrisync_demo_seed.sql`.
+
 ## Pas 4. Executar l'aplicacio
 
 Des de l'arrel del repositori:
@@ -209,6 +228,7 @@ Has de poder:
 - editar titulars dins del seu abast
 - assignar tecnics de la seva oficina
 - veure o crear comparticions d'oficina quan pertoqui
+- compartir un titular amb una oficina no visible introduint l'email del manager receptor al dialeg de comparticio
 
 ### Com a tecnic agricola
 

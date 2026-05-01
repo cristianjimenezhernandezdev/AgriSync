@@ -73,6 +73,14 @@ Segons rol, l'app ofereix:
 - `Oficines`: alta, edicio i baixa
 - `Perfil`: dades del tecnic actual amb `nom`, `oficina`, `email`, `telefon` i canvi del propi password
 
+### Comparticio de titulars amb oficines no visibles
+
+Per mantenir la RLS estricta, un manager nomes veu directament les oficines que ja entren dins del seu abast. Aixo pot fer que una oficina nova no aparegui encara a la llista de comparticio.
+
+Com a solucio MVP, el dialeg de comparticio de titular permet introduir l'email del manager receptor. L'app busca l'oficina associada a aquell manager actiu, l'afegeix temporalment a la llista d'oficines receptores i permet crear la comparticio normal per `scope`.
+
+Aquest flux evita haver d'obrir la lectura global d'oficines als managers i permet compartir amb oficines acabades de crear sense canviar l'esquema de base de dades.
+
 ## Casos de prova que cobreix la seed
 
 - titulars compartits entre oficines

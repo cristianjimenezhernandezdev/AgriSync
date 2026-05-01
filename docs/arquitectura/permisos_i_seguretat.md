@@ -62,6 +62,7 @@ L'esquema defineix, entre d'altres:
 - `lectura` pot veure pero no editar
 - les entregues cap a terres o titulars d'altres ambit passen per comprovacions de referencia i lectura
 - les altes de titulars i terres passen per RPCs de domini per conservar permisos i auditoria
+- la comparticio amb una oficina no visible es resol introduint l'email del manager receptor; l'app nomes usa aquesta cerca per trobar l'oficina i despres crea la comparticio amb les policies normals
 
 ## Scripts de suport
 

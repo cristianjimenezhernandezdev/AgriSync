@@ -48,6 +48,8 @@ data class TitularManagementUiState(
     val showShareDialog: Boolean = false,
     val newShareOficinaId: String = "",
     val newShareScope: String = "lectura",
+    val shareManagerEmail: String = "",
+    val isLookingUpShareOffice: Boolean = false,
     val isSharing: Boolean = false,
     // Paginació
     val currentPage: Int = 0,
@@ -252,6 +254,8 @@ internal class TitularManagementViewModel(
                         officeShares = shares,
                         newShareOficinaId = availableOfficeId,
                         newShareScope = "lectura",
+                        shareManagerEmail = "",
+                        isLookingUpShareOffice = false,
                         showShareDialog = true
                     )
                 }
@@ -267,6 +271,8 @@ internal class TitularManagementViewModel(
                 shareTargetTitular = null,
                 officeShares = emptyList(),
                 showShareDialog = false,
+                shareManagerEmail = "",
+                isLookingUpShareOffice = false,
                 isSharing = false
             )
         }
@@ -278,6 +284,55 @@ internal class TitularManagementViewModel(
 
     fun onNewShareScope(value: String) {
         _uiState.update { it.copy(newShareScope = value) }
+    }
+
+    fun onShareManagerEmail(value: String) {
+        _uiState.update { it.copy(shareManagerEmail = value) }
+    }
+
+    fun lookupShareOfficeByManagerEmail() {
+        val email = _uiState.value.shareManagerEmail.trim()
+        if (email.isBlank()) {
+            _uiState.update { it.copy(message = "Introdueix l'email del manager receptor") }
+            return
+        }
+
+        scope.launch {
+            _uiState.update { it.copy(isLookingUpShareOffice = true) }
+            try {
+                val oficina = repository.findOfficeByManagerEmail(email)
+                if (oficina == null) {
+                    _uiState.update {
+                        it.copy(
+                            isLookingUpShareOffice = false,
+                            message = "No s'ha trobat cap manager actiu amb aquest email"
+                        )
+                    }
+                    return@launch
+                }
+
+                _uiState.update { state ->
+                    val updatedOficines = if (state.oficines.any { it.id == oficina.id }) {
+                        state.oficines
+                    } else {
+                        (state.oficines + oficina).sortedBy { it.nom }
+                    }
+                    state.copy(
+                        oficines = updatedOficines,
+                        newShareOficinaId = oficina.id,
+                        isLookingUpShareOffice = false,
+                        message = "Oficina '${oficina.nom}' afegida a la comparticio"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLookingUpShareOffice = false,
+                        message = "Error buscant oficina: ${e.message}"
+                    )
+                }
+            }
+        }
     }
 
     fun createOfficeShare() {

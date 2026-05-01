@@ -1,8 +1,21 @@
 package cat.agrisync.data
 
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import io.ktor.client.request.url
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import kotlinx.serialization.Serializable
 
-internal class TitularManagementRepository(private val restClient: RestClient) {
+internal class TitularManagementRepository(
+    private val restClient: RestClient,
+    private val httpClient: HttpClient,
+    private val config: SupabaseConfig
+) {
 
     // ── Titulars ──
 
@@ -44,6 +57,29 @@ internal class TitularManagementRepository(private val restClient: RestClient) {
     internal suspend fun listOfficeShares(titularId: String): List<OficinaTitularCompartitDto> {
         val q = "?select=id,oficina_id,titular_id,scope,created_at,updated_at,oficina:oficina_id(id,nom)&titular_id=eq.$titularId&order=created_at.desc"
         return restClient.get("oficina_titular_compartit", q)
+    }
+
+    internal suspend fun findOfficeByManagerEmail(email: String): OficinaDto? {
+        val cleanEmail = email.trim().lowercase()
+        if (cleanEmail.isBlank()) return null
+        if (config.serviceRoleKey.isBlank()) {
+            throw ApiException(500, "Falta SUPABASE_SERVICE_ROLE_KEY per buscar oficines per email")
+        }
+
+        val response = httpClient.get {
+            url("${config.url}/rest/v1/tecnic?select=oficina:oficina_id(id,nom)&email=eq.$cleanEmail&rol=eq.oficina_manager&actiu=eq.true&limit=1")
+            contentType(ContentType.Application.Json)
+            headers.append("apikey", config.serviceRoleKey)
+            headers.append(HttpHeaders.Authorization, "Bearer ${config.serviceRoleKey}")
+        }
+
+        if (!response.status.isSuccess()) {
+            val msg = response.bodyAsText().ifBlank { "HTTP ${response.status.value}" }
+            throw ApiException(response.status.value, msg)
+        }
+
+        val result: List<TecnicOfficeLookupDto> = response.body()
+        return result.firstOrNull()?.oficina
     }
 
     internal suspend fun createOfficeShare(body: OficinaTitularCompartitCreateRequest): OficinaTitularCompartitDto {
@@ -144,6 +180,11 @@ data class OficinaTitularCompartitCreateRequest(
     val oficina_id: String,
     val titular_id: String,
     val scope: String
+)
+
+@Serializable
+private data class TecnicOfficeLookupDto(
+    val oficina: OficinaDto? = null
 )
 
 @Serializable

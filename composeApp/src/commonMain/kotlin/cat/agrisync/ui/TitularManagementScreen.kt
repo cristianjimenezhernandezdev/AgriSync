@@ -143,9 +143,13 @@ internal fun TitularManagementScreen(
                 officeShares = ui.officeShares,
                 selectedOficinaId = ui.newShareOficinaId,
                 selectedScope = ui.newShareScope,
+                managerEmail = ui.shareManagerEmail,
                 isSaving = ui.isSharing,
+                isLookingUpOffice = ui.isLookingUpShareOffice,
                 onSelectOficina = viewModel::onNewShareOficina,
                 onSelectScope = viewModel::onNewShareScope,
+                onManagerEmailChange = viewModel::onShareManagerEmail,
+                onLookupOffice = viewModel::lookupShareOfficeByManagerEmail,
                 onConfirm = viewModel::createOfficeShare,
                 onDeleteShare = viewModel::deleteOfficeShare,
                 onDismiss = viewModel::closeShareDialog
@@ -291,9 +295,13 @@ private fun ShareTitularDialog(
     officeShares: List<cat.agrisync.data.OficinaTitularCompartitDto>,
     selectedOficinaId: String,
     selectedScope: String,
+    managerEmail: String,
     isSaving: Boolean,
+    isLookingUpOffice: Boolean,
     onSelectOficina: (String) -> Unit,
     onSelectScope: (String) -> Unit,
+    onManagerEmailChange: (String) -> Unit,
+    onLookupOffice: () -> Unit,
     onConfirm: () -> Unit,
     onDeleteShare: (String) -> Unit,
     onDismiss: () -> Unit
@@ -344,6 +352,39 @@ private fun ShareTitularDialog(
                 }
                 item {
                     Text("Nova comparticio", style = MaterialTheme.typography.titleSmall)
+                }
+                item {
+                    Text(
+                        "Si l'oficina no surt a la llista, introdueix l'email del seu manager per afegir-la.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = managerEmail,
+                            onValueChange = onManagerEmailChange,
+                            label = { Text("Email manager receptor") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedButton(
+                            onClick = onLookupOffice,
+                            enabled = !isSaving && !isLookingUpOffice
+                        ) {
+                            Text("Buscar")
+                        }
+                    }
+                }
+                if (isLookingUpOffice) {
+                    item {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                    }
                 }
                 if (oficines.isEmpty()) {
                     item {

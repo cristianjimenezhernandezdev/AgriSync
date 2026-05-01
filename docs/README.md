@@ -52,7 +52,7 @@ Si una persona no coneix gens el projecte, l'ordre recomanat es aquest:
 ## Quina pregunta respon cada document
 
 - `guies/instalacio_i_demo.md`
-  "Com poso en marxa el projecte des de zero, quines claus necessito i que faig si alguna cosa falla?"
+  "Com poso en marxa el projecte des de zero, quines claus necessito, quines credencials demo faig servir i que faig si alguna cosa falla?"
 - `arquitectura/arquitectura_i_codi.md`
   "Com esta organitzat el programa, quins fitxers hi ha, quines pantalles i viewmodels existeixen, i com flueixen les dades?"
 - `api/api_i_integracio.md`

@@ -64,6 +64,7 @@ Document operatiu. Serveix per:
 
 - preparar un projecte Supabase net
 - entendre quines claus i fitxers de configuracio fan falta
+- consultar les credencials de demo generades pel seed
 - aplicar esquema i seed en l'ordre correcte
 - executar el client desktop
 - validar la demo

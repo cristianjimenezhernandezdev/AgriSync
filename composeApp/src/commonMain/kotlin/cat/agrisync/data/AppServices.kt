@@ -34,7 +34,7 @@ internal class AppServices private constructor(
                 danPreparationRepository = DanPreparationRepository(userRestClient),
                 oficinaRepository = OficinaRepository(userRestClient),
                 tecnicRepository = TecnicRepository(userRestClient, httpClient, config),
-                titularManagementRepository = TitularManagementRepository(userRestClient)
+                titularManagementRepository = TitularManagementRepository(userRestClient, httpClient, config)
             )
         }
     }
