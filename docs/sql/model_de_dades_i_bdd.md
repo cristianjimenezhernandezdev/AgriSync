@@ -59,6 +59,7 @@ Conté:
 - indexos
 - trigger d'auditoria
 - funcions helper
+- RPCs de domini per crear `titular` i `terra`
 - grants
 - activació d'RLS
 - policies
@@ -585,6 +586,13 @@ Important:
 
 - el `grant` sol no dona accés real
 - la decisió final la fan les policies RLS
+
+Per evitar que altes habituals quedin bloquejades per detalls interns de RLS, l'esquema també exposa RPCs controlades:
+
+- `create_titular(...)`: permet crear titulars a `admin` i `oficina_manager`, i deixa `created_by = auth.uid()`.
+- `create_terra(...)`: permet crear terres a `admin`, a managers dins del seu àmbit i a tècnics amb escriptura agrícola sobre el titular.
+
+Aquestes RPCs no donen permisos nous; centralitzen la mateixa decisio de permisos a la BDD i eviten inserts directes inconsistents.
 
 ## Resum de polítiques per taula
 

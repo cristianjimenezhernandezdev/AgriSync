@@ -14,6 +14,8 @@ drop view if exists public.v_titular_access cascade;
 drop function if exists public.get_my_tecnic() cascade;
 drop function if exists public.current_auth_email() cascade;
 drop function if exists public.matches_current_identity(uuid, text) cascade;
+drop function if exists public.create_titular(text, text, text, text, text, text) cascade;
+drop function if exists public.create_terra(text, integer, integer, integer, numeric, uuid, text, text, text, public.zona_nitrogen) cascade;
 drop function if exists public.audit_fill_actor() cascade;
 drop function if exists public.resolve_nutrient_triplet(numeric, numeric, numeric) cascade;
 drop function if exists public.normalize_nutrient_fields() cascade;
@@ -947,7 +949,134 @@ as $$
   );
 $$;
 
+create or replace function public.create_titular(
+  p_nif text default null,
+  p_nom_rao text default null,
+  p_telefon text default null,
+  p_email text default null,
+  p_adreca text default null,
+  p_codi_postal text default null
+)
+returns setof public.titular
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Cal iniciar sessio per crear titulars'
+      using errcode = '42501';
+  end if;
+
+  if nullif(btrim(coalesce(p_nom_rao, '')), '') is null then
+    raise exception 'El nom o rao social del titular es obligatori'
+      using errcode = '23502';
+  end if;
+
+  if not (public.is_admin() or public.is_oficina_manager()) then
+    raise exception 'No tens permisos per crear titulars'
+      using errcode = '42501';
+  end if;
+
+  return query
+  insert into public.titular (
+    nif,
+    nom_rao,
+    telefon,
+    email,
+    adreca,
+    codi_postal,
+    created_by
+  )
+  values (
+    nullif(btrim(coalesce(p_nif, '')), ''),
+    btrim(p_nom_rao),
+    nullif(btrim(coalesce(p_telefon, '')), ''),
+    nullif(btrim(coalesce(p_email, '')), ''),
+    nullif(btrim(coalesce(p_adreca, '')), ''),
+    nullif(btrim(coalesce(p_codi_postal, '')), ''),
+    auth.uid()
+  )
+  returning *;
+end;
+$$;
+
+create or replace function public.create_terra(
+  p_mun_codi text,
+  p_poligon integer,
+  p_parcela integer,
+  p_recinte integer,
+  p_superficie numeric,
+  p_titular_id uuid default null,
+  p_municipi_literal text default null,
+  p_us_sigpac text default null,
+  p_cultiu text default null,
+  p_zona public.zona_nitrogen default 'ZNV'
+)
+returns setof public.terra
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Cal iniciar sessio per crear terres'
+      using errcode = '42501';
+  end if;
+
+  if nullif(btrim(coalesce(p_mun_codi, '')), '') is null
+    or p_poligon is null
+    or p_parcela is null
+    or p_recinte is null
+    or p_superficie is null
+  then
+    raise exception 'Falten dades SIGPAC obligatories'
+      using errcode = '23502';
+  end if;
+
+  if not (
+    public.is_admin()
+    or (p_titular_id is null and public.is_oficina_manager())
+    or (p_titular_id is not null and public.can_write_agricola(p_titular_id))
+  ) then
+    raise exception 'No tens permisos per crear aquesta terra'
+      using errcode = '42501';
+  end if;
+
+  return query
+  insert into public.terra (
+    titular_id,
+    mun_codi,
+    poligon,
+    parcela,
+    recinte,
+    municipi_literal,
+    us_sigpac,
+    cultiu,
+    superficie,
+    zona,
+    created_by
+  )
+  values (
+    p_titular_id,
+    btrim(p_mun_codi),
+    p_poligon,
+    p_parcela,
+    p_recinte,
+    nullif(btrim(coalesce(p_municipi_literal, '')), ''),
+    nullif(btrim(coalesce(p_us_sigpac, '')), ''),
+    nullif(btrim(coalesce(p_cultiu, '')), ''),
+    p_superficie,
+    coalesce(p_zona, 'ZNV'::public.zona_nitrogen),
+    auth.uid()
+  )
+  returning *;
+end;
+$$;
+
 grant execute on function public.get_my_tecnic() to authenticated;
+grant execute on function public.create_titular(text, text, text, text, text, text) to authenticated;
+grant execute on function public.create_terra(text, integer, integer, integer, numeric, uuid, text, text, text, public.zona_nitrogen) to authenticated;
 grant execute on function public.can_self_update_tecnic(uuid, uuid, uuid, public.rol_global, boolean) to authenticated;
 grant execute on function public.can_view_tecnic(uuid) to authenticated;
 grant execute on function public.can_view_oficina(uuid) to authenticated;

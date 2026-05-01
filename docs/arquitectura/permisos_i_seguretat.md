@@ -51,6 +51,8 @@ L'esquema defineix, entre d'altres:
 - `can_write_agricola(...)`
 - `can_write_ramader(...)`
 - `can_reference_terra(...)`
+- `create_titular(...)`
+- `create_terra(...)`
 
 ## Consequencies practiques
 
@@ -59,6 +61,7 @@ L'esquema defineix, entre d'altres:
 - un tecnic pot treballar nomes els titulars que te assignats o compartits
 - `lectura` pot veure pero no editar
 - les entregues cap a terres o titulars d'altres ambit passen per comprovacions de referencia i lectura
+- les altes de titulars i terres passen per RPCs de domini per conservar permisos i auditoria
 
 ## Scripts de suport
 

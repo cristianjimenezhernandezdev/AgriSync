@@ -27,6 +27,7 @@ Reconstrueix la base de dades del projecte:
 - indexos
 - triggers d'auditoria
 - funcions helper
+- RPCs de domini per a creacions sensibles
 - grants
 - RLS
 - policies
@@ -39,6 +40,11 @@ També deixa integrats dins l'esquema base els camps:
 - `aplicacions_fertilitzants.volum_m3`
 - `aplicacions_fertilitzants.kg_n_m3`
 - `aplicacions_fertilitzants.kg_n`
+
+I exposa operacions controlades per evitar errors de RLS en altes habituals:
+
+- `create_titular(...)`
+- `create_terra(...)`
 
 ### `seeds/agrisync_demo_seed.sql`
 

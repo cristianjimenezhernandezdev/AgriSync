@@ -76,20 +76,25 @@ No hi ha una API REST pròpia per sobre d'aquestes entitats. El client consumeix
 
 ## 3. RPC sobre PostgREST
 
-Endpoint clau:
+Endpoints clau:
 
 - `POST /rest/v1/rpc/get_my_tecnic`
+- `POST /rest/v1/rpc/create_titular`
+- `POST /rest/v1/rpc/create_terra`
 
 On es fa servir:
 
 - `composeApp/src/commonMain/kotlin/cat/agrisync/data/SupabaseAuthApi.kt`
+- `composeApp/src/commonMain/kotlin/cat/agrisync/data/TitularManagementRepository.kt`
+- `composeApp/src/commonMain/kotlin/cat/agrisync/data/AgricolaRepository.kt`
 
 Per què existeix:
 
 - per resoldre quin `public.tecnic` correspon a `auth.uid()`
 - per encapsular aquesta lògica a la base de dades
+- per fer altes sensibles sense dependre d'inserts directes que poden xocar amb RLS
 
-Aquest RPC es especialment important perquè el model funcional de l'app no gira directament al voltant d'`auth.users`, sino de `public.tecnic`.
+Aquestes RPCs son especialment importants perquè el model funcional de l'app no gira directament al voltant d'`auth.users`, sino de `public.tecnic` i dels seus permisos sobre titulars.
 
 ## 4. Supabase Admin API
 
@@ -215,6 +220,10 @@ Per a la majoria de pantalles, el flux es:
 7. DTO
 8. `UiState`
 9. Compose
+
+Excepcio controlada:
+
+- les altes de `titular` i `terra` passen per RPCs (`create_titular`, `create_terra`) perquè la BDD pugui comprovar permisos i escriure auditoria de forma consistent.
 
 ## Té API pròpia el projecte
 

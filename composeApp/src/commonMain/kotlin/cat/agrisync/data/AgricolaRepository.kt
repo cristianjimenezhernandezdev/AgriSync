@@ -23,7 +23,22 @@ internal class AgricolaRepository(private val restClient: RestClient) {
 
     internal suspend fun createTerra(body: TerraCreateRequest): TerraDto {
         val q = "?select=id,titular_id,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,updated_at,updated_by"
-        val result: List<TerraDto> = restClient.post("terra", body, q)
+        val result: List<TerraDto> = restClient.post(
+            "rpc/create_terra",
+            CreateTerraRpcRequest(
+                p_mun_codi = body.mun_codi,
+                p_poligon = body.poligon,
+                p_parcela = body.parcela,
+                p_recinte = body.recinte,
+                p_superficie = body.superficie,
+                p_titular_id = body.titular_id,
+                p_municipi_literal = body.municipi_literal,
+                p_us_sigpac = body.us_sigpac,
+                p_cultiu = body.cultiu,
+                p_zona = body.zona
+            ),
+            q
+        )
         return result.first()
     }
 

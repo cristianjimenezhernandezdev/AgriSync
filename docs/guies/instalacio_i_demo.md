@@ -9,7 +9,7 @@ Aquesta guia explica, pas a pas, com reconstruir AgriSync des de zero i com vali
 ### Infraestructura
 
 - un projecte de Supabase amb acces a:
-  `SQL Editor`, `Table Editor`, `Authentication > Users` i `Project Settings > API`
+  `SQL Editor`, `Table Editor` i `Project Settings > API`
 - connexio a internet des de la maquina on s'executa l'app
 
 ### Entorn local
@@ -74,21 +74,26 @@ $env:SUPABASE_SERVICE_ROLE_KEY="<service_role_key>"
 
 L'ordre important es aquest:
 
-1. si refas una demo existent, executar `docs/sql/maintenance/reset_auth_seed_users.sql`
+1. executar `docs/sql/maintenance/reset_auth_seed_users.sql`
 2. executar `docs/sql/schema/agrisync_schema.sql`
-3. crear manualment els usuaris demo a `Authentication > Users`
-4. executar `docs/sql/seeds/agrisync_demo_seed.sql`
-5. si cal, executar `docs/sql/maintenance/resincronitza_tecnic_user_ids.sql`
-6. si cal, executar `docs/sql/maintenance/reaplica_permisos.sql`
+3. executar `docs/sql/seeds/agrisync_demo_seed.sql`
 
 Aquest ordre no es arbitrari:
 
-- l'esquema crea taules, funcions helper, grants i policies
 - el reset d'Auth evita col·lisions quan es reconstrueix una demo ja existent
-- el seed assumeix que els usuaris Auth ja existeixen
-- les operacions de manteniment nomes tenen sentit quan la base ja esta desplegada
+- el reset deixa buits els usuaris i tokens d'Auth del projecte
+- l'esquema crea taules, funcions helper, RPCs de domini, grants i policies
+- el seed crea els usuaris Auth demo i la resta de dades funcionals
 
-## Pas 1. Aplicar l'esquema SQL
+## Pas 1. Netejar Supabase Auth
+
+Obre el `SQL Editor` de Supabase i executa:
+
+- `docs/sql/maintenance/reset_auth_seed_users.sql`
+
+Aquest fitxer es destructiu: elimina els usuaris Auth i tokens del projecte actual. Fes-lo servir quan vols reconstruir la demo de zero.
+
+## Pas 2. Aplicar l'esquema SQL
 
 Obre el `SQL Editor` de Supabase i executa el fitxer:
 
@@ -101,6 +106,7 @@ Aquest fitxer fa una reconstruccio completa:
 - recrea totes les taules
 - integra directament els camps `volum_m3`, `kg_n_m3` i `kg_n`
 - recrea triggers d'auditoria
+- afegeix les RPCs controlades `create_titular` i `create_terra`
 - recrea funcions helper de seguretat
 - aplica grants
 - activa RLS
@@ -114,32 +120,6 @@ Si el `schema` falla a mig cami, no intentis continuar enganxant nomes el tros o
 2. tornar a executar el fitxer sencer des del principi
 
 El motiu es que l'script te dependències entre funcions, triggers i policies. Deixar-lo a mitges pot provocar estats inconsistents.
-
-## Pas 2. Crear els usuaris demo a Supabase Auth
-
-Abans d'executar el seed, crea aquests usuaris a `Authentication > Users`:
-
-- `admin.demo@agrisync.com` / `admin1234`
-- `manager.lleida.demo@agrisync.com` / `lleida1234`
-- `manager.girona.demo@agrisync.com` / `girona1234`
-- `sergi.agri.demo@agrisync.com` / `sergi1234`
-- `marta.ram.demo@agrisync.com` / `marta1234`
-- `laia.comu.demo@agrisync.com` / `laia1234`
-- `nil.shared.demo@agrisync.com` / `nil1234`
-- `joan.agri.demo@agrisync.com` / `joan1234`
-- `anna.ram.demo@agrisync.com` / `anna1234`
-- `lectura.demo@agrisync.com` / `lectura1234`
--  `manager.campalans@agrisync.com` / `campa1234`
--  `rmart@campa.net` / `rmart1234`
-
-### Per què es fan a ma i no per SQL
-
-El projecte evita inserir directament a `auth.users` via SQL intern. Es prefereix:
-
-- dashboard de Supabase
-- o Admin API
-
-perque es un flux mes robust i menys dependent dels detalls interns de GoTrue.
 
 ## Pas 3. Executar el seed de demo
 
@@ -164,6 +144,8 @@ Aquest seed no es limita a posar quatre registres. Carrega una demo realista amb
 I a mes:
 
 - neteja abans les dades demo conegudes del projecte
+- crea els usuaris Auth demo amb password conegut
+- sincronitza `auth.users.id` amb `public.tecnic.user_id`
 - deixa aplicacions manuals i aplicacions sincronitzades des d'entregues
 - inclou terres en `ZV` i `ZNV`
 - deixa casos per comprovar limits anuals de nitrogen per campanya
@@ -270,7 +252,7 @@ Comprova:
 
 Causes habituals:
 
-- l'usuari no existeix a `Authentication > Users`
+- l'usuari no existeix a Auth
 - existeix a Auth pero no existeix o no coincideix a `public.tecnic`
 - `public.tecnic.user_id` no esta sincronitzat amb `auth.users.id`
 
@@ -278,21 +260,23 @@ Solucio:
 
 1. comprovar que l'email existeix a Auth
 2. comprovar que l'email existeix a `public.tecnic`
-3. executar `docs/sql/maintenance/resincronitza_tecnic_user_ids.sql` si cal
+3. si es una demo reconstruible, executar de nou la sequencia `reset -> schema -> seed`
 
-### 3. El seed falla dient que falten usuaris
+### 3. El seed falla creant usuaris Auth
 
 Símptoma:
 
-- excepcio del bloc inicial del seed
+- error dins del bloc inicial d'Auth
 
-Causa:
+Causa habitual:
 
-- encara no has creat algun usuari demo a `Authentication > Users`
+- no s'ha executat primer el reset complet d'Auth
+- queda algun registre intern d'Auth bloquejant l'email
 
 Solucio:
 
-- crear els usuaris que falten i tornar a executar el seed
+- executar `docs/sql/maintenance/reset_auth_seed_users.sql`
+- tornar a executar `docs/sql/seeds/agrisync_demo_seed.sql`
 
 ### 4. La UI carrega pero algunes pantalles donen `401` o `403`
 
@@ -309,9 +293,23 @@ Comprova:
 
 Si sospites d'un desajust de permisos:
 
-- executa `docs/sql/maintenance/reaplica_permisos.sql`
+- confirma que has executat la versio actual de `docs/sql/schema/agrisync_schema.sql`
+- comprova que existeixen les funcions `create_titular`, `create_terra` i `matches_current_identity`
 
-### 5. No es creen tecnics o no es poden canviar passwords
+### 5. No es poden crear titulars o terres i surt `42501`
+
+Causa habitual:
+
+- l'app esta fent una accio permesa per la UI, pero la BDD no te encara les RPCs actuals
+- el `schema` aplicat a Supabase es anterior a `create_titular` o `create_terra`
+- el manager o tecnic no queda resolt correctament per Auth i `public.tecnic`
+
+Solucio:
+
+- en entorn de demo, reconstruir amb l'ordre `reset -> schema -> seed`
+- en entorn amb dades que no es poden perdre, aplicar nomes el bloc actual de funcions helper/RPCs del `schema`
+
+### 6. No es creen tecnics o no es poden canviar passwords
 
 Causa habitual:
 
@@ -319,7 +317,7 @@ Causa habitual:
 
 Aquestes operacions fan servir Admin API i no es poden fer nomes amb `anon key`.
 
-### 6. L'app veu dades incorrectes o massa poques
+### 7. L'app veu dades incorrectes o massa poques
 
 Causes habituals:
 
@@ -328,7 +326,7 @@ Causes habituals:
 - hi ha comparticions d'oficina que no existeixen
 - l'usuari te rol `lectura`
 
-### 7. Error de xarxa, timeout, SSL o host desconegut
+### 8. Error de xarxa, timeout, SSL o host desconegut
 
 Normalment el problema no es del codi, sino de:
 
@@ -340,47 +338,32 @@ Normalment el problema no es del codi, sino de:
 
 La `LoginViewModel` ja tradueix molts d'aquests casos a missatges mes clars.
 
-### 8. El schema SQL falla a mig crear funcions
+### 9. El schema SQL falla a mig crear funcions
 
 Si treballes amb una copia antiga del fitxer, pot passar per ordre de dependències entre funcions. Solucio:
 
 - assegurar-se d'executar la versio actual de `docs/sql/schema/agrisync_schema.sql`
 - tornar a llançar l'script sencer
 
-## Scripts de manteniment i quan fer-los servir
-
-### `docs/sql/maintenance/resincronitza_tecnic_user_ids.sql`
-
-Serveix per reparar la correspondencia entre:
-
-- `auth.users.id`
-- `public.tecnic.user_id`
-
-Fes-lo servir si:
-
-- l'usuari existeix a Auth pero l'app no li troba perfil tecnic
-
-### `docs/sql/maintenance/reaplica_permisos.sql`
-
-Reaplica:
-
-- grants sobre taules
-- execucio de funcions helper
-
-Fes-lo servir si:
-
-- algun entorn ha quedat amb permisos desalineats
-- has tocat manualment objectes SQL
+## Els 3 scripts SQL a executar
 
 ### `docs/sql/maintenance/reset_auth_seed_users.sql`
 
-Neteja els usuaris demo coneguts d'Auth. Es util si vols reconstruir la demo des de zero sense anar esborrant un per un.
+Neteja completament Supabase Auth del projecte actual.
+
+### `docs/sql/schema/agrisync_schema.sql`
+
+Reconstrueix taules, triggers, funcions helper, RPCs de domini, grants i RLS.
+
+### `docs/sql/seeds/agrisync_demo_seed.sql`
+
+Crea els usuaris Auth demo i carrega totes les dades funcionals.
 
 ## Recomanacions per una demo estable
 
 - no modifiquis manualment registres a `public.tecnic` mentre tens l'app oberta
 - si canvies l'esquema, torna a aplicar el fitxer sencer
-- si canvies el seed, torna a validar usuaris Auth i relacio `user_id`
+- si canvies el seed, torna a executar la sequencia completa sobre un entorn net
 - usa usuaris diferents per provar rols diferents
 - valida sempre almenys una campanya 2024 i una 2025
 
@@ -422,8 +405,8 @@ Tests JVM:
 La posta en marxa d'AgriSync te quatre punts sensibles:
 
 - configuracio local correcta
-- projecte Supabase ben preparat
-- ordre correcte `schema -> Auth users -> seed`
+- projecte Supabase ben preparat amb el `schema` actual
+- ordre correcte `reset -> schema -> seed`
 - coherencia entre `auth.users` i `public.tecnic`
 
 Quan aquests quatre punts estan bé, la resta del projecte acostuma a funcionar de manera bastant directa.

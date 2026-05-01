@@ -15,7 +15,17 @@ internal class TitularManagementRepository(private val restClient: RestClient) {
     }
 
     internal suspend fun create(body: TitularCreateRequest): TitularDto {
-        val result: List<TitularDto> = restClient.post("titular", body)
+        val result: List<TitularDto> = restClient.post(
+            "rpc/create_titular",
+            CreateTitularRpcRequest(
+                p_nif = body.nif,
+                p_nom_rao = body.nom_rao,
+                p_telefon = body.telefon,
+                p_email = body.email,
+                p_adreca = body.adreca,
+                p_codi_postal = body.codi_postal
+            )
+        )
         return result.first()
     }
 
@@ -56,9 +66,20 @@ internal class TitularManagementRepository(private val restClient: RestClient) {
 
     internal suspend fun createTerra(body: TerraCreateRequest): TerraFullDto {
         val result: List<TerraFullDto> = restClient.post(
-            "terra",
-            body,
-            "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,created_at,updated_at,titular:titular_id(id,nom_rao,nif,telefon,email,adreca,codi_postal)"
+            "rpc/create_terra",
+            CreateTerraRpcRequest(
+                p_mun_codi = body.mun_codi,
+                p_poligon = body.poligon,
+                p_parcela = body.parcela,
+                p_recinte = body.recinte,
+                p_superficie = body.superficie,
+                p_titular_id = body.titular_id,
+                p_municipi_literal = body.municipi_literal,
+                p_us_sigpac = body.us_sigpac,
+                p_cultiu = body.cultiu,
+                p_zona = body.zona
+            ),
+            "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,created_at,updated_at"
         )
         return result.first()
     }
@@ -123,6 +144,30 @@ data class OficinaTitularCompartitCreateRequest(
     val oficina_id: String,
     val titular_id: String,
     val scope: String
+)
+
+@Serializable
+private data class CreateTitularRpcRequest(
+    val p_nif: String? = null,
+    val p_nom_rao: String,
+    val p_telefon: String? = null,
+    val p_email: String? = null,
+    val p_adreca: String? = null,
+    val p_codi_postal: String? = null
+)
+
+@Serializable
+data class CreateTerraRpcRequest(
+    val p_mun_codi: String,
+    val p_poligon: Int,
+    val p_parcela: Int,
+    val p_recinte: Int,
+    val p_superficie: Double,
+    val p_titular_id: String? = null,
+    val p_municipi_literal: String? = null,
+    val p_us_sigpac: String? = null,
+    val p_cultiu: String? = null,
+    val p_zona: String = "ZNV"
 )
 
 @Serializable
