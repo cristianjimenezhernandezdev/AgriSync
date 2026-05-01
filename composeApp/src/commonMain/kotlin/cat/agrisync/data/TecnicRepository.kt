@@ -46,15 +46,50 @@ internal class TecnicRepository(
         return result.first()
     }
 
-    /** Crea un usuari Auth via Admin API (requereix service_role key) i retorna el user_id */
-    internal suspend fun createAuthUser(email: String, password: String): String {
+    /** Crea el perfil de tècnic amb service_role per evitar bloquejos RLS en altes administratives. */
+    internal suspend fun createTecnicWithServiceRole(body: TecnicCreateRequest): TecnicDto {
+        if (config.serviceRoleKey.isBlank()) {
+            throw ApiException(500, "Falta SUPABASE_SERVICE_ROLE_KEY per crear el perfil del tecnic")
+        }
+
+        val response = httpClient.post {
+            url("${config.url}/rest/v1/tecnic")
+            contentType(ContentType.Application.Json)
+            headers.append("apikey", config.serviceRoleKey)
+            headers.append(HttpHeaders.Authorization, "Bearer ${config.serviceRoleKey}")
+            headers.append("Prefer", "return=representation")
+            setBody(body)
+        }
+
+        if (!response.status.isSuccess()) {
+            val msg = response.bodyAsText().ifBlank { "HTTP ${response.status.value}" }
+            throw ApiException(response.status.value, msg)
+        }
+
+        val result: List<TecnicDto> = response.body()
+        return result.first()
+    }
+
+    /** Cerca un tècnic visible per email per prevenir duplicats evidents abans de tocar Auth. */
+    internal suspend fun findVisibleTecnicByEmail(email: String): TecnicDto? {
+        val cleanEmail = email.trim().lowercase()
+        val result: List<TecnicDto> = restClient.get(
+            "tecnic",
+            "?select=id,oficina_id,user_id,nom,email,telefon,rol,actiu,created_at,created_by,updated_at,updated_by&email=eq.$cleanEmail&limit=1"
+        )
+        return result.firstOrNull()
+    }
+
+    /** Crea un usuari Auth via Admin API (requereix service_role key) i retorna si s'ha creat o recuperat. */
+    internal suspend fun createAuthUser(email: String, password: String): AuthUserLinkResult {
+        val cleanEmail = email.trim().lowercase()
         val response = httpClient.post {
             url("${config.url}/auth/v1/admin/users")
             contentType(ContentType.Application.Json)
             headers.append("apikey", config.serviceRoleKey)
             headers.append(HttpHeaders.Authorization, "Bearer ${config.serviceRoleKey}")
             setBody(CreateAuthUserRequest(
-                email = email,
+                email = cleanEmail,
                 password = password,
                 email_confirm = true
             ))
@@ -62,11 +97,22 @@ internal class TecnicRepository(
 
         if (!response.status.isSuccess()) {
             val msg = response.bodyAsText()
+            if (response.status.value == 422 && msg.contains("email_exists", ignoreCase = true)) {
+                val existingUserId = recoverExistingAuthUserId(cleanEmail, password)
+                if (existingUserId != null) {
+                    return AuthUserLinkResult(userId = existingUserId, reusedExisting = true)
+                }
+                throw ApiException(
+                    response.status.value,
+                    "Ja existeix un login amb aquest email a Supabase Auth. " +
+                        "Pot ser un intent anterior a mig crear o un usuari ja existent amb un altre password."
+                )
+            }
             throw ApiException(response.status.value, "Error creant usuari Auth: $msg")
         }
 
         val result: AuthUserCreatedResponse = response.body()
-        return result.id
+        return AuthUserLinkResult(userId = result.id, reusedExisting = false)
     }
 
     /** Llista assignacions tecnic_titular d'un tècnic */
@@ -156,6 +202,23 @@ internal class TecnicRepository(
         val actor = result.firstOrNull() ?: return null
         return actor.email?.takeIf { it.isNotBlank() }?.let { "${actor.nom} ($it)" } ?: actor.nom
     }
+
+    private suspend fun recoverExistingAuthUserId(email: String, password: String): String? {
+        val response = httpClient.post {
+            url("${config.url}/auth/v1/token?grant_type=password")
+            contentType(ContentType.Application.Json)
+            headers.append("apikey", config.anonKey)
+            headers.append(HttpHeaders.Authorization, "Bearer ${config.anonKey}")
+            setBody(PasswordGrantRequest(email = email, password = password))
+        }
+
+        if (!response.status.isSuccess()) {
+            return null
+        }
+
+        val authResponse: AuthResponse = response.body()
+        return authResponse.user.id
+    }
 }
 
 @Serializable
@@ -180,16 +243,27 @@ data class TecnicUpdateRequest(
 )
 
 @Serializable
-private data class CreateAuthUserRequest(
+    private data class CreateAuthUserRequest(
     val email: String,
     val password: String,
     val email_confirm: Boolean = true
 )
 
 @Serializable
+private data class PasswordGrantRequest(
+    val email: String,
+    val password: String
+)
+
+@Serializable
 private data class AuthUserCreatedResponse(
     val id: String,
     val email: String? = null
+)
+
+data class AuthUserLinkResult(
+    val userId: String,
+    val reusedExisting: Boolean
 )
 
 @Serializable

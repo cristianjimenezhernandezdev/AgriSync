@@ -229,11 +229,12 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                 }
 
                 Screen.TecnicManagement -> {
-                    val vm = remember { TecnicManagementViewModel(services.tecnicRepository) }
-                    DisposableEffect(Unit) { onDispose { vm.clear() } }
-                    LaunchedEffect(Unit) { vm.load() }
+                    val vm = remember(data.tecnic.id) { TecnicManagementViewModel(services.tecnicRepository, data.tecnic) }
+                    DisposableEffect(data.tecnic.id) { onDispose { vm.clear() } }
+                    LaunchedEffect(data.tecnic.id) { vm.load() }
                     TecnicManagementScreen(
                         viewModel = vm,
+                        currentTecnic = data.tecnic,
                         onBack = { currentScreen = Screen.TitularsHome },
                         onOpenDetail = { currentScreen = Screen.TecnicDetail(it) }
                     )

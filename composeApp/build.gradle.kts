@@ -54,7 +54,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "cat.agrisync"
-            packageVersion = "1.0.0"
+            packageVersion = "1.0.1"
             description = "Aplicacio desktop AgriSync per a la gestio DAN"
             vendor = "AgriSync"
 

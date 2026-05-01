@@ -39,7 +39,8 @@ data class TecnicManagementUiState(
 )
 
 internal class TecnicManagementViewModel(
-    private val repository: TecnicRepository
+    private val repository: TecnicRepository,
+    private val currentTecnic: TecnicDto
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _uiState = MutableStateFlow(TecnicManagementUiState())
@@ -51,9 +52,14 @@ internal class TecnicManagementViewModel(
             try {
                 val tecnics = repository.listAll()
                 val oficines = repository.listOficines()
+                val defaultOficinaId = if (currentTecnic.rol == "oficina_manager") {
+                    currentTecnic.oficina_id
+                } else {
+                    oficines.firstOrNull()?.id ?: ""
+                }
                 _uiState.update {
                     it.copy(isLoading = false, tecnics = tecnics, oficines = oficines,
-                        newOficinaId = oficines.firstOrNull()?.id ?: "")
+                        newOficinaId = defaultOficinaId)
                 }
             } catch (ex: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = ex.message ?: "Error") }
@@ -62,7 +68,17 @@ internal class TecnicManagementViewModel(
     }
 
     fun showCreateDialog() {
-        _uiState.update { it.copy(showCreateDialog = true, newNom = "", newEmail = "", newTelefon = "", newPassword = "", newRol = "tecnic") }
+        _uiState.update {
+            it.copy(
+                showCreateDialog = true,
+                newNom = "",
+                newEmail = "",
+                newTelefon = "",
+                newPassword = "",
+                newRol = "tecnic",
+                newOficinaId = if (currentTecnic.rol == "oficina_manager") currentTecnic.oficina_id else it.newOficinaId
+            )
+        }
     }
 
     fun hideCreateDialog() {
@@ -90,20 +106,51 @@ internal class TecnicManagementViewModel(
         scope.launch {
             _uiState.update { it.copy(isCreating = true) }
             try {
+                val cleanEmail = st.newEmail.trim().lowercase()
+                val targetOficinaId = if (currentTecnic.rol == "oficina_manager") {
+                    currentTecnic.oficina_id
+                } else {
+                    st.newOficinaId
+                }
+                val targetRol = when {
+                    currentTecnic.rol == "oficina_manager" && st.newRol !in setOf("tecnic", "lectura") -> "tecnic"
+                    else -> st.newRol
+                }
+
+                val existingTecnic = repository.findVisibleTecnicByEmail(cleanEmail)
+                if (existingTecnic != null) {
+                    _uiState.update {
+                        it.copy(
+                            isCreating = false,
+                            message = "Ja existeix un tecnic visible amb aquest email: ${existingTecnic.nom}"
+                        )
+                    }
+                    return@launch
+                }
+
                 // 1) Crear usuari Auth
-                val userId = repository.createAuthUser(st.newEmail.trim(), st.newPassword)
-                println("[TECNIC] Auth user creat: $userId")
+                val authLink = repository.createAuthUser(cleanEmail, st.newPassword)
+                val userId = authLink.userId
+                println("[TECNIC] Auth user ${if (authLink.reusedExisting) "recuperat" else "creat"}: $userId")
 
                 // 2) Crear tècnic a public.tecnic vinculat a l'usuari Auth
-                repository.createTecnic(TecnicCreateRequest(
-                    oficina_id = st.newOficinaId,
-                    user_id = userId,
-                    nom = st.newNom.trim(),
-                    email = st.newEmail.trim(),
-                    telefon = st.newTelefon.trim().ifBlank { null },
-                    rol = st.newRol,
-                    actiu = true
-                ))
+                try {
+                    repository.createTecnicWithServiceRole(TecnicCreateRequest(
+                        oficina_id = targetOficinaId,
+                        user_id = userId,
+                        nom = st.newNom.trim(),
+                        email = cleanEmail,
+                        telefon = st.newTelefon.trim().ifBlank { null },
+                        rol = targetRol,
+                        actiu = true
+                    ))
+                } catch (ex: Exception) {
+                    if (!authLink.reusedExisting) {
+                        runCatching { repository.deleteAuthUser(userId) }
+                        println("[TECNIC] Rollback Auth user: $userId")
+                    }
+                    throw ex
+                }
                 println("[TECNIC] Tecnic creat: ${st.newNom}")
 
                 // 3) Recarregar llista
@@ -111,7 +158,9 @@ internal class TecnicManagementViewModel(
                 _uiState.update {
                     it.copy(
                         isCreating = false, showCreateDialog = false,
-                        tecnics = tecnics, message = "Tecnic '${st.newNom}' creat correctament"
+                        tecnics = tecnics,
+                        message = "Tecnic '${st.newNom}' creat correctament" +
+                            if (authLink.reusedExisting) " reutilitzant un login Auth ja existent" else ""
                     )
                 }
             } catch (ex: Exception) {

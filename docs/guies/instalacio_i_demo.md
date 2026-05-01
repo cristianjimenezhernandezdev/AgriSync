@@ -130,6 +130,7 @@ Abans d'executar el seed, crea aquests usuaris a `Authentication > Users`:
 - `anna.ram.demo@agrisync.com` / `anna1234`
 - `lectura.demo@agrisync.com` / `lectura1234`
 -  `manager.campalans@agrisync.com` / `campa1234`
+-  `rmart@campa.net` / `rmart1234`
 
 ### Per què es fan a ma i no per SQL
 

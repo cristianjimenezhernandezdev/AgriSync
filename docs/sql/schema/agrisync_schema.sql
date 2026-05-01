@@ -12,6 +12,8 @@
 drop view if exists public.v_titular_access cascade;
 
 drop function if exists public.get_my_tecnic() cascade;
+drop function if exists public.current_auth_email() cascade;
+drop function if exists public.matches_current_identity(uuid, text) cascade;
 drop function if exists public.audit_fill_actor() cascade;
 drop function if exists public.resolve_nutrient_triplet(numeric, numeric, numeric) cascade;
 drop function if exists public.normalize_nutrient_fields() cascade;
@@ -614,6 +616,32 @@ for each row execute function public.sync_entrega_to_aplicacio();
 -- 5) HELPERS DE SEGURETAT
 -- =========================================================
 
+create or replace function public.current_auth_email()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select lower(nullif(auth.jwt() ->> 'email', ''));
+$$;
+
+create or replace function public.matches_current_identity(p_user_id uuid, p_email text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    (auth.uid() is not null and p_user_id = auth.uid())
+    or (
+      public.current_auth_email() is not null
+      and p_email is not null
+      and lower(p_email) = public.current_auth_email()
+    );
+$$;
+
 create or replace function public.get_my_tecnic()
 returns setof public.tecnic
 language sql
@@ -623,7 +651,7 @@ set search_path = public
 as $$
   select *
   from public.tecnic t
-  where t.user_id = auth.uid()
+  where public.matches_current_identity(t.user_id, t.email)
   limit 1;
 $$;
 
@@ -636,7 +664,7 @@ set search_path = public
 as $$
   select t.oficina_id
   from public.tecnic t
-  where t.user_id = auth.uid()
+  where public.matches_current_identity(t.user_id, t.email)
     and t.actiu = true
   limit 1;
 $$;
@@ -651,7 +679,7 @@ as $$
   select exists (
     select 1
     from public.tecnic t
-    where t.user_id = auth.uid()
+    where public.matches_current_identity(t.user_id, t.email)
       and t.actiu = true
       and t.rol = 'admin'
   );
@@ -667,7 +695,7 @@ as $$
   select exists (
     select 1
     from public.tecnic t
-    where t.user_id = auth.uid()
+    where public.matches_current_identity(t.user_id, t.email)
       and t.actiu = true
       and t.rol = 'oficina_manager'
   );
@@ -705,7 +733,7 @@ as $$
     select 1
     from public.tecnic t
     where t.id = p_tecnic_id
-      and t.user_id = auth.uid()
+      and public.matches_current_identity(t.user_id, t.email)
       and t.user_id is not distinct from p_user_id
       and t.oficina_id = p_oficina_id
       and t.rol = p_rol
@@ -801,7 +829,7 @@ as $$
       select 1
       from public.tecnic_titular tt
       join public.tecnic t on t.id = tt.tecnic_id
-      where t.user_id = auth.uid()
+      where public.matches_current_identity(t.user_id, t.email)
         and t.actiu = true
         and tt.titular_id = p_titular_id
         and tt.actiu = true
@@ -822,7 +850,7 @@ as $$
       select 1
       from public.tecnic t
       where t.id = p_tecnic_id
-        and t.user_id = auth.uid()
+        and public.matches_current_identity(t.user_id, t.email)
     )
     or exists (
       select 1
@@ -875,7 +903,7 @@ as $$
       select 1
       from public.tecnic_titular tt
       join public.tecnic t on t.id = tt.tecnic_id
-      where t.user_id = auth.uid()
+      where public.matches_current_identity(t.user_id, t.email)
         and t.actiu = true
         and tt.titular_id = p_titular_id
         and tt.actiu = true
@@ -1044,7 +1072,7 @@ using (
     select 1
     from public.tecnic t
     where t.id = tecnic_titular.tecnic_id
-      and t.user_id = auth.uid()
+      and public.matches_current_identity(t.user_id, t.email)
       and t.actiu = true
   )
 );

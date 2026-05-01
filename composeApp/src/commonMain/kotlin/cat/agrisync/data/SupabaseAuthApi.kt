@@ -128,7 +128,7 @@ class SupabaseAuthApi(
                 val response = httpClient.get {
                     url("${config.url}/rest/v1/tecnic?email=eq.$email&limit=1")
                     contentType(ContentType.Application.Json)
-                    headers.append("apikey", config.anonKey)
+                    headers.append("apikey", config.serviceRoleKey)
                     headers.append(HttpHeaders.Authorization, "Bearer ${config.serviceRoleKey}")
                 }
                 if (response.status.isSuccess()) {
@@ -144,7 +144,7 @@ class SupabaseAuthApi(
                                 val patchResp = httpClient.patch {
                                     url("${config.url}/rest/v1/tecnic?id=eq.${tecnic.id}")
                                     contentType(ContentType.Application.Json)
-                                    headers.append("apikey", config.anonKey)
+                                    headers.append("apikey", config.serviceRoleKey)
                                     headers.append(HttpHeaders.Authorization, "Bearer ${config.serviceRoleKey}")
                                     headers.append("Prefer", "return=representation")
                                     setBody("""{"user_id":"$userId"}""")

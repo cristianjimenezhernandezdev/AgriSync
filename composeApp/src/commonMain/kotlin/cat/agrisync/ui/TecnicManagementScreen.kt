@@ -16,6 +16,7 @@ import cat.agrisync.viewmodel.TecnicManagementViewModel
 @Composable
 internal fun TecnicManagementScreen(
     viewModel: TecnicManagementViewModel,
+    currentTecnic: TecnicDto,
     onBack: () -> Unit,
     onOpenDetail: (String) -> Unit
 ) {
@@ -66,6 +67,7 @@ internal fun TecnicManagementScreen(
 
         // Dialog crear nou tècnic
         if (ui.showCreateDialog) {
+            val currentOficina = ui.oficines.find { it.id == currentTecnic.oficina_id }
             CreateTecnicDialog(
                 nom = ui.newNom,
                 email = ui.newEmail,
@@ -74,6 +76,8 @@ internal fun TecnicManagementScreen(
                 rol = ui.newRol,
                 oficinaId = ui.newOficinaId,
                 oficines = ui.oficines,
+                currentUserRol = currentTecnic.rol ?: "tecnic",
+                lockedOficinaNom = currentOficina?.nom,
                 isCreating = ui.isCreating,
                 onNomChange = viewModel::onNewNom,
                 onEmailChange = viewModel::onNewEmail,
@@ -164,13 +168,16 @@ private fun TecnicCard(
 @Composable
 private fun CreateTecnicDialog(
     nom: String, email: String, telefon: String, password: String, rol: String, oficinaId: String,
-    oficines: List<OficinaDto>, isCreating: Boolean,
+    oficines: List<OficinaDto>, currentUserRol: String, lockedOficinaNom: String?, isCreating: Boolean,
     onNomChange: (String) -> Unit, onEmailChange: (String) -> Unit,
     onTelefonChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit, onRolChange: (String) -> Unit,
     onOficinaChange: (String) -> Unit,
     onConfirm: () -> Unit, onDismiss: () -> Unit
 ) {
+    val isManager = currentUserRol == "oficina_manager"
+    val allowedRoles = if (isManager) listOf("tecnic", "lectura") else listOf("tecnic", "lectura", "oficina_manager", "admin")
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Crear nou tecnic") },
@@ -221,19 +228,28 @@ private fun CreateTecnicDialog(
                 item {
                     Text("Oficina:", style = MaterialTheme.typography.labelMedium)
                 }
-                items(oficines, key = { it.id }) { ofi ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(selected = oficinaId == ofi.id, onClick = { onOficinaChange(ofi.id) })
-                        Text(ofi.nom)
+                if (isManager) {
+                    item {
+                        AssistChip(
+                            onClick = {},
+                            label = { Text(lockedOficinaNom ?: "Oficina actual") }
+                        )
+                    }
+                } else {
+                    items(oficines, key = { it.id }) { ofi ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = oficinaId == ofi.id, onClick = { onOficinaChange(ofi.id) })
+                            Text(ofi.nom)
+                        }
                     }
                 }
                 item {
                     Text("Rol:", style = MaterialTheme.typography.labelMedium)
                 }
-                items(listOf("tecnic", "oficina_manager", "admin"), key = { it }) { currentRol ->
+                items(allowedRoles, key = { it }) { currentRol ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
