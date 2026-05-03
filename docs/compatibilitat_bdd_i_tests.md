@@ -16,7 +16,7 @@ Quan la UI feia consultes o escriptures assumint aquests elements, PostgREST ret
 
 ## Solucio aplicada
 
-S'ha creat [SchemaCompatibility.kt](/C:/Cristian/DAM2/AgriSynct/composeApp/src/commonMain/kotlin/cat/agrisync/data/SchemaCompatibility.kt) per centralitzar:
+S'ha creat `composeApp/src/commonMain/kotlin/cat/agrisync/data/SchemaCompatibility.kt` per centralitzar:
 
 - selectors PostgREST compatibles
 - deteccio de taula absent al `schema cache`
@@ -38,7 +38,7 @@ S'ha creat [SchemaCompatibility.kt](/C:/Cristian/DAM2/AgriSynct/composeApp/src/c
 
 ## Tests afegits
 
-Fitxer: [SchemaCompatibilityTest.kt](/C:/Cristian/DAM2/AgriSynct/composeApp/src/jvmTest/kotlin/cat/agrisync/data/SchemaCompatibilityTest.kt)
+Fitxer: `composeApp/src/jvmTest/kotlin/cat/agrisync/data/SchemaCompatibilityTest.kt`
 
 Cobertura:
 

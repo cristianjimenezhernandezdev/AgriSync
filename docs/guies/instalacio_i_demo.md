@@ -41,7 +41,7 @@ L'ordre real de prioritat, implementat a `composeApp/src/jvmMain/kotlin/cat/agri
 1. propietats JVM `-D...`
 2. variables d'entorn del sistema
 3. fitxer `agrisync.properties`
-4. fitxer `config/agrisync.properties`
+4. ruta opcional `config/` amb un fitxer de propietats equivalent, si es crea expressament
 
 El codi busca aquests fitxers en diversos directoris candidats relacionats amb:
 
@@ -269,7 +269,7 @@ Comprova:
 
 - que existeixen `SUPABASE_URL`, `SUPABASE_ANON_KEY` i `SUPABASE_SERVICE_ROLE_KEY`
 - que no hi ha espais en blanc o claus truncades
-- que `agrisync.properties` esta realment a l'arrel o a `config/agrisync.properties`
+- que `agrisync.properties` esta realment a l'arrel, o que has creat expressament una ruta opcional `config/` amb el fitxer de propietats equivalent
 
 ### 2. El login falla amb credencials correctes
 

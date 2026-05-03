@@ -1338,9 +1338,9 @@ Serveix per executar scripts.
 
 Captures recomanades:
 
-[CAPTURA: SQL Editor amb `schema/agrisync_schema.sql`]
+[CAPTURA: SQL Editor amb `docs/sql/schema/agrisync_schema.sql`]
 
-[CAPTURA: SQL Editor amb `seeds/agrisync_demo_seed.sql`]
+[CAPTURA: SQL Editor amb `docs/sql/seeds/agrisync_demo_seed.sql`]
 
 [CAPTURA: resultat final del seed sense errors]
 
@@ -1605,7 +1605,5 @@ Aquest manual cobreix l'us complet d'AgriSync des de la perspectiva d'usuari i d
 - `docs/arquitectura/arquitectura_i_codi.md`
 - `docs/sql/model_de_dades_i_bdd.md`
 - `docs/arquitectura/permisos_i_seguretat.md`
-- `docs/presentacio/Modular48.md`
-- `docs/presentacio/DCasos.md`
-- `docs/presentacio/Activitats46.md`
-- `docs/presentacio/DClasses.md`
+- `docs/funcional/flux_operatiu_i_moduls.md`
+- `docs/presentacio/guia_defensa.md`

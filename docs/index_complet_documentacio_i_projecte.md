@@ -18,7 +18,6 @@ Aquest document fa de mapa mestre. Resumeix:
 5. [Model de dades i funcionament de la BDD](sql/model_de_dades_i_bdd.md)
 6. [Permisos i seguretat](arquitectura/permisos_i_seguretat.md)
 7. [Flux operatiu i moduls](funcional/flux_operatiu_i_moduls.md)
-8. [Capitols 4 i 5 de la memoria i manual d'usuari](presentacio/memoria_capitols_4_5_i_manual_usuari.md)
 
 ## Estructura actual de `docs/`
 
@@ -41,7 +40,7 @@ docs/
 |   `-- instalacio_i_demo.md
 |-- presentacio/
 |   |-- guia_defensa.md
-|   `-- memoria_capitols_4_5_i_manual_usuari.md
+|   `-- mem.md
 |-- projecte/
 |   |-- estat_actual_i_roadmap.md
 |   `-- millores_post_mvp.md
@@ -118,10 +117,6 @@ Resum especialitzat del model de permisos. Complementa el document detallat de B
 ### `docs/funcional/flux_operatiu_i_moduls.md`
 
 Resum funcional centrat en us d'usuari i no tant en implementacio.
-
-### `docs/presentacio/memoria_capitols_4_5_i_manual_usuari.md`
-
-Document preparat per completar la memoria del projecte final. Desenvolupa els punts 4.1 a 5.2 i afegeix un manual d'usuari. Inclou requeriments, casos d'us, diagrames d'activitat, diagrama de classes, disseny modular, model ER, model relacional i explicacio de com generar el model relacional des de Supabase/PostgreSQL.
 
 ### `docs/sql/README.md`
 
@@ -212,7 +207,6 @@ Si algú ha d'explicar o mantenir el projecte, els fitxers minimament imprescind
 - `composeApp/src/commonMain/kotlin/cat/agrisync/data/TecnicRepository.kt`
 - `docs/sql/schema/agrisync_schema.sql`
 - `docs/sql/seeds/agrisync_demo_seed.sql`
-- `docs/presentacio/memoria_capitols_4_5_i_manual_usuari.md`
 
 ## Criteri estructural actual
 

@@ -13,7 +13,6 @@ Aquest `README` es nomes el punt d'entrada ràpid. La documentacio extensa viu a
 - [API i integracio amb Supabase](docs/api/api_i_integracio.md)
 - [Model de dades i funcionament de la BDD](docs/sql/model_de_dades_i_bdd.md)
 - [Permisos i seguretat](docs/arquitectura/permisos_i_seguretat.md)
-- [Capitols 4 i 5 de la memoria i manual d'usuari](docs/presentacio/memoria_capitols_4_5_i_manual_usuari.md)
 
 ## Posada en marxa ràpida
 

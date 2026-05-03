@@ -10,12 +10,12 @@ L'objectiu del sistema de tests és verificar que la **lògica de negoci pura** 
 
 ## 2. Mòduls sota test
 
-S'han triat els dos fitxers de lògica pura del paquet `util/`:
+S'han triat els dos fitxers de lògica pura del paquet `composeApp/src/commonMain/kotlin/cat/agrisync/util/`:
 
 | Fitxer font | Paquet | Funció al projecte |
 |---|---|---|
-| `util/NitrogenMath.kt` | `cat.agrisync.util` | Càlculs del DAN: valida i resol el triplet kgN / volum m³ / concentració kgN/m³ que emplen els tècnics als formularis d'aplicació de dejeccions ramaderes |
-| `util/DateFormats.kt` | `cat.agrisync.util` | Normalització i conversió de dates entre format visual (dd/MM/yyyy), format d'entrada de l'usuari i format ISO 8601 (yyyy-MM-dd) que emmagatzema Supabase |
+| `composeApp/src/commonMain/kotlin/cat/agrisync/util/NitrogenMath.kt` | `cat.agrisync.util` | Càlculs del DAN: valida i resol el triplet kgN / volum m³ / concentració kgN/m³ que emplen els tècnics als formularis d'aplicació de dejeccions ramaderes |
+| `composeApp/src/commonMain/kotlin/cat/agrisync/util/DateFormats.kt` | `cat.agrisync.util` | Normalització i conversió de dates entre format visual (dd/MM/yyyy), format d'entrada de l'usuari i format ISO 8601 (yyyy-MM-dd) que emmagatzema Supabase |
 
 Aquests mòduls no depenen de UI, Compose, ni Ktor: són funcions pures ideals per a tests unitaris.
 

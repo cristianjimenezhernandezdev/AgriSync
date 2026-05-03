@@ -16,8 +16,6 @@ Si una persona no coneix gens el projecte, l'ordre recomanat es aquest:
    Per entendre el model relacional, les funcions helper, els triggers, les policies RLS i el flux de dades a la base de dades.
 5. `arquitectura/permisos_i_seguretat.md`
    Per llegir el resum de seguretat i control d'acces un cop ja es coneix el model general.
-6. `presentacio/memoria_capitols_4_5_i_manual_usuari.md`
-   Per tenir els capitols 4 i 5 de la memoria desenvolupats, amb requeriments, casos d'us, diagrames, model de dades i manual d'usuari.
 
 ## Estructura de `docs/`
 
@@ -48,7 +46,6 @@ Si una persona no coneix gens el projecte, l'ordre recomanat es aquest:
 - [Model de dades i funcionament de la BDD](sql/model_de_dades_i_bdd.md)
 - [Permisos i seguretat](arquitectura/permisos_i_seguretat.md)
 - [Flux operatiu i moduls](funcional/flux_operatiu_i_moduls.md)
-- [Capitols 4 i 5 de la memoria i manual d'usuari](presentacio/memoria_capitols_4_5_i_manual_usuari.md)
 - [Millores previstes per versions posteriors al MVP](projecte/millores_post_mvp.md)
 - [Index del paquet SQL](sql/README.md)
 - [Procediment de testing](guies/testing.md)
@@ -67,8 +64,6 @@ Si una persona no coneix gens el projecte, l'ordre recomanat es aquest:
   "Com esta modelada la BDD, quines taules intervenen, com s'aplica la seguretat i com es relaciona tot amb la UI?"
 - `arquitectura/permisos_i_seguretat.md`
   "Com es combina Auth, `public.tecnic`, scopes i RLS per decidir qui pot veure o modificar cada dada?"
-- `presentacio/memoria_capitols_4_5_i_manual_usuari.md`
-  "Com puc explicar formalment l'ambit, requeriments, casos d'us, activitats, classes, moduls, model ER, model relacional i manual d'usuari a la memoria?"
 
 ## Criteri editorial
 
