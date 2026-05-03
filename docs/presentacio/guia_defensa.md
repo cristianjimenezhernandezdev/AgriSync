@@ -12,6 +12,10 @@ AgriSync es un MVP desktop per centralitzar la DAN amb autenticacio real, permis
 4. recorregut d'usuari des del login fins a `Preparar DAN`
 5. decisions de disseny i limits del MVP
 
+Per preparar la part formal de la memoria, utilitza tambe:
+
+- `docs/presentacio/memoria_capitols_4_5_i_manual_usuari.md`
+
 ## Punts forts a destacar
 
 - no es un mock: hi ha Auth real i BDD real
@@ -27,6 +31,7 @@ AgriSync es un MVP desktop per centralitzar la DAN amb autenticacio real, permis
 - `composeApp/src/commonMain/kotlin/cat/agrisync/data/TecnicRepository.kt`
 - `docs/sql/schema/agrisync_schema.sql`
 - `docs/sql/seeds/agrisync_demo_seed.sql`
+- `docs/presentacio/memoria_capitols_4_5_i_manual_usuari.md`
 
 ## Resposta curta per preguntes dificils
 

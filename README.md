@@ -8,10 +8,12 @@ Aquest `README` es nomes el punt d'entrada ràpid. La documentacio extensa viu a
 
 - [Index general de documentacio](docs/README.md)
 - [Guia detallada de posada en marxa i troubleshooting](docs/guies/instalacio_i_demo.md)
+- [Manual d'usuari complet](docs/guies/Manual_Usuari.md)
 - [Arquitectura, codi i estructura del programa](docs/arquitectura/arquitectura_i_codi.md)
 - [API i integracio amb Supabase](docs/api/api_i_integracio.md)
 - [Model de dades i funcionament de la BDD](docs/sql/model_de_dades_i_bdd.md)
 - [Permisos i seguretat](docs/arquitectura/permisos_i_seguretat.md)
+- [Capitols 4 i 5 de la memoria i manual d'usuari](docs/presentacio/memoria_capitols_4_5_i_manual_usuari.md)
 
 ## Posada en marxa ràpida
 

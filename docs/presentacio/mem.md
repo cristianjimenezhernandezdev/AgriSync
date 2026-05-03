@@ -1,5 +1,7 @@
 # 1 Introduccio i objectius
 
+Nota documental: els capitols 4.1 a 5.2, els diagrames i el manual d'usuari estan desenvolupats a `docs/presentacio/memoria_capitols_4_5_i_manual_usuari.md`.
+
 ## 1.1 Descripcio general
 
 AgriSync es una aplicacio desktop desenvolupada amb Kotlin Multiplatform i JetBrains Compose orientada a la gestio de la DAN. El projecte centralitza en una sola eina la part administrativa i la part operativa del treball amb titulars, terres, granges, aplicacions fertilitzants i entregues de dejeccions.
