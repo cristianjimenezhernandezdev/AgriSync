@@ -1,6 +1,9 @@
 package cat.agrisync.viewmodel
 
 import cat.agrisync.data.TitularCreateRequest
+import cat.agrisync.data.AccessRepository
+import cat.agrisync.data.TecnicDto
+import cat.agrisync.data.TitularAccessRow
 import cat.agrisync.data.TitularDto
 import cat.agrisync.data.OficinaDto
 import cat.agrisync.data.OficinaTitularCompartitCreateRequest
@@ -19,6 +22,7 @@ import kotlinx.coroutines.launch
 
 data class TitularManagementUiState(
     val titulars: List<TitularDto> = emptyList(),
+    val accessByTitularId: Map<String, TitularAccessRow> = emptyMap(),
     val searchQuery: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -84,7 +88,9 @@ data class TitularManagementUiState(
 }
 
 internal class TitularManagementViewModel(
-    private val repository: TitularManagementRepository
+    private val repository: TitularManagementRepository,
+    private val accessRepository: AccessRepository,
+    private val currentTecnic: TecnicDto
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _uiState = MutableStateFlow(TitularManagementUiState())
@@ -96,7 +102,16 @@ internal class TitularManagementViewModel(
             try {
                 val list = repository.listAll()
                 val oficines = repository.listOficines()
-                _uiState.update { it.copy(isLoading = false, titulars = list, oficines = oficines, currentPage = 0) }
+                val accessRows = accessRepository.listTitularAccessForTecnic(currentTecnic)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        titulars = list,
+                        accessByTitularId = accessRows.associateBy { row -> row.titular_id },
+                        oficines = oficines,
+                        currentPage = 0
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error carregant titulars") }
             }
@@ -113,6 +128,14 @@ internal class TitularManagementViewModel(
 
     fun prevPage() {
         _uiState.update { s -> if (s.currentPage > 0) s.copy(currentPage = s.currentPage - 1) else s }
+    }
+
+    private fun canEditCommon(titularId: String): Boolean {
+        return _uiState.value.accessByTitularId[titularId]?.can_comu == true
+    }
+
+    private fun canManageTitular(titularId: String): Boolean {
+        return _uiState.value.accessByTitularId[titularId]?.can_manage == true
     }
 
     // ── Crear ──
@@ -174,6 +197,12 @@ internal class TitularManagementViewModel(
 
     // ── Editar ──
     fun startEdit(titular: TitularDto) {
+        if (!canEditCommon(titular.id)) {
+            _uiState.update {
+                it.copy(message = "No tens permis comu per editar aquest titular. Demana-ho als gestors del titular o a un administrador.")
+            }
+            return
+        }
         _uiState.update {
             it.copy(
                 editingTitular = titular,
@@ -201,6 +230,16 @@ internal class TitularManagementViewModel(
     fun saveEdit() {
         val state = _uiState.value
         val titular = state.editingTitular ?: return
+        if (!canEditCommon(titular.id)) {
+            _uiState.update {
+                it.copy(
+                    editingTitular = null,
+                    isEditing = false,
+                    message = "No tens permis comu per editar aquest titular. Demana-ho als gestors del titular o a un administrador."
+                )
+            }
+            return
+        }
         if (state.editNom.isBlank()) {
             _uiState.update { it.copy(message = "El nom es obligatori") }
             return
@@ -232,6 +271,12 @@ internal class TitularManagementViewModel(
 
     // ── Eliminar ──
     fun deleteTitular(titularId: String) {
+        if (!canManageTitular(titularId)) {
+            _uiState.update {
+                it.copy(message = "No pots eliminar aquest titular. Ho ha de fer l'oficina responsable o un administrador.")
+            }
+            return
+        }
         scope.launch {
             try {
                 repository.delete(titularId)
@@ -244,6 +289,12 @@ internal class TitularManagementViewModel(
     }
 
     fun openShareDialog(titular: TitularDto) {
+        if (!canManageTitular(titular.id)) {
+            _uiState.update {
+                it.copy(message = "No pots gestionar les comparticions d'aquest titular. Ho ha de fer l'oficina responsable o un administrador.")
+            }
+            return
+        }
         scope.launch {
             try {
                 val shares = repository.listOfficeShares(titular.id)
@@ -338,6 +389,15 @@ internal class TitularManagementViewModel(
     fun createOfficeShare() {
         val state = _uiState.value
         val titular = state.shareTargetTitular ?: return
+        if (!canManageTitular(titular.id)) {
+            _uiState.update {
+                it.copy(
+                    isSharing = false,
+                    message = "No pots gestionar les comparticions d'aquest titular. Ho ha de fer l'oficina responsable o un administrador."
+                )
+            }
+            return
+        }
         if (state.newShareOficinaId.isBlank()) {
             _uiState.update { it.copy(message = "Has de seleccionar una oficina") }
             return
@@ -370,6 +430,12 @@ internal class TitularManagementViewModel(
 
     fun deleteOfficeShare(shareId: String) {
         val titular = _uiState.value.shareTargetTitular ?: return
+        if (!canManageTitular(titular.id)) {
+            _uiState.update {
+                it.copy(message = "No pots gestionar les comparticions d'aquest titular. Ho ha de fer l'oficina responsable o un administrador.")
+            }
+            return
+        }
         scope.launch {
             try {
                 repository.deleteOfficeShare(shareId)

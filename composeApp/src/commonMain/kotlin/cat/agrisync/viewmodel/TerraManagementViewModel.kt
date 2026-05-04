@@ -3,6 +3,9 @@ package cat.agrisync.viewmodel
 import cat.agrisync.data.TerraCreateRequest
 import cat.agrisync.data.TerraFullDto
 import cat.agrisync.data.TerraUpdateFullRequest
+import cat.agrisync.data.AccessRepository
+import cat.agrisync.data.TecnicDto
+import cat.agrisync.data.TitularAccessRow
 import cat.agrisync.data.TitularDto
 import cat.agrisync.data.TitularManagementRepository
 import kotlinx.coroutines.CoroutineScope
@@ -18,6 +21,7 @@ import kotlinx.coroutines.launch
 data class TerraManagementUiState(
     val terres: List<TerraFullDto> = emptyList(),
     val titulars: List<TitularDto> = emptyList(),
+    val accessByTitularId: Map<String, TitularAccessRow> = emptyMap(),
     val searchQuery: String = "",
     val filterTitularId: String? = null,
     val isLoading: Boolean = false,
@@ -76,7 +80,9 @@ data class TerraManagementUiState(
 }
 
 internal class TerraManagementViewModel(
-    private val repository: TitularManagementRepository
+    private val repository: TitularManagementRepository,
+    private val accessRepository: AccessRepository,
+    private val currentTecnic: TecnicDto
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _uiState = MutableStateFlow(TerraManagementUiState())
@@ -88,7 +94,16 @@ internal class TerraManagementViewModel(
             try {
                 val terres = repository.listTerres()
                 val titulars = repository.listAll()
-                _uiState.update { it.copy(isLoading = false, terres = terres, titulars = titulars, currentPage = 0) }
+                val accessRows = accessRepository.listTitularAccessForTecnic(currentTecnic)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        terres = terres,
+                        titulars = titulars,
+                        accessByTitularId = accessRows.associateBy { row -> row.titular_id },
+                        currentPage = 0
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error carregant terres") }
             }
@@ -109,6 +124,27 @@ internal class TerraManagementViewModel(
 
     fun prevPage() {
         _uiState.update { s -> if (s.currentPage > 0) s.copy(currentPage = s.currentPage - 1) else s }
+    }
+
+    private fun isAdmin(): Boolean = currentTecnic.rol == "admin"
+
+    private fun isManager(): Boolean = currentTecnic.rol == "oficina_manager"
+
+    private fun canWriteAgricola(titularId: String?): Boolean {
+        return titularId?.let { _uiState.value.accessByTitularId[it]?.can_agricola == true } ?: false
+    }
+
+    private fun canUseTitularForTerra(titularId: String?): Boolean {
+        if (isAdmin()) return true
+        if (titularId.isNullOrBlank()) return isManager()
+        return canWriteAgricola(titularId)
+    }
+
+    private fun canWriteTerra(terra: TerraFullDto): Boolean {
+        if (isAdmin()) return true
+        val titularId = terra.titular_id
+        if (titularId != null) return canWriteAgricola(titularId)
+        return isManager() && terra.created_by == currentTecnic.user_id
     }
 
     // ── Crear ──
@@ -142,6 +178,7 @@ internal class TerraManagementViewModel(
         val parcela = s.newParcela.toIntOrNull()
         val recinte = s.newRecinte.toIntOrNull()
         val superficie = s.newSuperficie.toDoubleOrNull()
+        val targetTitularId = s.newTitularId.ifBlank { null }
 
         if (s.newMunCodi.isBlank() || poligon == null || parcela == null || recinte == null || superficie == null) {
             _uiState.update { it.copy(message = "Tots els camps SIGPAC i superficie son obligatoris") }
@@ -155,12 +192,18 @@ internal class TerraManagementViewModel(
             _uiState.update { it.copy(message = "La zona ha de ser ZV o ZNV") }
             return
         }
+        if (!canUseTitularForTerra(targetTitularId)) {
+            _uiState.update {
+                it.copy(message = "No tens permis agricola per crear terres en aquest titular. Demana-ho als gestors del titular o a un administrador.")
+            }
+            return
+        }
 
         scope.launch {
             _uiState.update { it.copy(isCreating = true) }
             try {
                 val body = TerraCreateRequest(
-                    titular_id = s.newTitularId.ifBlank { null },
+                    titular_id = targetTitularId,
                     mun_codi = s.newMunCodi,
                     poligon = poligon,
                     parcela = parcela,
@@ -182,6 +225,12 @@ internal class TerraManagementViewModel(
 
     // ── Editar ──
     fun startEdit(terra: TerraFullDto) {
+        if (!canWriteTerra(terra)) {
+            _uiState.update {
+                it.copy(message = "No tens permis agricola per editar aquesta terra. Demana-ho als gestors del titular o a un administrador.")
+            }
+            return
+        }
         _uiState.update {
             it.copy(
                 editingTerra = terra,
@@ -208,6 +257,23 @@ internal class TerraManagementViewModel(
         val s = _uiState.value
         val terra = s.editingTerra ?: return
         val superficie = s.editSuperficie.toDoubleOrNull()
+        val targetTitularId = s.editTitularId.ifBlank { null }
+        if (!canWriteTerra(terra)) {
+            _uiState.update {
+                it.copy(
+                    editingTerra = null,
+                    isEditing = false,
+                    message = "No tens permis agricola per editar aquesta terra. Demana-ho als gestors del titular o a un administrador."
+                )
+            }
+            return
+        }
+        if (!canUseTitularForTerra(targetTitularId)) {
+            _uiState.update {
+                it.copy(message = "No tens permis agricola per vincular aquesta terra al titular seleccionat.")
+            }
+            return
+        }
         if (superficie == null) {
             _uiState.update { it.copy(message = "Superficie ha de ser un nombre") }
             return
@@ -220,7 +286,7 @@ internal class TerraManagementViewModel(
             _uiState.update { it.copy(isEditing = true) }
             try {
                 val body = TerraUpdateFullRequest(
-                    titular_id = s.editTitularId.ifBlank { null },
+                    titular_id = targetTitularId,
                     municipi_literal = s.editMunicipiLiteral.ifBlank { null },
                     us_sigpac = s.editUsSigpac.ifBlank { null },
                     cultiu = s.editCultiu.ifBlank { null },
@@ -238,6 +304,13 @@ internal class TerraManagementViewModel(
 
     // ── Eliminar ──
     fun deleteTerra(terraId: String) {
+        val terra = _uiState.value.terres.firstOrNull { it.id == terraId }
+        if (terra != null && !canWriteTerra(terra)) {
+            _uiState.update {
+                it.copy(message = "No tens permis agricola per eliminar aquesta terra. Demana-ho als gestors del titular o a un administrador.")
+            }
+            return
+        }
         scope.launch {
             try {
                 repository.deleteTerra(terraId)

@@ -32,8 +32,8 @@ import cat.agrisync.viewmodel.HomeViewModel
 internal fun TitularsScreen(
     viewModel: HomeViewModel,
     onOpenDanPreparation: (String) -> Unit,
-    onOpenAgricola: (String) -> Unit,
-    onOpenRamader: (String) -> Unit
+    onOpenAgricola: (String, Boolean) -> Unit,
+    onOpenRamader: (String, Boolean) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isFiltered = uiState.searchText.isNotBlank()
@@ -151,8 +151,8 @@ private fun TitularCard(
     row: TitularAccessRow,
     actorLabel: String?,
     onOpenDanPreparation: (String) -> Unit,
-    onOpenAgricola: (String) -> Unit,
-    onOpenRamader: (String) -> Unit
+    onOpenAgricola: (String, Boolean) -> Unit,
+    onOpenRamader: (String, Boolean) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -173,10 +173,10 @@ private fun TitularCard(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AssistChip(onClick = { onOpenDanPreparation(row.titular_id) }, label = { Text("Preparar DAN") })
                 if (row.can_agricola) {
-                    AssistChip(onClick = { onOpenAgricola(row.titular_id) }, label = { Text("Agricola") })
+                    AssistChip(onClick = { onOpenAgricola(row.titular_id, row.can_comu) }, label = { Text("Agricola") })
                 }
                 if (row.can_ramader) {
-                    AssistChip(onClick = { onOpenRamader(row.titular_id) }, label = { Text("Ramader") })
+                    AssistChip(onClick = { onOpenRamader(row.titular_id, row.can_comu) }, label = { Text("Ramader") })
                 }
             }
         }

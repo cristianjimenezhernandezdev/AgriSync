@@ -72,8 +72,13 @@ internal fun TitularManagementScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(ui.pageItems, key = { it.id }) { titular ->
+                            val access = ui.accessByTitularId[titular.id]
+                            val canEditCommon = access?.can_comu == true
+                            val canManageTitular = access?.can_manage == true
                             TitularManagementCard(
                                 titular = titular,
+                                canEditCommon = canEditCommon,
+                                canManageTitular = canManageTitular,
                                 isEditingThis = ui.editingTitular?.id == titular.id,
                                 editNom = ui.editNom,
                                 editNif = ui.editNif,
@@ -161,6 +166,8 @@ internal fun TitularManagementScreen(
 @Composable
 private fun TitularManagementCard(
     titular: TitularDto,
+    canEditCommon: Boolean,
+    canManageTitular: Boolean,
     isEditingThis: Boolean,
     editNom: String,
     editNif: String,
@@ -185,7 +192,7 @@ private fun TitularManagementCard(
 
     Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (isEditingThis) {
+            if (isEditingThis && canEditCommon) {
                 Text("Editant titular", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 OutlinedTextField(
                     value = editNom,
@@ -256,14 +263,31 @@ private fun TitularManagementCard(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        if (!canEditCommon) {
+                            Text(
+                                "Dades en lectura. Per editar-les, demana permis comu als gestors del titular o a un administrador.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else if (!canManageTitular) {
+                            Text(
+                                "Pots editar dades comunes, pero les comparticions i eliminacions les ha de gestionar l'oficina responsable o un administrador.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        TextButton(onClick = onStartEdit) { Text("Editar") }
-                        TextButton(onClick = onShare) { Text("Compartir") }
-                        TextButton(
-                            onClick = { showDeleteConfirm = true },
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                        ) { Text("Eliminar") }
+                        if (canEditCommon) {
+                            TextButton(onClick = onStartEdit) { Text("Editar") }
+                        }
+                        if (canManageTitular) {
+                            TextButton(onClick = onShare) { Text("Compartir") }
+                            TextButton(
+                                onClick = { showDeleteConfirm = true },
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) { Text("Eliminar") }
+                        }
                     }
                 }
             }

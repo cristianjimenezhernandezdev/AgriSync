@@ -96,7 +96,7 @@ internal class TitularManagementRepository(
 
     internal suspend fun listTerres(titularId: String? = null): List<TerraFullDto> {
         val filter = if (titularId != null) "&titular_id=eq.$titularId" else ""
-        val q = "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,created_at,updated_at,titular:titular_id(id,nom_rao,nif,telefon,email,adreca,codi_postal)&order=codi_sigpac_complet$filter"
+        val q = "?select=id,titular_id,mun_codi,poligon,parcela,recinte,codi_sigpac_complet,municipi_literal,us_sigpac,cultiu,superficie,zona,limit_kg_n_ha,created_at,created_by,updated_at,titular:titular_id(id,nom_rao,nif,telefon,email,adreca,codi_postal)&order=codi_sigpac_complet$filter"
         return restClient.get("terra", q)
     }
 
@@ -149,6 +149,7 @@ data class TerraFullDto(
     val zona: String = "ZNV",
     val limit_kg_n_ha: Double? = null,
     val created_at: String? = null,
+    val created_by: String? = null,
     val updated_at: String? = null,
     val titular: TitularRefDto? = null
 )

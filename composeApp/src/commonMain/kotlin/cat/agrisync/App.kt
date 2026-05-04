@@ -168,8 +168,12 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                     TitularsScreen(
                         viewModel = vm,
                         onOpenDanPreparation = { currentScreen = Screen.DanPreparation(it) },
-                        onOpenAgricola = { currentScreen = Screen.TitularAgricola(it) },
-                        onOpenRamader = { currentScreen = Screen.TitularRamader(it) }
+                        onOpenAgricola = { titularId, canEditTitularCommon ->
+                            currentScreen = Screen.TitularAgricola(titularId, canEditTitularCommon)
+                        },
+                        onOpenRamader = { titularId, canEditTitularCommon ->
+                            currentScreen = Screen.TitularRamader(titularId, canEditTitularCommon)
+                        }
                     )
                 }
 
@@ -208,6 +212,7 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                     LaunchedEffect(screen.titularId) { vm.load(screen.titularId) }
                     TitularAgricolaScreen(
                         viewModel = vm,
+                        canEditTitularCommon = screen.canEditTitularCommon,
                         onBack = { currentScreen = Screen.TitularsHome }
                     )
                 }
@@ -224,6 +229,7 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                     LaunchedEffect(screen.titularId) { vm.load(screen.titularId) }
                     TitularRamaderScreen(
                         viewModel = vm,
+                        canEditTitularCommon = screen.canEditTitularCommon,
                         onBack = { currentScreen = Screen.TitularsHome }
                     )
                 }
@@ -252,7 +258,13 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                 }
 
                 Screen.TitularManagement -> {
-                    val vm = remember { TitularManagementViewModel(services.titularManagementRepository) }
+                    val vm = remember(data.tecnic.id) {
+                        TitularManagementViewModel(
+                            services.titularManagementRepository,
+                            services.accessRepository,
+                            data.tecnic
+                        )
+                    }
                     DisposableEffect(Unit) { onDispose { vm.clear() } }
                     LaunchedEffect(Unit) { vm.load() }
                     TitularManagementScreen(
@@ -262,11 +274,18 @@ private fun AuthenticatedContent(services: AppServices, data: AuthState.Authenti
                 }
 
                 Screen.TerraManagement -> {
-                    val vm = remember { TerraManagementViewModel(services.titularManagementRepository) }
+                    val vm = remember(data.tecnic.id) {
+                        TerraManagementViewModel(
+                            services.titularManagementRepository,
+                            services.accessRepository,
+                            data.tecnic
+                        )
+                    }
                     DisposableEffect(Unit) { onDispose { vm.clear() } }
                     LaunchedEffect(Unit) { vm.load() }
                     TerraManagementScreen(
                         viewModel = vm,
+                        currentTecnic = data.tecnic,
                         onBack = { currentScreen = Screen.TitularsHome }
                     )
                 }

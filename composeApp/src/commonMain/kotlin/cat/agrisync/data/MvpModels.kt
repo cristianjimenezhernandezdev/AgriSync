@@ -11,6 +11,8 @@ data class TitularAccessRow(
     val email: String? = null,
     val adreca: String? = null,
     val codi_postal: String? = null,
+    val can_manage: Boolean = false,
+    val can_comu: Boolean = false,
     val can_agricola: Boolean = false,
     val can_ramader: Boolean = false,
     val last_update_at: String? = null,

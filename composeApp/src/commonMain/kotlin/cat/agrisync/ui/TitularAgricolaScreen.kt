@@ -54,6 +54,7 @@ import cat.agrisync.viewmodel.TitularAgricolaViewModel
 @Composable
 internal fun TitularAgricolaScreen(
     viewModel: TitularAgricolaViewModel,
+    canEditTitularCommon: Boolean,
     onBack: () -> Unit
 ) {
     val ui by viewModel.uiState.collectAsState()
@@ -90,7 +91,8 @@ internal fun TitularAgricolaScreen(
                         ui.titular?.let { titular ->
                             EditableTitularCard(
                                 titular = titular,
-                                actorLabel = ui.actorLabels[titular.updated_by]
+                                actorLabel = ui.actorLabels[titular.updated_by],
+                                canEdit = canEditTitularCommon
                             ) { nif, nom, telefon, email, adreca, codiPostal ->
                                 viewModel.updateTitular(nif, nom, telefon, email, adreca, codiPostal)
                             }
@@ -293,6 +295,7 @@ private fun EmptySectionCard(title: String, message: String) {
 private fun EditableTitularCard(
     titular: TitularDto,
     actorLabel: String?,
+    canEdit: Boolean,
     onSave: (String, String, String, String, String, String) -> Boolean
 ) {
     var editing by remember { mutableStateOf(false) }
@@ -306,7 +309,7 @@ private fun EditableTitularCard(
     Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Titular", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            if (editing) {
+            if (editing && canEdit) {
                 OutlinedTextField(value = nom, onValueChange = { nom = it }, label = { Text("Nom / Rao social") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = nif, onValueChange = { nif = it }, label = { Text("NIF") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = telefon, onValueChange = { telefon = it }, label = { Text("Telefon") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -337,7 +340,15 @@ private fun EditableTitularCard(
                     updatedByLabel = actorLabel,
                     fallbackUserId = titular.updated_by
                 )
-                TextButton(onClick = { editing = true }) { Text("Editar") }
+                if (canEdit) {
+                    TextButton(onClick = { editing = true }) { Text("Editar") }
+                } else {
+                    Text(
+                        "Per editar aquestes dades, demana permis comu als gestors del titular o a un administrador.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

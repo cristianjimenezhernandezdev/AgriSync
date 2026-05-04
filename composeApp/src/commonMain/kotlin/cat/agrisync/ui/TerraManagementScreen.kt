@@ -8,6 +8,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import cat.agrisync.data.TecnicDto
+import cat.agrisync.data.TitularAccessRow
 import cat.agrisync.data.TerraFullDto
 import cat.agrisync.data.TitularDto
 import cat.agrisync.viewmodel.TerraManagementViewModel
@@ -15,9 +17,13 @@ import cat.agrisync.viewmodel.TerraManagementViewModel
 @Composable
 internal fun TerraManagementScreen(
     viewModel: TerraManagementViewModel,
+    currentTecnic: TecnicDto,
     onBack: () -> Unit
 ) {
     val ui by viewModel.uiState.collectAsState()
+    val writableTitulars = ui.titulars.filter { titular ->
+        ui.accessByTitularId[titular.id]?.can_agricola == true
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(ui.message) {
@@ -88,9 +94,15 @@ internal fun TerraManagementScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(ui.pageItems, key = { it.id }) { terra ->
+                            val canEdit = canEditTerra(
+                                terra = terra,
+                                currentTecnic = currentTecnic,
+                                accessByTitularId = ui.accessByTitularId
+                            )
                             TerraManagementCard(
                                 terra = terra,
-                                titulars = ui.titulars,
+                                titulars = writableTitulars,
+                                canEdit = canEdit,
                                 isEditingThis = ui.editingTerra?.id == terra.id,
                                 editTitularId = ui.editTitularId,
                                 editMunicipiLiteral = ui.editMunicipiLiteral,
@@ -133,7 +145,7 @@ internal fun TerraManagementScreen(
         // Dialog crear terra
         if (ui.showCreateDialog) {
             CreateTerraDialog(
-                titulars = ui.titulars,
+                titulars = writableTitulars,
                 titularId = ui.newTitularId,
                 munCodi = ui.newMunCodi,
                 poligon = ui.newPoligon,
@@ -166,6 +178,7 @@ internal fun TerraManagementScreen(
 private fun TerraManagementCard(
     terra: TerraFullDto,
     titulars: List<TitularDto>,
+    canEdit: Boolean,
     isEditingThis: Boolean,
     editTitularId: String,
     editMunicipiLiteral: String,
@@ -189,7 +202,7 @@ private fun TerraManagementCard(
 
     Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (isEditingThis) {
+            if (isEditingThis && canEdit) {
                 Text("Editant terra", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Text(
                     "SIGPAC: ${terra.codi_sigpac_complet ?: "${terra.mun_codi}:${terra.poligon}:${terra.parcela}:${terra.recinte}"}",
@@ -275,13 +288,22 @@ private fun TerraManagementCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall
                         )
+                        if (!canEdit) {
+                            Text(
+                                "Terra visible en lectura. Per modificar-la cal permis agricola/comu sobre el titular o que l'oficina responsable ho gestioni.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        TextButton(onClick = onStartEdit) { Text("Editar") }
-                        TextButton(
-                            onClick = { showDeleteConfirm = true },
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                        ) { Text("Eliminar") }
+                        if (canEdit) {
+                            TextButton(onClick = onStartEdit) { Text("Editar") }
+                            TextButton(
+                                onClick = { showDeleteConfirm = true },
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) { Text("Eliminar") }
+                        }
                     }
                 }
             }
@@ -343,6 +365,18 @@ private fun CreateTerraDialog(
                     .heightIn(max = 420.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                item {
+                    val note = if (titulars.isEmpty()) {
+                        "No tens cap titular amb permis agricola per vincular-hi la terra. Pots crear-la sense titular i vincular-la mes endavant des d'un usuari autoritzat."
+                    } else {
+                        "Nomes es mostren titulars on pots crear o modificar terres."
+                    }
+                    Text(
+                        note,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 item {
                     SearchableSelectionField(
                         items = titulars,
@@ -473,5 +507,16 @@ private fun ZonaSelector(
 private fun formatLimit(value: Double): String {
     val rounded = kotlin.math.round(value * 100) / 100
     return rounded.toString().replace('.', ',')
+}
+
+private fun canEditTerra(
+    terra: TerraFullDto,
+    currentTecnic: TecnicDto,
+    accessByTitularId: Map<String, TitularAccessRow>
+): Boolean {
+    if (currentTecnic.rol == "admin") return true
+    val titularId = terra.titular_id
+    if (titularId != null) return accessByTitularId[titularId]?.can_agricola == true
+    return currentTecnic.rol == "oficina_manager" && terra.created_by == currentTecnic.user_id
 }
 

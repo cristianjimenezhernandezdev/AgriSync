@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 internal class AccessRepository(private val restClient: RestClient) {
 
     /**
-     * Per admin/oficina_manager: retorna tots els titulars amb can_agricola=true, can_ramader=true.
+     * Retorna els titulars visibles amb permisos derivats de rol, oficina, assignacions i comparticions.
      * Per tècnic normal: filtra segons les assignacions a tecnic_titular.
      * Usa el token de l'usuari autenticat — les RLS policies controlen l'accés.
      */
@@ -27,6 +27,8 @@ internal class AccessRepository(private val restClient: RestClient) {
                     email = t.email,
                     adreca = t.adreca,
                     codi_postal = t.codi_postal,
+                    can_manage = true,
+                    can_comu = true,
                     can_agricola = true,
                     can_ramader = true,
                     last_update_at = t.updated_at,
@@ -49,6 +51,8 @@ internal class AccessRepository(private val restClient: RestClient) {
                 return titulars.map { titular ->
                     val scopes = sharedByTitular[titular.id].orEmpty().map { it.scope }
                     val isShared = scopes.isNotEmpty()
+                    val canManage = !isShared
+                    val canComu = if (isShared) scopes.any { it == "comu" } else true
                     val canAgricola = if (isShared) scopes.any { it == "comu" || it == "agricola" } else true
                     val canRamader = if (isShared) scopes.any { it == "comu" || it == "ramader" } else true
                     TitularAccessRow(
@@ -59,6 +63,8 @@ internal class AccessRepository(private val restClient: RestClient) {
                         email = titular.email,
                         adreca = titular.adreca,
                         codi_postal = titular.codi_postal,
+                        can_manage = canManage,
+                        can_comu = canComu,
                         can_agricola = canAgricola,
                         can_ramader = canRamader,
                         last_update_at = titular.updated_at,
@@ -78,6 +84,7 @@ internal class AccessRepository(private val restClient: RestClient) {
             return grouped.mapNotNull { (titularId, entries) ->
                 val titular = entries.firstOrNull()?.titular ?: return@mapNotNull null
                 val scopes = entries.map { it.scope }
+                val canComu = scopes.any { it == "comu" }
                 val canAgricola = scopes.any { it == "comu" || it == "agricola" }
                 val canRamader = scopes.any { it == "comu" || it == "ramader" }
                 if (!canAgricola && !canRamader) return@mapNotNull null
@@ -89,6 +96,8 @@ internal class AccessRepository(private val restClient: RestClient) {
                     email = titular.email,
                     adreca = titular.adreca,
                     codi_postal = titular.codi_postal,
+                    can_manage = false,
+                    can_comu = canComu,
                     can_agricola = canAgricola,
                     can_ramader = canRamader,
                     last_update_at = titular.updated_at,
