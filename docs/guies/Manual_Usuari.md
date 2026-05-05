@@ -1578,25 +1578,7 @@ Solucio:
 - Table Editor > `entrega_dejeccions`.
 - Table Editor > `aplicacions_fertilitzants`.
 
-## Prompt per passar aquest manual a una altra IA
 
-```text
-Tinc aquest manual d'usuari en Markdown per una aplicacio anomenada AgriSync. Vull que el converteixis en un manual final ben maquetat, clar i professional.
-
-Instruccions:
-- Mantingues tots els apartats.
-- On vegis `[CAPTURA: ...]`, deixa un espai per inserir una imatge.
-- Converteix cada marcador de captura en un peu d'imatge formal.
-- No inventis funcionalitats que no apareixen al text.
-- Conserva els noms de pantalles: Titulars, Agricola, Ramader, Preparar DAN, Perfil, Gestio Titulars, Terres, Tecnics i Oficines.
-- Explica que els tecnics tambe poden tenir email i login quan estan vinculats a Supabase Auth.
-- Explica que els permisos reals els valida PostgreSQL amb RLS.
-- Si generes PDF o Word, usa portada, index, numeracio d'apartats i peus d'imatge.
-- Si apareixen claus de Supabase en captures, indica que s'han de tapar.
-
-Objectiu:
-Crear un manual d'usuari complet per entregar en una memoria de projecte final de DAM.
-```
 
 ## Tancament
 
