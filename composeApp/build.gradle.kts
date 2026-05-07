@@ -52,7 +52,7 @@ compose.desktop {
         mainClass = "cat.agrisync.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Exe, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "cat.agrisync"
             packageVersion = "1.0.1"
             description = "Aplicacio desktop AgriSync per a la gestio DAN"
