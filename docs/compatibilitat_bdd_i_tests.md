@@ -71,7 +71,7 @@ Només tests de compatibilitat:
 .\gradlew.bat :composeApp:jvmTest --tests "cat.agrisync.data.SchemaCompatibilityTest"
 ```
 
-## Proces recomanat quan surt un nou error de BDD
+## Proces quan surt un nou error de BDD
 
 1. Copiar el missatge complet de PostgREST.
 2. Classificar-lo:

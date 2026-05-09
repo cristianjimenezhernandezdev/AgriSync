@@ -5,11 +5,11 @@
 Aquest document fa de mapa mestre. Resumeix:
 
 - quins documents existeixen
-- en quin ordre es recomana llegir-los
+- quin ordre de lectura facilita entendre'ls
 - com esta organitzat el repositori
 - on viu cada part del sistema: aplicacio, integracio, SQL, documentacio i fitxers auxiliars
 
-## Ruta recomanada per entendre el projecte de zero
+## Ruta de lectura per entendre el projecte de zero
 
 1. [Guia de posada en marxa, demo i incidencies](guies/instalacio_i_demo.md)
 2. [Manual d'usuari complet](guies/Manual_Usuari.md)
@@ -18,12 +18,14 @@ Aquest document fa de mapa mestre. Resumeix:
 5. [Model de dades i funcionament de la BDD](sql/model_de_dades_i_bdd.md)
 6. [Permisos i seguretat](arquitectura/permisos_i_seguretat.md)
 7. [Flux operatiu i moduls](funcional/flux_operatiu_i_moduls.md)
+8. [Procediment de testing](guies/testing.md)
 
 ## Estructura actual de `docs/`
 
 ```text
 docs/
 |-- README.md
+|-- compatibilitat_bdd_i_tests.md
 |-- index_complet_documentacio_i_projecte.md
 |-- api/
 |   `-- api_i_integracio.md
@@ -31,15 +33,17 @@ docs/
 |   |-- arquitectura_i_codi.md
 |   `-- permisos_i_seguretat.md
 |-- exemples/
+|   |-- MemoriaAgrisync.pdf
 |   |-- dan_agricola_exemple.pdf
 |   `-- dan_ramadera_exemple.pdf
 |-- funcional/
 |   `-- flux_operatiu_i_moduls.md
 |-- guies/
+|   |-- build_i_icones_desktop.md
 |   |-- Manual_Usuari.md
-|   `-- instalacio_i_demo.md
+|   |-- instalacio_i_demo.md
+|   `-- testing.md
 |-- presentacio/
-|   |-- guia_defensa.md
 |   `-- mem.md
 |-- projecte/
 |   |-- estat_actual_i_roadmap.md
@@ -97,7 +101,7 @@ Document principal de la capa d'integracio. Detalla:
 - endpoints de Supabase Auth, PostgREST, RPC i Admin API
 - peces personalitzades del projecte
 - punts de fort acoblament actual
-- com evolucionar cap a una API propia o admetre APIs externes
+- com es reparteix la integracio entre client Kotlin i SQL
 
 ### `docs/sql/model_de_dades_i_bdd.md`
 
@@ -121,6 +125,18 @@ Resum funcional centrat en us d'usuari i no tant en implementacio.
 ### `docs/sql/README.md`
 
 Index del paquet SQL i de l'ordre d'execucio.
+
+### `docs/guies/testing.md`
+
+Procediment de testing del projecte i relacio de suites de test JVM.
+
+### `docs/guies/build_i_icones_desktop.md`
+
+Guia curta de packaging desktop i recursos d'icona.
+
+### `docs/compatibilitat_bdd_i_tests.md`
+
+Document de compatibilitat entre l'esquema SQL actual, esquemes antics de Supabase i tests de regressio associats.
 
 ### `docs/projecte/millores_post_mvp.md`
 
@@ -207,6 +223,7 @@ Si algú ha d'explicar o mantenir el projecte, els fitxers minimament imprescind
 - `composeApp/src/commonMain/kotlin/cat/agrisync/data/TecnicRepository.kt`
 - `docs/sql/schema/agrisync_schema.sql`
 - `docs/sql/seeds/agrisync_demo_seed.sql`
+- `docs/sql/maintenance/reset_auth_seed_users.sql`
 
 ## Criteri estructural actual
 

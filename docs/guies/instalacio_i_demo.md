@@ -174,8 +174,6 @@ Despres d'executar el seed, pots entrar a l'app amb aquests usuaris:
 | Tecnic agricola Girona | `joan.agri.demo@agrisync.com` | `joan1234` | Provar treball agricola des d'una altra oficina |
 | Tecnic ramader Girona | `anna.ram.demo@agrisync.com` | `anna1234` | Provar treball ramader des d'una altra oficina |
 | Lectura | `lectura.demo@agrisync.com` | `lectura1234` | Validar acces nomes de consulta |
-`campamanager@campa.net` | `campa1234` 
-`rmart@campa.net` | `rmart1234` 
 
 Aquestes credencials son nomes per demo/MVP i surten de `docs/sql/seeds/agrisync_demo_seed.sql`.
 

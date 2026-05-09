@@ -2,18 +2,18 @@
 
 ## Objectiu del document
 
-Aquest document no descriu funcionalitats ja implementades, sino una proposta d'evolucio posterior al MVP actual.
+Aquest document no descriu funcionalitats ja implementades, sino l'evolucio prevista posterior al MVP actual.
 
 L'objectiu es doble:
 
 - deixar constancia de limits coneguts detectats durant el desenvolupament i les proves
-- justificar davant el tribunal que el projecte te recorregut real, criteri tecnic i una linia clara de millora
+- justificar davant el tribunal que el projecte te recorregut real, criteri tecnic i una linia clara d'evolucio
 
 El criteri seguit en el MVP ha estat prioritzar una base funcional, coherent i demostrable abans d'afegir mes complexitat. Per tant, les millores descrites aqui no son omissions arbitraries, sino decisions ajornades a una fase posterior per mantenir el projecte acotat i presentable.
 
 ## Prioritats de millora
 
-Les millores futures es poden agrupar en cinc blocs:
+Les linies d'evolucio es poden agrupar en cinc blocs:
 
 1. seguretat i desplegament real
 2. correccions funcionals detectades a la practica
@@ -29,7 +29,7 @@ Per poder distribuir el MVP com a aplicacio instal·lable, s'ha habilitat una co
 
 Aixo es practic per una demo o una entrega de MVP, pero no es la solucio adequada per una distribucio real a usuaris finals, especialment perque la `SUPABASE_SERVICE_ROLE_KEY` no hauria d'estar disponible dins una aplicacio desktop instal·lada.
 
-Millora prevista:
+Evolucio prevista:
 
 - moure les operacions administratives sensibles a una capa backend controlada o a Supabase Edge Functions
 - deixar al client nomes `SUPABASE_URL` i `SUPABASE_ANON_KEY`
@@ -43,7 +43,7 @@ Benefici:
 
 ### 1.2 Millora del model de configuracio d'instal·lacio
 
-Actualment el sistema ja pot funcionar en build, pero una versio posterior hauria de permetre:
+Actualment el sistema ja pot funcionar en build. L'evolucio posterior prevista inclou:
 
 - pantalla inicial de configuracio guiada
 - comprovacio de connexio amb Supabase abans d'entrar al login
@@ -64,7 +64,7 @@ En una evolucio natural del projecte seria convenient separar:
 - entorn preproduccio
 - entorn produccio
 
-Amb aquesta separacio es podria:
+Amb aquesta separacio es pot:
 
 - provar canvis sense afectar dades compartides
 - controlar millor claus i permisos
@@ -86,7 +86,7 @@ Conseqüencia funcional:
 - l'usuari veu una hora valida tecnicament, pero no alineada amb la seva hora local real
 - pot generar confusio en revisions, auditoria i defensa del flux de treball
 
-Millora prevista:
+Evolucio prevista:
 
 - convertir sempre els `timestamp` des de UTC a la zona local del dispositiu
 - unificar el format de visualitzacio de dates i hores a tota l'aplicacio
@@ -114,7 +114,7 @@ Impacte:
 - pot generar dubtes sobre quin valor es considera manual i quin calculat
 - afegeix una friccio innecessaria a l'edicio
 
-Millora prevista:
+Evolucio prevista:
 
 - definir clarament quin camp s'esta editant i quin queda bloquejat com a calculat
 - recalcular en viu el tercer camp quan canvien els altres dos
@@ -123,11 +123,11 @@ Millora prevista:
 
 ### 2.3 Millora del tractament d'errors de domini
 
-El MVP ja mostra errors funcionals basics, pero en versions posteriors seria convenient:
+El MVP ja mostra errors funcionals basics. L'evolucio posterior prevista inclou:
 
 - distingir millor errors de validacio, errors de xarxa i errors de permisos
 - oferir missatges mes contextuals segons el modul
-- suggerir una accio concreta a l'usuari quan el problema sigui recuperable
+- mostrar una accio concreta a l'usuari quan el problema sigui recuperable
 
 Exemples:
 
@@ -141,7 +141,7 @@ Exemples:
 
 La UI actual es suficient per un MVP funcional, pero encara te marge de millora en aspectes de presentacio i consistencia.
 
-Linies de millora:
+Linies d'evolucio:
 
 - jerarquia visual mes clara entre bloc principal, subbloc i accions
 - espaiat i alineacions mes uniformes
@@ -156,7 +156,7 @@ Benefici:
 
 ### 3.2 Reforc de feedback d'usuari
 
-En versions posteriors convindria millorar:
+En versions posteriors queda identificat:
 
 - confirmacions de guardat mes visibles
 - indicadors de carrega mes consistents
@@ -165,17 +165,17 @@ En versions posteriors convindria millorar:
 
 ### 3.3 Millora de l'experiencia en formularis
 
-Punts recomanables:
+Punts identificats:
 
 - validacio en viu de camps obligatoris
 - filtres i mascara d'entrada mes estrictes en camps numerics i de dates
 - millor navegacio per teclat
 - seleccio i cerca mes rapida en llistes llargues
-- estandarditzar placeholders, etiquetes i textos d'ajuda
+- estandarditzar camps buits, etiquetes i textos d'ajuda
 
 ### 3.4 Iconografia i branding
 
-Ja s'ha introduit suport d'icones i packaging, pero una versio posterior podria afegir:
+Ja s'ha introduit suport d'icones i packaging. La continuacio natural inclou:
 
 - recursos de marca definitius per tots els sistemes operatius
 - revisio del nom de paquet i metadades del producte
@@ -195,7 +195,7 @@ Actualment la pantalla `Preparar DAN` funciona com a resum operatiu i checklist.
 
 El MVP cobreix una base funcional bona, pero encara no implementa tot el calcul normatiu possible.
 
-Millores futures:
+Linies d'evolucio:
 
 - refinament del calcul de nitrogen generat per bestiar
 - validacions normatives mes detallades segons context
@@ -211,7 +211,7 @@ Un dels limits reconeguts del MVP es que la relacio entre:
 
 encara es tracta de forma simplificada.
 
-Una versio posterior podria:
+Una versio posterior ha de:
 
 - vincular millor cada entrega amb el seu desti funcional
 - explicar millor l'origen del balanc calculat
@@ -250,7 +250,7 @@ Una millora clara seria professionalitzar el seguiment d'incidencies:
 
 Durant la compilacio ja apareixen alguns avisos de deprecacio o APIs experimentals.
 
-Millores futures:
+Linies d'evolucio:
 
 - adaptar l'uso del portaretalls a les APIs noves de Compose
 - revisar APIs `expect/actual` marcades com a beta
@@ -258,16 +258,16 @@ Millores futures:
 
 ### 5.4 Instal·lacio i actualitzacio de versions
 
-La generacio de l'instal·lador ja es pot fer, pero una versio posterior podria afegir:
+La generacio de l'instal·lador ja es pot fer. Una versio posterior ha de concretar:
 
 - procediment d'actualitzacio entre versions
 - conservacio controlada de configuracio local
 - millor estrategia de numeracio de versions
 - paquet portable i paquet instal·lable ben diferenciats
 
-## Proposta de prioritzacio posterior al tribunal
+## Prioritzacio posterior al tribunal
 
-Si calguessin prioritzar les millores en fases petites, l'ordre recomanat seria aquest:
+La prioritzacio en fases petites queda ordenada aixi:
 
 1. seguretat del client i eliminacio de `service_role` del build distribuible
 2. correccio de timezone a dates i hores mostrades

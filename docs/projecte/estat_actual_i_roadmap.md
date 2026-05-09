@@ -17,22 +17,20 @@ AgriSync esta en un punt de MVP funcional i demostrable. El nucli del projecte e
 - comparticio de titulars entre oficines per `scope`
 - seed de demo completa revisada
 
-## Revisio del seed
+## Seed de demo
 
-El fitxer actual `docs/sql/seeds/agrisync_demo_seed.sql` no sembla una seed incompleta. Fa la feina esperada per a demo i proves funcionals:
+El fitxer `docs/sql/seeds/agrisync_demo_seed.sql` deixa preparada una demo funcional per a proves i defensa:
 
 - recrea els usuaris Auth demo
 - carrega dades representatives
 - cobreix entitats principals del model
 - deixa consultes de comprovacio al final
 
-La principal incidència detectada no era el seed, sino la documentacio: hi havia noms i referencies de fitxers antics que ja no coincidien amb el repositori real.
-
 ## Limits actuals del MVP
 
 - no hi ha exportacio a PDF oficial
 - no hi ha calcul normatiu complet del nitrogen generat per bestiar
-- la tracabilitat entre entrega concreta i aplicacio concreta continua simplificada
+- la tracabilitat documental final de la DAN encara queda fora de l'abast del MVP
 - hi ha funcionalitats administratives que depenen de `service_role`
 
 ## Roadmap curt

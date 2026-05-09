@@ -4,9 +4,9 @@
 
 Aquest manual explica com utilitzar AgriSync des del punt de vista d'una persona usuaria. Esta preparat per convertir-se en un document final amb captures de pantalla, imatges del programa i captures de Supabase.
 
-El document tambe esta preparat per passar-lo a una altra IA. Les marques `[CAPTURA: ...]` indiquen exactament on inserir imatges i quin contingut hauria de mostrar cada captura.
+Les marques `[CAPTURA: ...]` indiquen punts d'insercio d'imatges dins del manual. Cada marca descriu la pantalla o dada que ha de mostrar la captura corresponent.
 
-## Com utilitzar aquest document per generar la versio final
+## Maquetacio de la versio final
 
 Per maquetar aquest manual:
 
@@ -788,7 +788,6 @@ Dades principals:
 - granja origen
 - terra desti
 - data
-- tipus de fertilitzant
 - volum
 - kg N/m3
 - kg N
@@ -803,9 +802,8 @@ Passos:
 2. Seleccionar granja origen.
 3. Seleccionar terra desti.
 4. Escriure data.
-5. Escriure tipus de fertilitzant.
-6. Informar volum, kg N/m3 i/o kg N.
-7. Premre `Crear`.
+5. Informar volum, kg N/m3 i/o kg N.
+6. Premre `Crear`.
 
 La base de dades comprova:
 
@@ -835,7 +833,7 @@ Passos:
 
 1. Localitzar entrega.
 2. Premre `Editar`.
-3. Modificar data, terra, tipus o nitrogen.
+3. Modificar data, terra o nitrogen.
 4. Premre `Guardar`.
 
 [CAPTURA: entrega de dejeccions en mode edicio]
@@ -1316,7 +1314,7 @@ Serveix per comprovar usuaris que poden fer login.
 
 Serveix per revisar dades persistides.
 
-Captures recomanades:
+Captures de suport:
 
 [CAPTURA: taula `tecnic` mostrant rols, email, actiu i user_id]
 
@@ -1336,7 +1334,7 @@ Captures recomanades:
 
 Serveix per executar scripts.
 
-Captures recomanades:
+Captures de suport:
 
 [CAPTURA: SQL Editor amb `docs/sql/schema/agrisync_schema.sql`]
 
@@ -1344,7 +1342,7 @@ Captures recomanades:
 
 [CAPTURA: resultat final del seed sense errors]
 
-## Recorreguts recomanats per demostrar l'aplicacio
+## Recorreguts de demostracio de l'aplicacio
 
 ### Demo 1. Flux complet com admin
 
@@ -1517,7 +1515,7 @@ Solucio:
 | ZV | Zona vulnerable |
 | ZNV | Zona no vulnerable |
 
-## Llista completa de captures recomanades
+## Llista completa de captures documentals
 
 ### Aplicacio
 
@@ -1588,4 +1586,4 @@ Aquest manual cobreix l'us complet d'AgriSync des de la perspectiva d'usuari i d
 - `docs/sql/model_de_dades_i_bdd.md`
 - `docs/arquitectura/permisos_i_seguretat.md`
 - `docs/funcional/flux_operatiu_i_moduls.md`
-- `docs/presentacio/guia_defensa.md`
+- `docs/presentacio/mem.md`

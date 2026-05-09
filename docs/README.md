@@ -11,7 +11,7 @@ Si una persona no coneix gens el projecte, l'ordre recomanat es aquest:
 2. `arquitectura/arquitectura_i_codi.md`
    Per entendre l'estructura del programa, les capes, els fitxers principals, el flux d'execucio i les pantalles.
 3. `api/api_i_integracio.md`
-   Per entendre quina API fa servir l'app, que hi ha de Supabase pur, que hi ha de personalitzat i com es podria evolucionar cap a una API propia o externa.
+   Per entendre quina API fa servir l'app, quins fitxers fan les crides HTTP i quin paper tenen Supabase, PostgREST, RPC i Admin API.
 4. `sql/model_de_dades_i_bdd.md`
    Per entendre el model relacional, les funcions helper, els triggers, les policies RLS i el flux de dades a la base de dades.
 5. `arquitectura/permisos_i_seguretat.md`
@@ -24,7 +24,7 @@ Si una persona no coneix gens el projecte, l'ordre recomanat es aquest:
 - `arquitectura/`
   Explicacio de l'estructura del codi, flux de l'app, permisos i decisions tecniques.
 - `exemples/`
-  PDFs de referencia de DAN.
+  PDFs de referencia de DAN i documentacio final en PDF quan s'inclou dins la carpeta.
 - `funcional/`
   Resum funcional dels moduls i del flux operatiu d'usuari.
 - `guies/`
@@ -47,6 +47,9 @@ Si una persona no coneix gens el projecte, l'ordre recomanat es aquest:
 - [Permisos i seguretat](arquitectura/permisos_i_seguretat.md)
 - [Flux operatiu i moduls](funcional/flux_operatiu_i_moduls.md)
 - [Millores previstes per versions posteriors al MVP](projecte/millores_post_mvp.md)
+- [Estat actual del MVP i roadmap](projecte/estat_actual_i_roadmap.md)
+- [Compatibilitat BDD i tests de regressio](compatibilitat_bdd_i_tests.md)
+- [Build i icones desktop](guies/build_i_icones_desktop.md)
 - [Index del paquet SQL](sql/README.md)
 - [Procediment de testing](guies/testing.md)
 
@@ -59,7 +62,7 @@ Si una persona no coneix gens el projecte, l'ordre recomanat es aquest:
 - `arquitectura/arquitectura_i_codi.md`
   "Com esta organitzat el programa, quins fitxers hi ha, quines pantalles i viewmodels existeixen, i com flueixen les dades?"
 - `api/api_i_integracio.md`
-  "Quina API consumeix el client, on es troba el codi d'integracio i fins a quin punt l'app esta lligada a Supabase?"
+  "Quina API consumeix el client, on es troba el codi d'integracio i com s'organitzen Auth, PostgREST, RPC i Admin API?"
 - `sql/model_de_dades_i_bdd.md`
   "Com esta modelada la BDD, quines taules intervenen, com s'aplica la seguretat i com es relaciona tot amb la UI?"
 - `arquitectura/permisos_i_seguretat.md`

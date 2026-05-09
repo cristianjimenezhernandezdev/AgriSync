@@ -1,62 +1,98 @@
 # API i integracio amb Supabase
 
-## Objectiu d'aquest document
+## Objectiu
 
-Aquest document explica quina API fa servir AgriSync, on es troba el codi d'integracio, què hi ha de personalitzat i fins a quin punt el projecte esta preparat per admetre una API propia o APIs externes.
+Aquest document explica quina API utilitza AgriSync, on es troba el codi d'integracio i quin paper tenen Supabase, els repositoris Kotlin i les funcions SQL.
 
-La resposta curta es:
+La situacio actual del projecte es aquesta:
 
-- avui el projecte fa servir Supabase com a API real
-- no hi ha backend propi separat
-- sí que hi ha lògica personalitzada, pero viu al client i a SQL
+- no hi ha un backend propi separat
+- el client desktop consumeix directament Supabase
+- la API real esta formada per Supabase Auth, PostgREST, RPC SQL i Admin API
+- la logica especifica del projecte esta repartida entre la capa `data/` del client i l'esquema SQL
 
-## Quina API consumeix actualment l'aplicacio
+## Tipus d'API utilitzats
 
-AgriSync consumeix quatre superfícies d'API de Supabase:
+AgriSync utilitza quatre superficies d'API:
 
-1. Auth API
-2. PostgREST API
-3. RPC sobre PostgREST
-4. Admin API
+| Superficie | Us dins del projecte |
+|---|---|
+| Supabase Auth API | Login, refresh de sessio i gestio d'usuaris Auth |
+| Supabase PostgREST | Consultes i operacions CRUD sobre taules publicades |
+| RPC SQL via PostgREST | Funcions controlades com `get_my_tecnic`, `create_titular` i `create_terra` |
+| Supabase Admin API | Creacio, eliminacio i canvi de password d'usuaris Auth |
 
-## 1. Supabase Auth API
+## Fitxers principals
 
-Endpoints principals:
+| Fitxer | Responsabilitat |
+|---|---|
+| `composeApp/src/commonMain/kotlin/cat/agrisync/data/SupabaseAuthApi.kt` | Crides a Auth, refresh de token i resolucio del tecnic autenticat |
+| `composeApp/src/commonMain/kotlin/cat/agrisync/data/AuthService.kt` | Orquestra sessio, persistencia, login, logout i refresc |
+| `composeApp/src/commonMain/kotlin/cat/agrisync/data/RestClient.kt` | Wrapper centralitzat de `GET`, `POST`, `PATCH` i `DELETE` contra `/rest/v1` |
+| `composeApp/src/commonMain/kotlin/cat/agrisync/data/AppServices.kt` | Crea el client HTTP, AuthService, RestClient i repositoris |
+| `composeApp/src/commonMain/kotlin/cat/agrisync/data/TecnicRepository.kt` | Gestio de tecnics, assignacions i operacions Admin API |
+| `composeApp/src/commonMain/kotlin/cat/agrisync/data/AgricolaRepository.kt` | Consultes i escriptures del modul agricola |
+| `composeApp/src/commonMain/kotlin/cat/agrisync/data/RamaderRepository.kt` | Consultes i escriptures del modul ramader |
+| `composeApp/src/commonMain/kotlin/cat/agrisync/data/DanPreparationRepository.kt` | Lectura agregada per a la pantalla `Preparar DAN` |
+| `docs/sql/schema/agrisync_schema.sql` | Funcions SQL, triggers, RLS i RPC exposades a PostgREST |
+
+## Supabase Auth API
+
+La autenticacio es fa contra Supabase Auth.
+
+Endpoints utilitzats:
 
 - `POST /auth/v1/token?grant_type=password`
 - `POST /auth/v1/token?grant_type=refresh_token`
 
-On es fa servir:
+Flux principal:
 
-- `composeApp/src/commonMain/kotlin/cat/agrisync/data/SupabaseAuthApi.kt`
+1. `LoginViewModel` envia email i contrasenya a `AuthService.login()`.
+2. `AuthService` crida `SupabaseAuthApi.signInWithPassword(...)`.
+3. Supabase retorna `access_token` i `refresh_token`.
+4. `AuthService` recupera el perfil funcional amb `getMyTecnic(...)`.
+5. La sessio queda guardada i l'aplicacio entra a l'estat autenticat.
 
-Per a què serveix:
+El login real no depen nomes d'`auth.users`. L'aplicacio necessita trobar tambe un registre actiu a `public.tecnic`.
 
-- login amb email i password
-- refresc de sessio
+## Resolucio del tecnic autenticat
 
-Quin fitxer l'orquestra:
+La funcio principal es:
 
-- `composeApp/src/commonMain/kotlin/cat/agrisync/data/AuthService.kt`
+- `SupabaseAuthApi.getMyTecnic(accessToken, loginEmail)`
 
-## 2. Supabase PostgREST API
+Ordre de resolucio:
 
-Base URL:
+1. Crida la RPC SQL `get_my_tecnic()`.
+2. Si cal, consulta `public.tecnic` per `user_id`.
+3. Si encara no es pot resoldre i hi ha `service_role`, consulta per email.
+4. Si detecta un desajust entre l'usuari Auth i `public.tecnic.user_id`, pot actualitzar la relacio.
 
-- `${SUPABASE_URL}/rest/v1/...`
+La RPC SQL esta definida a:
 
-On es centralitza:
+- `docs/sql/schema/agrisync_schema.sql`
+
+## PostgREST i RestClient
+
+La majoria de consultes del projecte passen per:
 
 - `composeApp/src/commonMain/kotlin/cat/agrisync/data/RestClient.kt`
 
-Què fa:
+Aquest client construeix URLs del tipus:
 
-- `GET`
-- `POST`
-- `PATCH`
-- `DELETE`
+```text
+${SUPABASE_URL}/rest/v1/<taula>?select=...
+```
 
-Aquest client construeix les crides per a:
+Responsabilitats de `RestClient`:
+
+- afegir `apikey`
+- afegir `Authorization`
+- utilitzar el token de sessio quan existeix
+- usar `Prefer: return=representation` en `POST` i `PATCH`
+- convertir errors HTTP en `ApiException`
+
+Taules consultades mitjancant PostgREST:
 
 - `titular`
 - `tecnic`
@@ -70,270 +106,125 @@ Aquest client construeix les crides per a:
 - `bestiar`
 - `fase_productiva`
 - `granja_bestiar`
+- `granja_campanya_balance`
 - `entrega_dejeccions`
 
-No hi ha una API REST pròpia per sobre d'aquestes entitats. El client consumeix directament les taules publicades via PostgREST.
+## RPC SQL exposades com API
 
-## 3. RPC sobre PostgREST
+Algunes operacions passen per funcions SQL en comptes d'inserts directes.
 
-Endpoints clau:
+| RPC | Us |
+|---|---|
+| `get_my_tecnic()` | Retorna el perfil funcional del tecnic autenticat |
+| `create_titular(...)` | Alta controlada de titular amb permisos i auditoria |
+| `create_terra(...)` | Alta controlada de terra amb validacions i codi SIGPAC generat |
 
-- `POST /rest/v1/rpc/get_my_tecnic`
-- `POST /rest/v1/rpc/create_titular`
-- `POST /rest/v1/rpc/create_terra`
+Aquestes funcions formen part del contracte real d'API del projecte, encara que estiguin implementades a PostgreSQL.
 
-On es fa servir:
+## Supabase Admin API
 
-- `composeApp/src/commonMain/kotlin/cat/agrisync/data/SupabaseAuthApi.kt`
-- `composeApp/src/commonMain/kotlin/cat/agrisync/data/TitularManagementRepository.kt`
-- `composeApp/src/commonMain/kotlin/cat/agrisync/data/AgricolaRepository.kt`
+La Admin API s'utilitza des de:
 
-Per què existeix:
+- `composeApp/src/commonMain/kotlin/cat/agrisync/data/TecnicRepository.kt`
 
-- per resoldre quin `public.tecnic` correspon a `auth.uid()`
-- per encapsular aquesta lògica a la base de dades
-- per fer altes sensibles sense dependre d'inserts directes que poden xocar amb RLS
+Operacions principals:
 
-Aquestes RPCs son especialment importants perquè el model funcional de l'app no gira directament al voltant d'`auth.users`, sino de `public.tecnic` i dels seus permisos sobre titulars.
+- crear usuaris Auth
+- canviar passwords
+- eliminar usuaris Auth
+- resoldre dades administratives quan cal `service_role`
 
-## 4. Supabase Admin API
-
-Endpoints principals:
+Endpoints utilitzats:
 
 - `POST /auth/v1/admin/users`
 - `PUT /auth/v1/admin/users/{id}`
 - `DELETE /auth/v1/admin/users/{id}`
 
-On es fa servir:
+Aquestes operacions requereixen `SUPABASE_SERVICE_ROLE_KEY`. En l'estat actual del projecte, aquesta clau forma part de la configuracio local necessaria per a les funcions administratives.
 
-- `composeApp/src/commonMain/kotlin/cat/agrisync/data/TecnicRepository.kt`
+## Repositoris com a capa d'integracio
 
-Per a què serveix:
+Els repositoris son la capa que coneix les consultes concretes de cada modul.
 
-- crear compte Auth quan es crea un tecnic
-- canviar passwords
-- eliminar usuaris Auth
-
-Important:
-
-- aquestes crides necessiten `SUPABASE_SERVICE_ROLE_KEY`
-- son molt potents
-- la UI limita les accions de manager a tecnics de la seva oficina, i les policies RLS reforcen els canvis sobre `public.tecnic` i `tecnic_titular`
-- en un entorn de produccio més exigent haurien de passar per una API backend propia en comptes de viatjar directament des del client
-
-## Peces personalitzades del projecte
-
-Encara que no hi hagi backend propi, el projecte sí que te integracio personalitzada.
-
-## Personalitzacio al client
-
-### `RestClient.kt`
-
-Fa de wrapper únic per a PostgREST:
-
-- injecta `apikey`
-- injecta `Authorization`
-- selecciona token de sessió o `anonKey`
-- gestiona errors HTTP i els converteix en `ApiException`
-
-### `SupabaseAuthApi.kt`
-
-Conté comportaments específics del projecte:
-
-- fallback de resolucio de `tecnic` per `user_id`
-- fallback per `email`
-- intent d'auto-fix de `public.tecnic.user_id`
-
-Això no és Supabase estàndard "tal qual"; es lògica del projecte construïda sobre Supabase.
-
-### `AuthService.kt`
-
-Implementa:
-
-- gestio de sessio persistent
-- refresc automatic de token
-- validacio que el tecnic estigui actiu
-
-### Repositoris
-
-Els repositoris encapsulen queries PostgREST concretes del domini:
-
-- `AccessRepository`
-- `AgricolaRepository`
-- `RamaderRepository`
-- `DanPreparationRepository`
-- `OficinaRepository`
-- `TecnicRepository`
-- `TitularManagementRepository`
-
-Cada repositori coneix:
-
-- la taula o conjunt de taules a consultar
-- les projeccions `select=...`
-- les relacions anidades
-- les operacions de creacio o actualitzacio
-
-## Personalitzacio a la BDD
-
-Una part important de l'"API" real del sistema viu al SQL:
-
-- funcions helper com `get_my_tecnic()`
-- funcions de permisos com `can_read_titular(...)`
-- funcions de domini com `can_write_agricola(...)`
-- RLS policies
-
-Des del punt de vista del client, aquestes funcions formen part del contracte d'integracio tant com qualsevol endpoint HTTP.
-
-## On es troba cada part de la capa API
-
-| Tipus d'integracio | Fitxer principal |
+| Repositori | Taules o funcions principals |
 |---|---|
-| càrrega de config | `JvmEnvConfig.kt` |
-| client HTTP | `SupabaseHttpClient.kt` |
-| wrapper REST | `RestClient.kt` |
-| Auth | `SupabaseAuthApi.kt` |
-| sessió | `AuthService.kt` |
-| composició de serveis | `AppServices.kt` |
-| Admin API tècnics | `TecnicRepository.kt` |
-| auditoria amb `service_role` | `AuditRepository.kt` |
+| `AccessRepository` | `titular`, `tecnic_titular`, `oficina_titular_compartit` |
+| `AgricolaRepository` | `titular`, `terra`, `dan_declaracio`, `aplicacions_fertilitzants`, `create_terra` |
+| `RamaderRepository` | `granja`, `granja_bestiar`, `granja_campanya_balance`, `entrega_dejeccions`, `terra` |
+| `DanPreparationRepository` | lectura agregada de titular, terres, aplicacions, granges, cens, balanços i entregues |
+| `TitularManagementRepository` | `titular`, `oficina_titular_compartit`, `terra`, `create_titular`, `create_terra` |
+| `TecnicRepository` | `tecnic`, `tecnic_titular`, `oficina`, Admin API |
+| `OficinaRepository` | `oficina` |
+| `AuditRepository` | resolucio de noms d'actor d'auditoria |
 
-## Flux d'autenticacio i API
+## Flux general d'una consulta
 
-1. `LoginViewModel` crida `AuthService.login()`
-2. `AuthService` usa `SupabaseAuthApi.signInWithPassword()`
-3. Supabase retorna `access_token` i `refresh_token`
-4. `AuthService` crida `getMyTecnic()`
-5. `SupabaseAuthApi` intenta RPC `get_my_tecnic`
-6. si cal, fa fallback a consultes REST
-7. el `Session` queda persistit
-8. a partir d'aqui `RestClient` ja treballa amb el token de l'usuari
+El flux habitual es:
 
-## Flux de dades operatives
+1. la pantalla Compose recull una accio o necessita dades
+2. el ViewModel actualitza estat i crida el repositori
+3. el repositori construeix la consulta PostgREST o RPC
+4. `RestClient` envia la peticio HTTP
+5. PostgreSQL aplica RLS, triggers i restriccions
+6. Supabase retorna JSON
+7. Kotlin deserialitza la resposta en DTOs
+8. el ViewModel actualitza el `UiState`
+9. la UI es recomposa
 
-Per a la majoria de pantalles, el flux es:
+## API interna o externa
 
-1. ViewModel
-2. Repository
-3. `RestClient`
-4. `/rest/v1/...`
-5. PostgreSQL aplica RLS
-6. resposta JSON
-7. DTO
-8. `UiState`
-9. Compose
+AgriSync no te una API backend propia ni una API externa de tercers per al domini DAN.
 
-Excepcio controlada:
+La API utilitzada es externa en el sentit que el servei HTTP el proporciona Supabase, pero el contracte funcional es propi del projecte:
 
-- les altes de `titular` i `terra` passen per RPCs (`create_titular`, `create_terra`) perquè la BDD pugui comprovar permisos i escriure auditoria de forma consistent.
+- taules dissenyades per AgriSync
+- DTOs Kotlin adaptats al model SQL
+- RPCs SQL especifiques
+- triggers propis
+- policies RLS propies
+- repositoris amb consultes PostgREST del domini
 
-## Té API pròpia el projecte
+Per tant, la integracio actual es una API Supabase personalitzada pel projecte.
 
-### Resposta curta
+## Seguretat de les consultes
 
-No. Avui no hi ha una API backend propia separada de Supabase.
+La UI pot mostrar o amagar botons, pero la seguretat efectiva no depen de la UI.
 
-### Què sí que hi ha
+La validacio real es fa a:
 
-Hi ha un contracte d'integracio propi, pero repartit entre:
+- Supabase Auth
+- funcions SQL de permisos
+- policies RLS
+- triggers i restriccions de PostgreSQL
 
-- el codi client
-- els DTOs
-- les queries PostgREST
-- les funcions SQL
-- les policies RLS
+Funcions destacades:
 
-Per tant, la lògica d'integracio es personalitzada, pero l'API exposada es la de Supabase.
+- `can_read_titular(...)`
+- `can_write_scope(...)`
+- `can_write_agricola(...)`
+- `can_write_ramader(...)`
+- `can_reference_terra(...)`
+- `office_has_shared_scope(...)`
 
-## Està preparat per admetre una API externa
+## Cas especial: entregues i aplicacions fertilitzants
 
-### Resposta curta
+Quan es crea o modifica una entrega de dejeccions, la base de dades pot sincronitzar una aplicacio fertilitzant equivalent.
 
-Parcialment.
+Elements implicats:
 
-### El que ja ajuda
+- taula `entrega_dejeccions`
+- taula `aplicacions_fertilitzants`
+- trigger `trg_entrega_sync_aplicacio`
+- funcio `sync_entrega_to_aplicacio()`
+- funcio `find_or_create_dan(...)`
 
-- hi ha una capa de repositoris
-- la UI no coneix directament HTTP
-- `RestClient` concentra la major part de les crides REST
-- `AuthService` concentra la sessio
+Aixo connecta el modul ramader amb el modul agricola sense que el client hagi de crear manualment dues operacions separades.
 
-Aquestes quatre coses faciliten refactoritzar.
+## Resum
 
-### El que encara lliga fort a Supabase
-
-- els repositoris fan queries PostgREST literals
-- molts DTOs estan modelats segons la resposta exacta de Supabase
-- l'app assumeix que la seguretat real viu a RLS
-- hi ha dependència directa de RPC i Admin API
-- no existeix una capa de "ports/adapters" o una capa de domini independent de transport
-
-Conclusio:
-
-- canviar completament a una API externa no seria trivial
-- pero tampoc caldria reescriure tota la UI
-- la capa que sofriria mes seria `data/`
-
-## Com seria una migracio cap a una API propia
-
-El camí raonable seria:
-
-1. definir contractes de repositori més abstractes
-2. separar DTO HTTP de models de domini
-3. crear un backend intermedi
-4. moure operacions amb `service_role` a aquest backend
-5. exposar endpoints propis per login tècnic, gestio tècnica i operacions de domini
-6. deixar Supabase com a BDD/Auth interna o reemplaçar-lo parcialment
-
-## Possibles millores futures a la capa API
-
-### Millores de seguretat
-
-- treure `service_role` del client final
-- moure Admin API a backend propi
-- signar i auditar millor operacions sensibles
-
-### Millores d'arquitectura
-
-- afegir una capa `ApiGateway` o `RemoteDataSource`
-- desacoblar models de domini de models PostgREST
-- definir contractes clars per cada cas d'us
-
-### Millores de robustesa
-
-- retries selectius
-- millor observabilitat i logs estructurats
-- contract tests sobre endpoints i RPC
-- tractament unificat d'errors de xarxa i d'RLS
-
-### Millores funcionals
-
-- integrar APIs externes de sistemes agraris
-- exposar OpenAPI d'un backend propi
-- suportar sincronitzacions amb ERPs o registres oficials
-
-## Possibles usos futurs d'una API externa
-
-Una API externa o backend intermedi permetria:
-
-- reutilitzar la mateixa lògica des de web, mòbil i desktop
-- amagar completament l'estructura SQL al client
-- centralitzar validacions més complexes
-- gestionar integracions oficials de DAN o tercers
-- controlar millor rols administratius sensibles
-
-## Risc actual a tenir en compte
-
-Per a un MVP o entorn de demo, l'arquitectura actual es viable i molt pràctica. Per a un producte produccio amb usuaris finals distribuïts, el punt més delicat es aquest:
-
-- el client coneix massa detalls interns de Supabase
-- algunes operacions sensibles depenen de `service_role`
-
-Per tant, la documentacio actual descriu una arquitectura funcional i coherent, pero no necessàriament la definitiva per a una explotacio gran.
-
-## Resum executiu
-
-- AgriSync no té API backend pròpia avui
-- la seva API real és Supabase Auth + PostgREST + RPC + Admin API
-- la personalització existeix, pero està al client i al SQL
-- l'app podria evolucionar cap a una API pròpia
-- per fer-ho bé, caldria desacoblar la capa `data/` de Supabase
+- L'aplicacio no te backend propi separat.
+- El client desktop consumeix Supabase directament.
+- `RestClient.kt` centralitza les crides PostgREST.
+- `SupabaseAuthApi.kt` centralitza Auth i resolucio del tecnic.
+- Els repositoris defineixen les consultes de cada modul.
+- Les RPC, triggers i RLS de PostgreSQL formen part de la API real del sistema.

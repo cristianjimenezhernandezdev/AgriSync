@@ -411,6 +411,7 @@ Mètodes principals:
 - `listCampanyesByTitular`
 - `listGranges`
 - `listGranjaBestiar`
+- `listGranjaCampanyaBalances`
 - `listEntreguesByTitular`
 
 Aquest repositori no fa escriptures. La seva feina es agregadora.
